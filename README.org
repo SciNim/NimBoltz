@@ -1,0 +1,185 @@
+* NimBoltz
+
+A simple interfacer to [[https://magboltz.web.cern.ch/magboltz/][MagBoltz]], a program that solves the Boltzmann
+transport equations for electrons in gas mixtures given external
+electric and magnetic fields. It is one of the most fundamental
+programs in gaseous detector physics to simulate properties of gases
+used in gaseous detectors.
+
+It requires ~magboltz~ as a binary somewhere in your PATH. See
+[[Installing Magboltz]] below if you're unsure about how.
+
+What this library allows you to do is to avoid having to manually
+write the extremely pedantic Magboltz input files. An example for a
+Magboltz input looks as follows:
+
+#+begin_src
+2         1         1         1         0.00000   
+2    11   80   80   80   80   
+97.7000   2.3000    0.0000    0.0000    0.0000    0.0000    26.8500   787.5648  
+60000.000 0.000     0.000     
+0         0         0         0         0.00000   
+#+end_src
+
+Nice right?
+
+Further, if you define multiple gas mixtures / settings this library
+will run multiple Magboltz processes for you in parallel, so you don't
+have to manually start N processes each with their own input and
+output file names. The file names are created based on the used
+parameters.
+
+** Using this library
+
+Of interest is mainly the ~initMagboltz~ procedure:
+#+begin_src nim
+proc initMagboltz*[F: SomeUnit, P: Pressure](
+  gases: seq[Gas], pressure: P, temp: Kelvin, E: F,
+  nMax: int,
+  usePenning = true, gasMotionThermal = true,
+  B: Tesla = 0.T,
+  Bθ: Degree = 0.°,
+  eFinal = 0.0,
+  outpath = "resources"
+                                          ): Magboltz
+#+end_src
+with which you construct a ~Magboltz~ object, which stores the gases
+and settings for a calculation. The gases come from either ~initGas~
+or ~initGases~:
+
+#+begin_src nim
+proc initGas*(id: int, fraction: float): Gas =
+  let gM = getGas(id)
+  result = Gas(name: gM.name, id: gM.id, frac: fraction)
+
+proc initGas*(name: string, fraction: float): Gas =
+  let gM = getGas(name)
+  result = Gas(name: gM.name, id: gM.id, frac: fraction)
+
+proc initGases*[T: int | string](gases: varargs[(T, float)]): seq[Gas] =
+  for arg in gases:
+    result.add initGas(arg[0], arg[1])
+#+end_src
+where as you can see we either allow to take the Magboltz IDs for the
+gases as listed in [[#sec:available_gases]] below or their names. The
+names as strings are case insensitive.
+
+Once a ~Magboltz~ object is defined all you need to do is run
+~runMagboltz~ and it will call Magboltz for you. All files will be
+stored in the ~outpath~ directory as given to ~initMagboltz~.
+
+If you wish to run multiple processes in parallel, simply call
+~runMagboltz~ with an array / seq input.
+
+So for example:
+
+#+begin_src nim
+import nimboltz
+let gases = initGases([("argon", 97.7), ("isobutane", 2.3)])
+let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 10,
+                      usePenning = true, gasMotionThermal = true)
+# to run a single calculation:
+# runMagboltz(mb)
+# to run multiple in parallel:
+var mb1 = mb # to keep modifying it simple, we just copy...
+var mb2 = mb
+var mb3 = mb
+var mb4 = mb
+mb1.temp = 300.K # ... and reassign what we want changed
+mb2.temp = 330.K
+mb3.temp = 360.K
+mb4.temp = 390.K
+let mbs = [mb1, mb2, mb3, mb4]
+runMagboltz(mbs)
+#+end_src
+
+In the future this will likely also provide some basic parsing of the
+Magboltz output files, but not today. 
+
+** Installing Magboltz
+
+Download the Magboltz source code from here:
+
+https://magboltz.web.cern.ch/magboltz/
+
+Assuming you are on a Unix system, you might want to do:
+
+#+begin_src sh
+cd ~
+mkdir -p src/Magboltz # for example for source code you compile
+cd src/Magboltz
+wget https://magboltz.web.cern.ch/magboltz/magboltz-11.17.f # for latest version as of writing
+gfortran -O3 -o magboltz magboltz-11.17.f
+#+end_src
+which downloads and compiles Magboltz with optimizations enabled.
+
+Then you should make sure to add =~/src/Magboltz= to your PATH, by adding
+#+begin_src sh
+export PATH=$PATH:$HOME/src/Magboltz
+#+end_src
+to your =~/.bashrc=, =~/.zshrc= or wherever you store your terminal
+configurations.
+
+After starting a new terminal Magboltz should be available as
+~magboltz~ from any directory.
+
+** Available Magboltz gases
+:PROPERTIES:
+:CUSTOM_ID: sec:available_gases
+:END:
+
+|----------+-----------------------+-------------+----------------------------------------+-------------|
+| Routine  | Gas                   | Last update | Notes                                  | Star rating |
+|----------+-----------------------+-------------+----------------------------------------+-------------|
+| GAS1     | CF4                   |        2001 | anisotropic scattering                 | 5*          |
+| GAS2     | Argon                 |        1997 |                                        | 5*          |
+| GAS3     | Helium 4              |        1997 |                                        | 5*          |
+| GAS4     | Helium 3              |        1992 |                                        | 5*          |
+| GAS5     | Neon                  |        1992 |                                        | 5*          |
+| GAS6     | Krypton               |        2001 |                                        | 4*          |
+| GAS7     | Xenon                 |        2001 |                                        | 4*          |
+| GAS8     | methane               |        1994 |                                        | 5*          |
+| GAS9     | ethane                |        1999 |                                        | 5*          |
+| GAS10    | propane               |        1999 |                                        | 4*          |
+| GAS11    | isobutane             |        1999 |                                        | 3*          |
+| GAS12    | CO2                   |        2001 |                                        | 5*          |
+| GAS13    | C(CH3)4 neo-pentane   |        1995 |                                        | 3*          |
+| GAS14    | H20                   |        1998 |                                        | 3*          |
+| GAS15    | Oxygen                |        1990 | 3-body attachment included             | 4*          |
+| GAS16    | Nitrogen              |        1985 | Pitchford and Phelps                   | 4*          |
+| GAS17    | nitric oxide          |        1995 | attaching gas                          | 4*          |
+| GAS18    | nitrous oxide         |        1995 | attaching gas                          | 4*          |
+| GAS19    | C2H4 ethene           |        1999 |                                        | 4*          |
+| GAS20    | C2H2 acetylene        |        1992 |                                        | 3*          |
+| GAS21    | Hydrogen              |        2001 |                                        | 5*          |
+| GAS22    | Deuterium             |        1998 |                                        | 5*          |
+| GAS23    | Carbon monoxide       |        1998 |                                        | 5*          |
+| GAS24    | methylal              |        1988 |                                        | 2*          |
+| GAS25    | DME                   |        1998 |                                        | 4*          |
+| GAS26    | Reid step model       |           ? | anisotropic version                    | -           |
+| GAS27    | Maxwell model         |           ? |                                        | -           |
+| GAS28    | Reid ramp model       |           ? |                                        | -           |
+| GAS29    | C2F6                  |        1999 | anisotropic                            | 4*          |
+| GAS30    | SF6                   |           ? | do not use high percentage             | 3*          |
+| GAS31    | NH3 ammonia           |        1999 |                                        | 3*          |
+| GAS32    | C3H6 propene          |        1999 |                                        | 4*          |
+| GAS33    | C3H6 cyclopropane     |        1999 |                                        | 4*          |
+| GAS34    | CH3OH methanol        |        1999 |                                        | 2*          |
+| GAS35    | C2H5OH ethanol        |        1999 |                                        | 3*          |
+| GAS36    | C3H7OH isopropanol    |        1999 |                                        | 2*          |
+| GAS37    | Cæsium                |        2001 | no dimers                              | 2*          |
+| GAS38    | Fluorine              |           ? | Morgan                                 | 2*          |
+| GAS39    | CS2                   |        2001 | ion drift, dark matter                 | 2*          |
+| GAS40    | COS                   |        2001 |                                        | 2*          |
+| GAS41    | CD4                   |        2001 | TPCs in neutron background environment | 3*          |
+| GAS42    | BF3 Boron trifluoride |        2001 | anisotropic                            | 3*          |
+| GAS43    | C2HF5 or C2H2F4       |           ? | estimated no data, anisotropic         | 1*          |
+| GAS44    | Helium 3              |        2002 | anisotropic                            | 5*          |
+| GAS45    | Helium 4              |        2002 | anisotropic                            | 5*          |
+| GAS46    | Neon                  |        2002 | anisotropic                            | 5*          |
+| GAS47    | Argon                 |        2002 | anisotropic                            | 5*          |
+| GAS48    | Krypton               |        2002 | anisotropic                            | 4*          |
+| GAS49    | Xenon                 |        2002 | anisotropic                            | 4*          |
+| GAS50    | methane               |        2002 | anisotropic                            | 5*          |
+| GAS52-80 | Dummy routines        |           ? |                                        | -           |
+
