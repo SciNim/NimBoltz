@@ -158,6 +158,9 @@ type
 defUnit(μm•ns⁻¹)
 defUnit(cm²•s⁻¹)
 defUnit(cm⁻¹)
+defUnit(μm²•cm⁻¹)
+defUnit(m²•s⁻¹)
+defUnit(m•s⁻¹)
 type # These come from using `parseMagboltz`
   MagboltzResult* = object
     xDrift*: Measurement[μm•ns⁻¹] ## Drift velocity in `x` direction
@@ -176,6 +179,21 @@ type # These come from using `parseMagboltz`
     D_T*: Measurement[cm²•s⁻¹] ## The transverse diffusion *coefficient* in units of `cm²•s⁻¹`
     α*: Measurement[cm⁻¹] ## First Townsend coefficient (Gas gain = `e^{αx}`, `x` drift length). Usually given in `cm⁻¹`.
     att*: Measurement[float] ## The attachment rate I think?
+
+proc pretty*(sst: SteadyStateResult, indent: int): string =
+  for field, val in fieldPairs(sst):
+    result.add repeat(' ', indent) & field & " = " & $val & "\n"
+  result = result.strip
+
+proc `$`*(sst: SteadyStateResult): string = pretty(sst, indent = 0)
+
+proc `$`*(mb: MagboltzResult): string =
+  for field, val in fieldPairs(mb):
+    when typeof(val) is SteadyStateResult:
+      result.add field & " = " & pretty(val, 2)
+    else:
+      result.add field & " = " & $val & "\n"
+  result = result.strip
 
 proc initGas*(id: int, fraction: float): Gas =
   let gM = getGas(id)
@@ -431,60 +449,6 @@ proc runMagboltz*(mbs: openArray[Magboltz]) =
     createThread(thrs[i], runCommand, mbs[i])
   joinThreads(thrs)
 
-proc test() =
-  doAssert formatFortran("I6", 123) == &"{123:>6}"
-  doAssert formatFortran("I6", 4) == &"{4:>6}"
-  try:
-    discard formatFortran("I2", 100)
-  except ValueError:
-    discard
-  try:
-    discard formatFortran("I2", 100)
-  except ValueError:
-    discard
-
-  doAssert formatFortran("F6.2", 1.23221) == &"{1.23221:6.2f}"
-  try:
-    discard formatFortran("F62", 1.23221)
-  except AssertionError:
-    discard
-
-proc run(usePenning = true, gasMotionThermal = true, drift = false, amp = false) =
-  let gases = initGases([("argon", 97.7), ("isobutane", 2.3)])
-  if amp:
-    let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 1,
-                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
-    # to run a single calculation:
-    # runMagboltz(mb)
-    # to run multiple in parallel:
-    var mb1 = mb
-    var mb2 = mb
-    var mb3 = mb
-    var mb4 = mb
-    mb1.temp = 300.K
-    mb2.temp = 330.K
-    mb3.temp = 360.K
-    mb4.temp = 390.K
-    let mbs = [mb1, mb2, mb3, mb4]
-    runMagboltz(mbs)
-  if drift:
-    let mb = initMagboltz(gases, 1050.mbar, 300.K, 500.V•cm⁻¹, nMax = 1,
-                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
-    # to run a single calculation:
-    # runMagboltz(mb)
-    # to run multiple in parallel:
-    var mb1 = mb
-    var mb2 = mb
-    var mb3 = mb
-    var mb4 = mb
-    mb1.temp = 300.K
-    mb2.temp = 330.K
-    mb3.temp = 360.K
-    mb4.temp = 390.K
-    let mbs = [mb1, mb2, mb3, mb4]
-    runMagboltz(mbs)
-
-
 ## Constants to help with extracting the parts of the Magboltz result files
 ## that is interesting for us (at the moment)
 const sstStart = "SOLUTION FOR STEADY STATE TOWNSEND PARAMETERS"
@@ -492,70 +456,6 @@ const sstStop = "SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAMETERS"
 
 const commonStart = "CALCULATED MAX. COLLISION TIME"
 const commonStop = "MEAN ELECTRON ENERGY"
-
-## NOTE: Instead of writing a simple parser I ended up using `npeg` instead
-## for the parsing...
-when false:
-  proc parseSteadyState(s: string): SteadyStateResult =
-    let idxStart = dat.find(sstStart)
-    let idxStop = dat.find(sstStop)
-    let lines = dat[idxStart ..< idxStop].splitLines
-    for l in lines:
-      ## Parse:
-      ## ```
-      ## SST DRIFT VELOCITIES
-      ##
-      ##  VD=    257.5 +-   0.29 %   WS=    292.1 +-   1.11 %
-      ##
-      ##  SST DIFFUSION
-      ##
-      ##  DL=   2956.7 +-    1.8 %   DT=   3713.0 +-   4.36 %
-      ##
-      ##  SST TOWNSEND COEFICIENTS
-      ##
-      ##  ALPHA =   1495.1 +-   0.50 %    ATT=      0.0 +-   0.00 %
-      ## ```
-      let lS = l.strip
-      if lS.startsWith("VD"): discard
-        # parse VD and WS
-      elif lS.startsWith("DL"): discard
-      elif lS.startsWith("ALPHA"): discard
-
-  proc parseDrift(s: string): μm•ns⁻¹ =
-    discard
-
-  proc parseCommonFields(s: string): MagboltzResult =
-    let idxStart = dat.find(commonStart)
-    let idxStop = dat.find(commonStop)
-    let lines = dat[idxStart ..< idxStop].splitLines
-    for l in lines:
-      ## Parsing:
-      ## ```
-      ##   Z DRIFT VELOCITY = 0.1833E+03 MICRONS/NANOSECOND  +-    0.14%
-      ##   Y DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
-      ##   X DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
-      ##
-      ##
-      ##            DIFFUSION IN CM**2/SEC.
-      ##
-      ##
-      ##   TRANSVERSE DIFFUSION   = 0.2477D+04 +-   10.16%
-      ##           =  8.10676 EV. +-  10.163%
-      ##           =  164.385 MICRONS/CENTIMETER**0.5  +-    5.08%
-      ##
-      ##
-      ##   LONGITUDINAL DIFFUSION = 0.1761D+04 +-    10.8%
-      ##           =   5.7649 EV. +-   10.79%
-      ##           =  138.622 MICRONS/CENTIMETER**0.5  +-    5.40%
-      ## ```
-      let lS = l.strip
-      if "DRIFT VELOCITY" in lS:
-        if lS.startsWith("Z"):
-          result.zDrift = parseDrift(lS)
-
-defUnit(μm²•cm⁻¹)
-defUnit(m²•s⁻¹)
-defUnit(m•s⁻¹)
 
 proc parseMagboltzNpeg(input: string): MagboltzResult =
   ## Grammar definition.
@@ -654,28 +554,13 @@ proc parseMagboltzNpeg(input: string): MagboltzResult =
   result.Dt_L = toDiffConstant(result.D_L, result.zDrift)
   result.Dt_T = toDiffConstant(result.D_T, result.zDrift)
 
-proc pretty*(sst: SteadyStateResult, indent: int): string =
-  for field, val in fieldPairs(sst):
-    result.add repeat(' ', indent) & field & " = " & $val & "\n"
-  result = result.strip
-
-proc `$`*(sst: SteadyStateResult): string = pretty(sst, indent = 0)
-
-proc `$`*(mb: MagboltzResult): string =
-  for field, val in fieldPairs(mb):
-    when typeof(val) is SteadyStateResult:
-      result.add field & " = " & pretty(val, 2)
-    else:
-      result.add field & " = " & $val & "\n"
-  result = result.strip
-
 proc cutFile(s: string): string =
   let idxStart = s.find(commonStart)
   let idxStop = if sstStart in s: s.find(sstStop) + sstSTop.len # includes sst
                 else: s.find(commonStop) + commonStop.len
   result = s[idxStart ..< idxStop]
 
-proc parseMagboltz(f: string): MagboltzResult =
+proc parseMagboltz*(f: string): MagboltzResult =
   let dat = readFile(f)
   ## Magboltz output files depend on the kind of gas & settings we use.
   ## For strong fields with ionization and amplification an additional
@@ -688,6 +573,59 @@ proc parseMagboltz(f: string): MagboltzResult =
   ## or end of SST section.
   let datRead = dat.cutFile()
   result = parseMagboltzNpeg(datRead)
+
+proc test() =
+  doAssert formatFortran("I6", 123) == &"{123:>6}"
+  doAssert formatFortran("I6", 4) == &"{4:>6}"
+  try:
+    discard formatFortran("I2", 100)
+  except ValueError:
+    discard
+  try:
+    discard formatFortran("I2", 100)
+  except ValueError:
+    discard
+
+  doAssert formatFortran("F6.2", 1.23221) == &"{1.23221:6.2f}"
+  try:
+    discard formatFortran("F62", 1.23221)
+  except AssertionError:
+    discard
+
+proc run(usePenning = true, gasMotionThermal = true, drift = false, amp = false) =
+  let gases = initGases([("argon", 97.7), ("isobutane", 2.3)])
+  if amp:
+    let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 1,
+                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
+    # to run a single calculation:
+    # runMagboltz(mb)
+    # to run multiple in parallel:
+    var mb1 = mb
+    var mb2 = mb
+    var mb3 = mb
+    var mb4 = mb
+    mb1.temp = 300.K
+    mb2.temp = 330.K
+    mb3.temp = 360.K
+    mb4.temp = 390.K
+    let mbs = [mb1, mb2, mb3, mb4]
+    runMagboltz(mbs)
+  if drift:
+    let mb = initMagboltz(gases, 1050.mbar, 300.K, 500.V•cm⁻¹, nMax = 1,
+                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
+    # to run a single calculation:
+    # runMagboltz(mb)
+    # to run multiple in parallel:
+    var mb1 = mb
+    var mb2 = mb
+    var mb3 = mb
+    var mb4 = mb
+    mb1.temp = 300.K
+    mb2.temp = 330.K
+    mb3.temp = 360.K
+    mb4.temp = 390.K
+    let mbs = [mb1, mb2, mb3, mb4]
+    runMagboltz(mbs)
 
 proc read(files: seq[string], alpha = false) =
   ## Note that the files are not very well specified and even differ slightly
