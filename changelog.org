@@ -1,0 +1,3 @@
+* v0.1.0
+- add Magboltz file generator and runner
+- add basic parser for (relevant sections of) Magboltz files 
