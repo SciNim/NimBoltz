@@ -356,12 +356,12 @@ from std / os import createDir, `/`
 proc genInfile(mb: Magboltz): string =
   createDir(mb.outpath)
   var infile = "magboltz_input_" & genSettingsStr(mb) & ".dat"
-  result = inpath / infile
+  result = mb.outpath / infile
 
 proc genOutfile(mb: Magboltz): string =
   createDir(mb.outpath)
   var outfile = "magboltz_output_" & genSettingsStr(mb) & ".dat"
-  result = outpath / outfile
+  result = mb.outpath / outfile
 
 import pkg / shell
 proc runMagboltz*(mb: Magboltz) =
