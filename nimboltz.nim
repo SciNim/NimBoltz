@@ -96,7 +96,7 @@ import std / [math, strutils, strformat, sequtils, parseutils]
 
 import parse_gases
 
-import unchained
+import unchained, measuremancer, npeg
 
 type
   NotImplementedError = object of Defect
@@ -128,6 +128,54 @@ type
     usePenning*: bool = true ## Whether to include the Penning effect or not
     gasMotionThermal*: bool = true ## Whether gas motion is to be taken at 0 K or input temp
     outpath*: string ## The path in which to store the magboltz input / output files
+
+
+## Note on diffusion `constant` vs diffusion `coefficient`.
+## After a drift time `t` with a diffusion coefficient `D`
+## a cloud of electrons will be a distance `σ_T` away from
+## the origin
+## `σ_T = √(2 N D t)`
+## in `N` dimensions.
+## In gaseous detector physics `N` is usually taken to be 1
+## and each dimension is treated seperately.
+##
+## It is convenient to introduce a diffusion `constant` D_t such that
+## `σ_T = D_t * √x`
+## where `x` is the drift length.
+## We can therefore relate the diffusion constant to the diffusion
+## coefficient by using the drift velocity `v`:
+## `D_t = √(2 N D / v)`
+##
+## Typically the diffusion coefficient `D` is given in `cm²•s⁻¹` and
+## the diffusion constant `D_t` in `μm•√cm⁻¹`. The diffusion constant
+## therefore says "how much diffusion in μm is expected after a drift
+## of `√cm` length?".
+##
+## In the code below we do not give units to `D_t` (called `Dt_L` and `Dt_T`
+## for the 1D transverse and longitudinal components), because `unchained`
+## currently does not support square roots of units unfortunately.
+
+defUnit(μm•ns⁻¹)
+defUnit(cm²•s⁻¹)
+defUnit(cm⁻¹)
+type # These come from using `parseMagboltz`
+  MagboltzResult* = object
+    xDrift*: Measurement[μm•ns⁻¹] ## Drift velocity in `x` direction
+    yDrift*: Measurement[μm•ns⁻¹] ## Drift velocity in `y` direction
+    zDrift*: Measurement[μm•ns⁻¹] ## Drift velocity in `z` direction. This is the direction of the electric field and therefore drift direction!
+    Dt_L*: Measurement[float] ## The longitudinal diffusion *constant* `D_t` in units of `μm•√cm⁻¹`
+    Dt_T*: Measurement[float] ## The longitudinal diffusion *constant* `D_t` in units of `μm•√cm⁻¹`
+    D_L*: Measurement[cm²•s⁻¹] ## The longitudinal diffusion *coefficient* in units of `cm²•s⁻¹`
+    D_T*: Measurement[cm²•s⁻¹] ## The transverse diffusion *coefficient* in units of `cm²•s⁻¹`
+    sst*: SteadyStateResult ## May be empty, only for fields strong enough for amplification
+
+  SteadyStateResult* = object
+    vDrift*: Measurement[μm•ns⁻¹]
+    ws*: Measurement[float] ## XXX: w hat is `WS`?
+    D_L*: Measurement[cm²•s⁻¹] ## The longitudinal diffusion *coefficient* in units of `cm²•s⁻¹`
+    D_T*: Measurement[cm²•s⁻¹] ## The transverse diffusion *coefficient* in units of `cm²•s⁻¹`
+    α*: Measurement[cm⁻¹] ## First Townsend coefficient (Gas gain = `e^{αx}`, `x` drift length). Usually given in `cm⁻¹`.
+    att*: Measurement[float] ## The attachment rate I think?
 
 proc initGas*(id: int, fraction: float): Gas =
   let gM = getGas(id)
@@ -401,30 +449,257 @@ proc test() =
   except AssertionError:
     discard
 
-proc run(usePenning = true, gasMotionThermal = true) =
+proc run(usePenning = true, gasMotionThermal = true, drift = false, amp = false) =
   let gases = initGases([("argon", 97.7), ("isobutane", 2.3)])
-  let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 1,
-                        usePenning = usePenning, gasMotionThermal = gasMotionThermal)
-  # to run a single calculation:
-  # runMagboltz(mb)
-  # to run multiple in parallel:
-  var mb1 = mb
-  var mb2 = mb
-  var mb3 = mb
-  var mb4 = mb
-  mb1.temp = 300.K
-  mb2.temp = 330.K
-  mb3.temp = 360.K
-  mb4.temp = 390.K
-  let mbs = [mb1, mb2, mb3, mb4]
-  runMagboltz(mbs)
+  if amp:
+    let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 1,
+                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
+    # to run a single calculation:
+    # runMagboltz(mb)
+    # to run multiple in parallel:
+    var mb1 = mb
+    var mb2 = mb
+    var mb3 = mb
+    var mb4 = mb
+    mb1.temp = 300.K
+    mb2.temp = 330.K
+    mb3.temp = 360.K
+    mb4.temp = 390.K
+    let mbs = [mb1, mb2, mb3, mb4]
+    runMagboltz(mbs)
+  if drift:
+    let mb = initMagboltz(gases, 1050.mbar, 300.K, 500.V•cm⁻¹, nMax = 1,
+                          usePenning = usePenning, gasMotionThermal = gasMotionThermal)
+    # to run a single calculation:
+    # runMagboltz(mb)
+    # to run multiple in parallel:
+    var mb1 = mb
+    var mb2 = mb
+    var mb3 = mb
+    var mb4 = mb
+    mb1.temp = 300.K
+    mb2.temp = 330.K
+    mb3.temp = 360.K
+    mb4.temp = 390.K
+    let mbs = [mb1, mb2, mb3, mb4]
+    runMagboltz(mbs)
+
+
+## Constants to help with extracting the parts of the Magboltz result files
+## that is interesting for us (at the moment)
+const sstStart = "SOLUTION FOR STEADY STATE TOWNSEND PARAMETERS"
+const sstStop = "SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAMETERS"
+
+const commonStart = "CALCULATED MAX. COLLISION TIME"
+const commonStop = "MEAN ELECTRON ENERGY"
+
+## NOTE: Instead of writing a simple parser I ended up using `npeg` instead
+## for the parsing...
+when false:
+  proc parseSteadyState(s: string): SteadyStateResult =
+    let idxStart = dat.find(sstStart)
+    let idxStop = dat.find(sstStop)
+    let lines = dat[idxStart ..< idxStop].splitLines
+    for l in lines:
+      ## Parse:
+      ## ```
+      ## SST DRIFT VELOCITIES
+      ##
+      ##  VD=    257.5 +-   0.29 %   WS=    292.1 +-   1.11 %
+      ##
+      ##  SST DIFFUSION
+      ##
+      ##  DL=   2956.7 +-    1.8 %   DT=   3713.0 +-   4.36 %
+      ##
+      ##  SST TOWNSEND COEFICIENTS
+      ##
+      ##  ALPHA =   1495.1 +-   0.50 %    ATT=      0.0 +-   0.00 %
+      ## ```
+      let lS = l.strip
+      if lS.startsWith("VD"): discard
+        # parse VD and WS
+      elif lS.startsWith("DL"): discard
+      elif lS.startsWith("ALPHA"): discard
+
+  proc parseDrift(s: string): μm•ns⁻¹ =
+    discard
+
+  proc parseCommonFields(s: string): MagboltzResult =
+    let idxStart = dat.find(commonStart)
+    let idxStop = dat.find(commonStop)
+    let lines = dat[idxStart ..< idxStop].splitLines
+    for l in lines:
+      ## Parsing:
+      ## ```
+      ##   Z DRIFT VELOCITY = 0.1833E+03 MICRONS/NANOSECOND  +-    0.14%
+      ##   Y DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
+      ##   X DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
+      ##
+      ##
+      ##            DIFFUSION IN CM**2/SEC.
+      ##
+      ##
+      ##   TRANSVERSE DIFFUSION   = 0.2477D+04 +-   10.16%
+      ##           =  8.10676 EV. +-  10.163%
+      ##           =  164.385 MICRONS/CENTIMETER**0.5  +-    5.08%
+      ##
+      ##
+      ##   LONGITUDINAL DIFFUSION = 0.1761D+04 +-    10.8%
+      ##           =   5.7649 EV. +-   10.79%
+      ##           =  138.622 MICRONS/CENTIMETER**0.5  +-    5.40%
+      ## ```
+      let lS = l.strip
+      if "DRIFT VELOCITY" in lS:
+        if lS.startsWith("Z"):
+          result.zDrift = parseDrift(lS)
+
+defUnit(μm²•cm⁻¹)
+defUnit(m²•s⁻¹)
+defUnit(m•s⁻¹)
+
+proc parseMagboltzNpeg(input: string): MagboltzResult =
+  ## Grammar definition.
+  ## This is the first time I'm using `npeg` or PEGs in general, so come at me. :P
+  ##
+  ## Parses:
+  ## ```
+  ##   Z DRIFT VELOCITY = 0.1833E+03 MICRONS/NANOSECOND  +-    0.14%
+  ##   Y DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
+  ##   X DRIFT VELOCITY = 0.0000E+00 MICRONS/NANOSECOND  +-    0.00%
+  ##
+  ##
+  ##            DIFFUSION IN CM**2/SEC.
+  ##
+  ##
+  ##   TRANSVERSE DIFFUSION   = 0.2477D+04 +-   10.16%
+  ##           =  8.10676 EV. +-  10.163%
+  ##           =  164.385 MICRONS/CENTIMETER**0.5  +-    5.08%
+  ##
+  ##
+  ##   LONGITUDINAL DIFFUSION = 0.1761D+04 +-    10.8%
+  ##           =   5.7649 EV. +-   10.79%
+  ##           =  138.622 MICRONS/CENTIMETER**0.5  +-    5.40%
+  ## ...
+  ## SST DRIFT VELOCITIES
+  ##
+  ##  VD=    257.5 +-   0.29 %   WS=    292.1 +-   1.11 %
+  ##
+  ##  SST DIFFUSION
+  ##
+  ##  DL=   2956.7 +-    1.8 %   DT=   3713.0 +-   4.36 %
+  ##
+  ##  SST TOWNSEND COEFICIENTS
+  ##
+  ##  ALPHA =   1495.1 +-   0.50 %    ATT=      0.0 +-   0.00 %
+  ## ```
+
+  let parser = peg("root", mb: MagboltzResult):
+    space <- *{' '}
+    eol <- '\n'
+    expNumber <- +Digit * ?'.' * *Digit * (i"E" | i"D") * ?{'+', '-'} * +{'0'..'9'}
+    number <- +Digit * ?'.' * *Digit
+    percentage <- >number * '%'
+    junk <- *(' ' | Print) * +eol
+    dataLine <- space * >+Alpha * ?space * "=" * space * >number * space * "+-" * space * >number * space * '%' * space * ?eol:
+      let val = parseFloat($2)
+      let err = parseFloat($3)
+      let merr = val * (err / 100.0)
+      case $1
+      of "VD": mb.sst.vDrift = val.μm•ns⁻¹ ± merr.μm•ns⁻¹
+      of "WS": mb.sst.ws = val ± merr
+      of "DL": mb.sst.D_L = val.cm²•s⁻¹ ± merr.cm²•s⁻¹
+      of "DT": mb.sst.D_T = val.cm²•s⁻¹ ± merr.cm²•s⁻¹
+      of "ALPHA": mb.sst.α = val.cm⁻¹ ± merr.cm⁻¹
+      of "ATT": mb.sst.att = val ± merr
+      else: doAssert false, "Encountered " & ($1)
+    velocity <- space * >+Alpha * space * "DRIFT VELOCITY =" * space * >expNumber * space * "MICRONS/NANOSECOND" * space * "+-" * space * >percentage * *eol:
+      let val = parseFloat($2)
+      let err = parseFloat(($3)[0 .. ^2])
+      let mval = val.μm•ns⁻¹ ± (val * err / 100.0).μm•ns⁻¹
+      case $1
+      of "Z": mb.zDrift = mval
+      of "Y": mb.yDrift = mval
+      of "X": mb.xDrift = mval
+      else: doAssert false, "Encountered " & ($1)
+    diffusion <- space * >+Alpha * space * "DIFFUSION" * space * "=" * space * >expNumber * space * "+-" * space * >percentage * eol:
+      let val = parseFloat(($2).replace("D", "E"))
+      let err = parseFloat(($3)[0 .. ^2])
+      let mval = val.cm²•s⁻¹ ± (val * err / 100.0).cm²•s⁻¹
+      case $1
+      of "TRANSVERSE":   mb.D_L = mval
+      of "LONGITUDINAL": mb.D_T = mval
+      else: doAssert false, "Encountered " & ($1)
+    root <- *(velocity | diffusion | dataLine | junk)
+
+  # And now parse the input file
+  doAssert parser.match(input, result).ok
+
+  # now compute the `Dt_L` and `Dt_T` fields using expl. above type defs
+  const N = 1 # treated as 1 dimensional!
+  proc toUnit[T: SomeUnit; U: SomeUnit](m: Measurement[T], _: typedesc[U]): Measurement[U] =
+    # get conversion factor needed
+    let factor = m.value.to(U).float / m.value.float
+    result = (m * factor).to(U)
+
+  proc toDiffConstant(D: Measurement[cm²•s⁻¹], v: Measurement[μm•ns⁻¹]): Measurement[float] =
+    ## NOTE: Because `unchained` does not support sqrt units, we need to manually perform the
+    ## unit conversion first before taking the sqrt. Done by calculating the required
+    ## conversion factor by hand.
+    # 1. First convert each unit to SI units by hand. This makes sure we get the correct
+    # conversion factors (something is broken in Measuremancer right now :( )
+    let dConstSq = 2 * N * D.toUnit(m²•s⁻¹) / v.toUnit(m•s⁻¹)
+    # 2. convert to target unit for conversion factor and then back to float (without factors)
+    result = sqrt(dConstSq.toUnit(μm²•cm⁻¹).to(float))
+
+  result.Dt_L = toDiffConstant(result.D_L, result.zDrift)
+  result.Dt_T = toDiffConstant(result.D_T, result.zDrift)
+
+proc pretty*(sst: SteadyStateResult, indent: int): string =
+  for field, val in fieldPairs(sst):
+    result.add repeat(' ', indent) & field & " = " & $val & "\n"
+  result = result.strip
+
+proc `$`*(sst: SteadyStateResult): string = pretty(sst, indent = 0)
+
+proc `$`*(mb: MagboltzResult): string =
+  for field, val in fieldPairs(mb):
+    when typeof(val) is SteadyStateResult:
+      result.add field & " = " & pretty(val, 2)
+    else:
+      result.add field & " = " & $val & "\n"
+  result = result.strip
+
+proc cutFile(s: string): string =
+  let idxStart = s.find(commonStart)
+  let idxStop = if sstStart in s: s.find(sstStop) + sstSTop.len # includes sst
+                else: s.find(commonStop) + commonStop.len
+  result = s[idxStart ..< idxStop]
+
+proc parseMagboltz(f: string): MagboltzResult =
+  let dat = readFile(f)
+  ## Magboltz output files depend on the kind of gas & settings we use.
+  ## For strong fields with ionization and amplification an additional
+  ## steady state solution is written. For pure drift fields this does
+  ## not exist.
+  ##
+  ## First parse the common fields for all Magboltz output results
+  ## ⇒ Nope, I used `npeg`.
+  ## We still cut the input file from common data to either end of common
+  ## or end of SST section.
+  let datRead = dat.cutFile()
+  result = parseMagboltzNpeg(datRead)
 
 proc read(files: seq[string], alpha = false) =
+  ## Note that the files are not very well specified and even differ slightly
+  ## between the different Magboltz parameters. Therefore we do a hacky simple
+  ## parse so that we might easily adjust it in the future. Not worth writing
+  ## some kind of more efficient parser.
+  ## The performance of parsing these files is completely irrelevant anyway.
   for f in files:
-    let dat = readFile(f).splitLines
-    for l in dat:
-      if l.startsWith(" ALPHA") and alpha:
-        echo "File: ", f, " = ", l
+    let mb = parseMagboltz(f)
+    echo "File: ", f
+    echo mb
+    echo "=================================================="
 
 when isMainModule:
   import cligen
