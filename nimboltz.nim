@@ -525,8 +525,8 @@ proc parseMagboltzNpeg(input: string): MagboltzResult =
       let err = parseFloat(($3)[0 .. ^2])
       let mval = val.cm²•s⁻¹ ± (val * err / 100.0).cm²•s⁻¹
       case $1
-      of "TRANSVERSE":   mb.D_L = mval
-      of "LONGITUDINAL": mb.D_T = mval
+      of "TRANSVERSE":   mb.D_T = mval
+      of "LONGITUDINAL": mb.D_L = mval
       else: doAssert false, "Encountered " & ($1)
     root <- *(velocity | diffusion | dataLine | junk)
 
