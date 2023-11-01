@@ -423,8 +423,7 @@ proc genInfile(mb: Magboltz): string =
   var infile = "magboltz_input_" & genSettingsStr(mb) & ".dat"
   result = mb.outpath / infile
 
-proc genOutfile(mb: Magboltz): string =
-  createDir(mb.outpath)
+proc genOutfile*(mb: Magboltz): string =
   var outfile = "magboltz_output_" & genSettingsStr(mb) & ".dat"
   result = mb.outpath / outfile
 
