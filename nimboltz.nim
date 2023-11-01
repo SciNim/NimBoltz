@@ -101,8 +101,8 @@ import unchained, measuremancer, npeg
 type
   NotImplementedError = object of Defect
 
-defUnit(kV•cm⁻¹)
-defUnit(V•cm⁻¹)
+defUnit(kV•cm⁻¹, toExport = true)
+defUnit(V•cm⁻¹, toExport = true)
 type
   Gas* = object
     name*: string
@@ -129,7 +129,6 @@ type
     gasMotionThermal*: bool = true ## Whether gas motion is to be taken at 0 K or input temp
     outpath*: string ## The path in which to store the magboltz input / output files
 
-
 ## Note on diffusion `constant` vs diffusion `coefficient`.
 ## After a drift time `t` with a diffusion coefficient `D`
 ## a cloud of electrons will be a distance `σ_T` away from
@@ -155,12 +154,12 @@ type
 ## for the 1D transverse and longitudinal components), because `unchained`
 ## currently does not support square roots of units unfortunately.
 
-defUnit(μm•ns⁻¹)
-defUnit(cm²•s⁻¹)
-defUnit(cm⁻¹)
-defUnit(μm²•cm⁻¹)
-defUnit(m²•s⁻¹)
-defUnit(m•s⁻¹)
+defUnit(μm•ns⁻¹, toExport = true)
+defUnit(cm²•s⁻¹, toExport = true)
+defUnit(cm⁻¹, toExport = true)
+defUnit(μm²•cm⁻¹, toExport = true)
+defUnit(m²•s⁻¹, toExport = true)
+defUnit(m•s⁻¹, toExport = true)
 type # These come from using `parseMagboltz`
   MagboltzResult* = object
     xDrift*: Measurement[μm•ns⁻¹] ## Drift velocity in `x` direction
