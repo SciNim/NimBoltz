@@ -432,10 +432,11 @@ import pkg / shell
 proc runMagboltz*(mb: Magboltz) =
   let infile = genInfile(mb)
   writeFile(mb, infile)
-  let outfile = genOutfile(mb)
   echo "Run:"
   let (res, err) = shellVerbose:
     magboltz "<" ($infile)
+  let outfile = genOutfile(mb)
+  createDir(mb.outpath)
   writeFile(outfile, res)
 
 proc runMagboltz*(mbs: openArray[Magboltz]) =
