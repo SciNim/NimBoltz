@@ -1,0 +1,13 @@
+{
+  "id": 27,
+  "name": "MAXWELL 1994--",
+  "mass_amu": 4.0,
+  "channels": {
+    "ionization": 1,
+    "excitation": 0,
+    "attachment": 1
+  },
+  "opal_beaty": [
+    99.0
+  ]
+}

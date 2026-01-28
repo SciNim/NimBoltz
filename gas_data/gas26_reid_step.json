@@ -1,0 +1,13 @@
+{
+  "id": 26,
+  "name": "REID STEP(ANIS)",
+  "mass_amu": 4.0,
+  "channels": {
+    "ionization": 1,
+    "excitation": 1,
+    "attachment": 1
+  },
+  "opal_beaty": [
+    15.9
+  ]
+}

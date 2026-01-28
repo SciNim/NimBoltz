@@ -1,0 +1,13 @@
+{
+  "id": 68,
+  "name": "DUMMY",
+  "mass_amu": 0.0,
+  "channels": {
+    "ionization": 1,
+    "excitation": 0,
+    "attachment": 1
+  },
+  "opal_beaty": [
+    0.0
+  ]
+}
