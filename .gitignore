@@ -1,5 +1,5 @@
+port/tests/*
 !port/tests/*.nim
 port/main
-port/tests/*
 tools/f2nim/f2nim
 tools/f2nim/ftest_parse
