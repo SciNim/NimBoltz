@@ -39,6 +39,10 @@ proc write(name: string, decks: varargs[Deck]) =
   s.add "0 0 0 0 0.0\n"
   writeFile("decks" / name & ".in", s)
 
+proc bname(ang: float): string =
+  ## deck name part for the angle between E and B
+  if ang == 0.0: "par" elif ang == 90.0: "perp" else: $ang.int
+
 const nGases = 61   # GAS62..80 are dummy routines
 
 createDir "decks"
@@ -52,17 +56,17 @@ for g in 1 .. nGases:
 #    each for static and thermal gas (MONTE, MONTEA, MONTEB, MONTEC + T versions).
 let arco2 = @[(2, 90.0), (12, 10.0)]
 for th in 0 .. 1:
-  write(&"arco2_b0_t{th}", Deck(gases: arco2, ithrm: th))
+  write(&"arco2_nob_t{th}", Deck(gases: arco2, ithrm: th))
   for ang in [0.0, 90.0, 45.0]:
-    write(&"arco2_b{ang.int}_t{th}",
+    write(&"arco2_b{bname(ang)}_t{th}",
           Deck(gases: arco2, ithrm: th, bmag: 10.0, btheta: ang))
 
 # 3. High field: Townsend coefficients above the SST threshold -> ALPCALC/ALPCLCx
 #    and the MONTEFT/MONTEFD time-of-flight / steady-state routines.
 for th in 0 .. 1:
-  write(&"hi_arco2_b0_t{th}", Deck(gases: arco2, ithrm: th, efield: 30000.0))
+  write(&"hi_arco2_nob_t{th}", Deck(gases: arco2, ithrm: th, efield: 30000.0))
   for ang in [0.0, 90.0, 45.0]:
-    write(&"hi_arco2_b{ang.int}_t{th}",
+    write(&"hi_arco2_b{bname(ang)}_t{th}",
           Deck(gases: arco2, ithrm: th, efield: 30000.0, bmag: 50.0, btheta: ang))
   # attachment dominated
   write(&"hi_sf6_t{th}", Deck(gases: @[(30, 100.0)], ithrm: th, efield: 50000.0))

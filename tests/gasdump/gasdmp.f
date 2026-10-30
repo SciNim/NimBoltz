@@ -1,0 +1,118 @@
+      PROGRAM GASDMP
+C Calls GASMIX for one gas over a list of cases and dumps every output
+C argument plus the COMMONs written by GAS routines as raw bytes
+C (unformatted stream) for a bitwise comparison with the Nim port.
+C Input (stdin), one case per line, list-directed:
+C   NGS NANISO EFINAL TEMPC TORR FRACG
+C NGS is mixed with argon (GAS2) at FRACG percent unless FRACG=100.
+C Output: file named by the first command line argument.
+      IMPLICIT REAL*8 (A-H,O-Z)
+      IMPLICIT INTEGER*8 (I-N)
+      CHARACTER*25 NAME
+      CHARACTER*50 SCRPT(300),SCRPTN(10)
+      CHARACTER*256 OUTF
+      COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
+      COMMON/RATIO/AN1,AN2,AN3,AN4,AN5,AN6,AN,FRAC(6)
+      COMMON/GASN/NGASN(6)
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
+      COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
+      COMMON/BFLD/EOVB,WB,BTHETA,BMAG
+      COMMON/MIX2/EG(4000),EROOT(4000),QT1(4000),QT2(4000),QT3(4000),
+     /QT4(4000)
+      COMMON/DENS/DEN(4000)
+      DIMENSION Q(6,4000),QIN(250,4000),E(6),EI(250),KIN(250)
+      DIMENSION QION(30,4000),PEQION(30,4000),EION(30),EB(30)
+      DIMENSION PEQEL(6,4000),PEQIN(250,4000),KEL(6),PENFRA(3,250)
+      DIMENSION NC0(30),EC0(30),WK(30),EFL(30),NG1(30),EG1(30),
+     /NG2(30),EG2(30)
+      DIMENSION QATT(8,4000),QNULL(10,4000),SCLN(10)
+      CALL GETARG(1,OUTF)
+      OPEN(10,FILE=OUTF,ACCESS='STREAM',FORM='UNFORMATTED',
+     /STATUS='REPLACE')
+    1 READ(5,*,END=99) NGS,NAN,EFIN,TEMP,PRES,FRACG
+      NGAS=2
+      NGASN(1)=NGS
+      FRAC(1)=FRACG
+      NGASN(2)=2
+      FRAC(2)=100.0D0-FRACG
+      IF(FRACG.EQ.100.0D0) NGAS=1
+      DO 2 J=NGAS+1,6
+      NGASN(J)=0
+    2 FRAC(J)=0.0D0
+      NMAX=1
+      IPEN=0
+      ITHRM=1
+      EFINAL=EFIN
+      TEMPC=TEMP
+      TORR=PRES
+      EFIELD=1000.0D0
+      BMAG=0.0D0
+      BTHETA=0.0D0
+      CALL SETUPT(LAST)
+      NANISO=NAN
+C grid exactly as in MIXERT
+      ESTEP=EFINAL/DFLOAT(NSTEP)
+      EHALF=ESTEP/2.0D0
+      EG(1)=EHALF
+      DO 3 I=2,4000
+      AJ=DFLOAT(I-1)
+      EG(I)=EHALF+ESTEP*AJ
+    3 EROOT(I)=DSQRT(EG(I))
+      EROOT(1)=DSQRT(EHALF)
+C all outputs start out zero (MIXERT zeroes what it passes in)
+      DO 5 I=1,4000
+      DO 4 J=1,250
+      QIN(J,I)=0.0D0
+    4 PEQIN(J,I)=0.0D0
+      DO 6 J=1,30
+      QION(J,I)=0.0D0
+    6 PEQION(J,I)=0.0D0
+      DO 7 J=1,6
+      Q(J,I)=0.0D0
+    7 PEQEL(J,I)=0.0D0
+      DO 8 J=1,8
+    8 QATT(J,I)=0.0D0
+      DO 9 J=1,10
+    9 QNULL(J,I)=0.0D0
+    5 CONTINUE
+      DO 10 J=1,250
+      EI(J)=0.0D0
+      KIN(J)=0
+      PENFRA(1,J)=0.0D0
+      PENFRA(2,J)=0.0D0
+   10 PENFRA(3,J)=0.0D0
+      DO 11 J=1,30
+      EION(J)=0.0D0
+      EB(J)=0.0D0
+      NC0(J)=0
+      EC0(J)=0.0D0
+      WK(J)=0.0D0
+      EFL(J)=0.0D0
+      NG1(J)=0
+      EG1(J)=0.0D0
+      NG2(J)=0
+   11 EG2(J)=0.0D0
+      DO 12 J=1,6
+      E(J)=0.0D0
+   12 KEL(J)=0
+      DO 13 J=1,10
+      SCRPTN(J)=' '
+   13 SCLN(J)=0.0D0
+      DO 14 J=1,300
+   14 SCRPT(J)=' '
+      NAME=' '
+      NIN=0
+      NION=0
+      NATT=0
+      NNULL=0
+      VIRL=0.0D0
+      CALL GASMIX(NGS,Q,QIN,NIN,E,EI,NAME,VIRL,EB,
+     /PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
+     /QNULL,NNULL,SCLN,NC0,EC0,WK,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
+      WRITE(10) Q,QIN,NIN,E,EI,NAME,VIRL,EB,PEQEL,PEQIN,PENFRA,KEL,KIN,
+     /QION,PEQION,EION,NION,QATT,NATT,QNULL,NNULL,SCLN,NC0,EC0,WK,EFL,
+     /NG1,EG1,NG2,EG2,SCRPT,SCRPTN,EG,EROOT,QT1,QT2,QT3,QT4,DEN,
+     /NANISO,ESTEP,AKT
+      GO TO 1
+   99 CLOSE(10)
+      END

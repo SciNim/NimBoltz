@@ -52,8 +52,8 @@ template fdo*(v: untyped, a, b, s: typed, body: untyped) =
 
 # ---------------------------------------------------------------- arithmetic
 
-proc powidf2(x: cdouble, n: cint): cdouble {.importc: "__powidf2", nodecl.}
-proc powisf2(x: cfloat, n: cint): cfloat {.importc: "__powisf2", nodecl.}
+proc powidf2(x: cdouble, n: cint): cdouble {.importc: "__powidf2".}
+proc powisf2(x: cfloat, n: cint): cfloat {.importc: "__powisf2".}
 
 func pow2*(x: float64): float64 {.inline.} = x*x
 func pow2*(x: float32): float32 {.inline.} = x*x
@@ -214,7 +214,7 @@ proc fmtNonFinite(x: float64, w: int): string =
   if neg: s = "-" & s
   align(s, w)
 
-proc fmtF(x: float64, w, d: int): string =
+proc fmtF*(x: float64, w, d: int): string =
   if x != x or abs(x) == Inf: return fmtNonFinite(x, w)
   var s = printfF(x, d)
   let neg = signbit(x)
@@ -223,7 +223,7 @@ proc fmtF(x: float64, w, d: int): string =
   if s.len > w: return stars(w)
   align(s, w)
 
-proc fmtE(x: float64, w, d: int, letter: char): string =
+proc fmtE*(x: float64, w, d: int, letter: char): string =
   if x != x or abs(x) == Inf: return fmtNonFinite(x, w)
   var digits: string
   var ex: int

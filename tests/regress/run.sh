@@ -15,7 +15,7 @@ src=${MAGBOLTZ_SRC:-$HOME/src/Magboltz/magboltz-11.21.f}
 work=${WORK:-/tmp/nbregress}
 jobs=${JOBS:-$(nproc)}
 glob=${1:-*}
-FFLAGS="-O0 -ffp-contract=off -std=legacy"
+FFLAGS="-O0 -ffp-contract=off -std=legacy -finit-local-zero"
 
 mkdir -p "$work/nim" "$work/out"
 if [ "${FULL:-0}" = 1 ]; then
@@ -32,8 +32,8 @@ fi
 
 # Nim translation
 echo "== f2nim + nim c"
-nim c --hints:off -d:release -o:"$work/f2nim" "$root/tools/f2nim/f2nim.nim" >/dev/null
-cp "$root"/port/{frt.nim,rm48.nim,nim.cfg,main.nim} "$work/nim/"
+nim c --hints:off --warnings:off -d:release -o:"$work/f2nim" "$root/tools/f2nim/f2nim.nim" >/dev/null
+cp "$root"/port/{frt.nim,rm48.nim,main.nim} "$work/nim/"; cp "$root/nim.cfg" "$work/nim/"
 if [ "${FULL:-0}" = 1 ]; then
   rm -rf "$work/nim/gen"; cp -r "$root/port/gen" "$work/nim/gen"
 else
@@ -58,7 +58,7 @@ for d in "${decks[@]}"; do
     echo "ok    $n"
   else
     fail=$((fail+1))
-    first=$(cmp "$work/out/$n.f.out" "$work/out/$n.nim.out" 2>&1 | head -1)
+    first=$(cmp "$work/out/$n.f.out" "$work/out/$n.nim.out" 2>&1 | head -1 || true)
     echo "FAIL  $n: $first"
   fi
 done
