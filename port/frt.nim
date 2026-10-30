@@ -205,7 +205,17 @@ proc printfE(x: float64, d: int): (string, int) =
   let digits = s[0 ..< e].replace(".", "")
   (digits, parseInt(s[e+1 .. ^1]) + 1)
 
+proc fmtNonFinite(x: float64, w: int): string =
+  ## NaN / Infinity in F, E, D editing, as libgfortran's build_infnan_string
+  ## (no SP: a positive infinity gets no sign, NaN never one)
+  let neg = x < 0
+  if w < 3 or (neg and w == 3): return stars(w)
+  var s = if x != x: "NaN" elif w - ord(neg) >= 8: "Infinity" else: "Inf"
+  if neg: s = "-" & s
+  align(s, w)
+
 proc fmtF(x: float64, w, d: int): string =
+  if x != x or abs(x) == Inf: return fmtNonFinite(x, w)
   var s = printfF(x, d)
   let neg = signbit(x)
   if s.startsWith("0.") and (s.len + ord(neg)) > w: s = s[1 .. ^1]
@@ -214,6 +224,7 @@ proc fmtF(x: float64, w, d: int): string =
   align(s, w)
 
 proc fmtE(x: float64, w, d: int, letter: char): string =
+  if x != x or abs(x) == Inf: return fmtNonFinite(x, w)
   var digits: string
   var ex: int
   if x == 0:
