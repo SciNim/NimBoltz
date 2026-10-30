@@ -5,6 +5,43 @@ import ../frt, commons
 import gas1, gas10, gas11, gas12, gas13, gas14, gas15, gas16, gas17, gas18, gas19, gas2, gas20, gas21, gas22, gas23, gas24, gas25, gas26, gas27, gas28, gas29, gas3, gas30, gas31, gas32, gas33, gas34, gas35, gas36, gas37, gas38, gas39, gas4, gas40, gas41, gas42, gas43, gas44, gas45, gas46, gas47, gas48, gas49, gas5, gas50, gas51, gas52, gas53, gas54, gas55, gas56, gas57, gas58, gas59, gas6, gas60, gas61, gas62, gas63, gas64, gas65, gas66, gas67, gas68, gas69, gas7, gas70, gas71, gas72, gas73, gas74, gas75, gas76, gas77, gas78, gas79, gas8, gas80, gas9
 
 proc gasmix*(ngs: int, q: var Arr2[float64, 6, 4000], qin: var Arr2[float64, 250, 4000], nin: var int, ev: var array[1..6, float64], ei: var array[1..250, float64], name: var string, virl: float64, eb: var array[1..30, float64], peqel: var Arr2[float64, 6, 4000], peqin: var Arr2[float64, 250, 4000], penfra: var Arr2[float64, 3, 250], kel: var array[1..6, int], kin: var array[1..250, int], qion: var Arr2[float64, 30, 4000], peqion: var Arr2[float64, 30, 4000], eion: var array[1..30, float64], nion: var int, qatt: var Arr2[float64, 8, 4000], natt: var int, qnull: var Arr2[float64, 10, 4000], nnull: var int, scln: var array[1..10, float64], nc0: var array[1..30, int], ec0: var array[1..30, float64], wk: var array[1..30, float64], efl: var array[1..30, float64], ng1: var array[1..30, int], eg1: var array[1..30, float64], ng2: var array[1..30, int], eg2: var array[1..30, float64], scrpt: var array[1..300, string], scrptn: var array[1..10, string]) =
+  var i, j: int
+  fdo i, 1, 4000:
+    fdo j, 1, 250:
+      qin[j, i] = 0.0
+      peqin[j, i] = 0.0
+    fdo j, 1, 30:
+      qion[j, i] = 0.0
+      peqion[j, i] = 0.0
+    fdo j, 1, 6:
+      q[j, i] = 0.0
+      peqel[j, i] = 0.0
+    fdo j, 1, 8:
+      qatt[j, i] = 0.0
+    fdo j, 1, 10:
+      qnull[j, i] = 0.0
+  fdo j, 1, 250:
+    ei[j] = 0.0
+    kin[j] = 0
+    penfra[1, j] = 0.0
+    penfra[2, j] = 0.0
+    penfra[3, j] = 0.0
+  fdo j, 1, 30:
+    eion[j] = 0.0
+    eb[j] = 0.0
+    nc0[j] = 0
+    ec0[j] = 0.0
+    wk[j] = 0.0
+    efl[j] = 0.0
+    ng1[j] = 0
+    eg1[j] = 0.0
+    ng2[j] = 0
+    eg2[j] = 0.0
+  fdo j, 1, 6:
+    ev[j] = 0.0
+    kel[j] = 0
+  fdo j, 1, 10:
+    scln[j] = 0.0
   block L80:
     block L79:
       block L78:
