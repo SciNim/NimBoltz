@@ -8,10 +8,12 @@ const
   fmt201 = "(/,\'   VELZ    VELY  ENERGY   ID  DIFXX   DIFYY   DIFZZ   DIFYZ  DIFLNG  DIFTRN\',/)"
   fmt202 = "(2(F7.2,1X),F7.4,1X,I4,6(F7.1,1X))"
 
-var xst: array[1..1000000, float64]
-var yst: array[1..1000000, float64]
-var zst: array[1..1000000, float64]
-var sto: array[1..1000000, float64]
+# NIMBOLTZ FIX MB-37: WAS 1000000; SETUP SETS NCOLM UP TO 2000000 (ALL
+# OTHER MONTE* USE 2000000)
+var xst: array[1..2000000, float64]
+var yst: array[1..2000000, float64]
+var zst: array[1..2000000, float64]
+var sto: array[1..2000000, float64]
 var temp: Arr2[float64, 6, 4000]
 
 proc montebt*() =
