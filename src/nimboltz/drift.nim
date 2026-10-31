@@ -228,7 +228,7 @@ proc runSegment*[G: static FieldGeometry; T](d: var Drift[G, T],
     template tab: untyped = tableOf(tabs, h)
     let r2 = drand48(rng)
     let i = findProcess(tab, h.ie, r2)
-    let ei = energyLoss(tab, i, h.e, rng, h.fl.e)
+    let ei = energyLoss(tab, i, h.e, rng, moderation = true)
     if tab.ipn[i] > 0:
       # Auger electrons or fluorescence: extra ionisations
       d.extraIons = d.extraIons + tab.augerCount[i]

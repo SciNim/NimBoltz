@@ -50,33 +50,23 @@ const vibrationMark = 0.024999000132083893
   ## EIN of a process whose energy loss is "all but 0.025 eV" (0.024999 as
   ## REAL*4 widened, as Magboltz compares it)
 
-proc shareWithSecondary[N](tab: CollisionTable[N], i: int, e, ei: float64,
-                           rng: var MagRng): float64 =
-  ## Ionisation shares the energy above threshold with the secondary
-  ## electron (a uniform fraction); the loss never exceeds e.
-  result = ei
+proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng,
+                    moderation: static bool = false): float64 =
+  ## Energy lost in process i at energy e. Ionisation shares the energy above
+  ## threshold with the secondary electron (a uniform fraction). With
+  ## `moderation` (MONTE*, not ELIMIT*), a process marked by an energy loss
+  ## of 0.024999 eV takes all but 0.024999 eV of the energy (MB-38: e is the
+  ## energy in the frame of the target, also with thermal motion).
+  result = tab.ein[i]
+  when moderation:
+    if abs(result - vibrationMark) <= 0.0001:
+      result = e - vibrationMark
   if tab.ipn[i] > 0:
     let r9 = drand48(rng)
     let extra = r9 * (e - result)
     result = extra + result
   if e < result:
     result = e - 0.0001
-
-proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng): float64 =
-  ## Energy lost in process i at energy e (ELIMIT*).
-  shareWithSecondary(tab, i, e, tab.ein[i], rng)
-
-proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng,
-                    eFlight: float64): float64 =
-  ## Energy lost in process i at energy e (MONTE*): as above, but a process
-  ## marked by an energy loss of 0.024999 eV takes all but 0.024999 eV of
-  ## `eFlight`, the energy at the end of the free flight in the lab frame.
-  ## (With thermal motion e is the energy in the rest frame of the
-  ## molecule; Magboltz still uses the lab energy here.)
-  var ei = tab.ein[i]
-  if abs(ei - vibrationMark) <= 0.0001:
-    ei = eFlight - vibrationMark
-  shareWithSecondary(tab, i, e, ei, rng)
 
 proc scatter*[N](tab: CollisionTable[N], i, ie: int, e, ei: float64, din: Vec3,
                  rng: var MagRng, r31First: static bool = false): Scattered =

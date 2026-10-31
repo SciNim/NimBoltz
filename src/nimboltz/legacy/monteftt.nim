@@ -259,7 +259,9 @@ proc monteftt*() =
                           # NEW CATCH FOR COLLISIONS WITH LARGE VIBRATIONAL ENERGY LOSS:
                           # ENERGY LOSS = INCIDENT ENERGY - 0.024999
                           if abs(ei - 0.024999000132083893) <= 0.0001:
-                            ei = ev - 0.024999000132083893
+                            # NIMBOLTZ FIX MB-38: WAS EV (LAB FRAME); THE INCIDENT ENERGY OF THE
+                            # COLLISION IS EOK (REST FRAME OF THE GAS MOLECULE)
+                            ei = eok - 0.024999000132083893
                           if not (gasTable[kgas].ipn[i] == 0):
                             # ATTACHMENT
                             if gasTable[kgas].ipn[i] == (-1):
