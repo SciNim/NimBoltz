@@ -263,9 +263,10 @@ proc mixert*() =
   # L=4      INELASTIC NTH GAS
   # L=5      SUPERELASTIC NTH GAS
   fdo ie, 1, n4000:
+    # NIMBOLTZ FIX MB-36: fcion/fcatt were zeroed and scaled inside the kgas loop
+    fred.fcion[ie] = 0.0
+    fred.fcatt[ie] = 0.0
     fdo kgas, 1, inpt.ngas:
-      fred.fcion[ie] = 0.0
-      fred.fcatt[ie] = 0.0
       # ELASTIC
       np = 1
       if kgas == 1:
@@ -454,13 +455,14 @@ proc mixert*() =
               gasTable[kgas].psct[ie, np] = 0.5
               gasTable[kgas].angct[ie, np] = 1.0
               gasTable[kgas].index[np] = 0
-              if kel1[3] == 1:
+              # NIMBOLTZ FIX MB-32: was kel1[3]
+              if kel2[3] == 1:
                 psct1 = peqion2[kion, ie]
                 angcut(psct1, angc, psct2)
                 gasTable[kgas].angct[ie, np] = angc
                 gasTable[kgas].psct[ie, np] = psct2
                 gasTable[kgas].index[np] = 1
-              if kel1[3] == 2:
+              if kel2[3] == 2:
                 gasTable[kgas].psct[ie, np] = peqion2[kion, ie]
                 gasTable[kgas].index[np] = 2
         elif kgas == 3:
@@ -491,13 +493,14 @@ proc mixert*() =
               gasTable[kgas].psct[ie, np] = 0.5
               gasTable[kgas].angct[ie, np] = 1.0
               gasTable[kgas].index[np] = 0
-              if kel1[3] == 1:
+              # NIMBOLTZ FIX MB-32: was kel1[3]
+              if kel3[3] == 1:
                 psct1 = peqion3[kion, ie]
                 angcut(psct1, angc, psct2)
                 gasTable[kgas].angct[ie, np] = angc
                 gasTable[kgas].psct[ie, np] = psct2
                 gasTable[kgas].index[np] = 1
-              if kel1[3] == 2:
+              if kel3[3] == 2:
                 gasTable[kgas].psct[ie, np] = peqion3[kion, ie]
                 gasTable[kgas].index[np] = 2
         elif kgas == 4:
@@ -528,13 +531,14 @@ proc mixert*() =
               gasTable[kgas].psct[ie, np] = 0.5
               gasTable[kgas].angct[ie, np] = 1.0
               gasTable[kgas].index[np] = 0
-              if kel1[3] == 1:
+              # NIMBOLTZ FIX MB-32: was kel1[3]
+              if kel4[3] == 1:
                 psct1 = peqion4[kion, ie]
                 angcut(psct1, angc, psct2)
                 gasTable[kgas].angct[ie, np] = angc
                 gasTable[kgas].psct[ie, np] = psct2
                 gasTable[kgas].index[np] = 1
-              if kel1[3] == 2:
+              if kel4[3] == 2:
                 gasTable[kgas].psct[ie, np] = peqion4[kion, ie]
                 gasTable[kgas].index[np] = 2
         elif kgas == 5:
@@ -565,13 +569,14 @@ proc mixert*() =
               gasTable[kgas].psct[ie, np] = 0.5
               gasTable[kgas].angct[ie, np] = 1.0
               gasTable[kgas].index[np] = 0
-              if kel1[3] == 1:
+              # NIMBOLTZ FIX MB-32: was kel1[3]
+              if kel5[3] == 1:
                 psct1 = peqion5[kion, ie]
                 angcut(psct1, angc, psct2)
                 gasTable[kgas].angct[ie, np] = angc
                 gasTable[kgas].psct[ie, np] = psct2
                 gasTable[kgas].index[np] = 1
-              if kel1[3] == 2:
+              if kel5[3] == 2:
                 gasTable[kgas].psct[ie, np] = peqion5[kion, ie]
                 gasTable[kgas].index[np] = 2
         else:
@@ -599,13 +604,14 @@ proc mixert*() =
             gasTable[kgas].psct[ie, np] = 0.5
             gasTable[kgas].angct[ie, np] = 1.0
             gasTable[kgas].index[np] = 0
-            if kel1[3] == 1:
+            # NIMBOLTZ FIX MB-32: was kel1[3]
+            if kel6[3] == 1:
               psct1 = peqion6[kion, ie]
               angcut(psct1, angc, psct2)
               gasTable[kgas].angct[ie, np] = angc
               gasTable[kgas].psct[ie, np] = psct2
               gasTable[kgas].index[np] = 1
-            if kel1[3] == 2:
+            if kel6[3] == 2:
               gasTable[kgas].psct[ie, np] = peqion6[kion, ie]
               gasTable[kgas].index[np] = 2
         if ie > 1: break L50
@@ -966,7 +972,8 @@ proc mixert*() =
             gasTable[kgas].index[np] = 0
             gasTable[kgas].ipn[np] = (-1)
             l = 3
-            gasTable[kgas].iarry[np] = 0
+            # NIMBOLTZ FIX MB-33: was 0 (out-of-bounds ICOLL count)
+            gasTable[kgas].iarry[np] = l
             gasTable[kgas].penfra[1, np] = 0.0
             gasTable[kgas].penfra[2, np] = 0.0
             gasTable[kgas].penfra[3, np] = 0.0
@@ -1130,7 +1137,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp1[4 + nion1 + natt1 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra1[1, j]
-              gasTable[kgas].penfra[2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra1[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra1[3, j]
         elif kgas == 2:
           if mix3.nin2 == 0: break L70
@@ -1158,7 +1166,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp2[4 + nion2 + natt2 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra2[1, j]
-              gasTable[kgas].penfra[2, np] = penfra2[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra2[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra2[3, j]
         elif kgas == 3:
           if mix3.nin3 == 0: break L70
@@ -1186,7 +1195,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp3[4 + nion3 + natt3 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra3[1, j]
-              gasTable[kgas].penfra[2, np] = penfra3[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra3[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra3[3, j]
         elif kgas == 4:
           if mix3.nin4 == 0: break L70
@@ -1214,7 +1224,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp4[4 + nion4 + natt4 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra4[1, j]
-              gasTable[kgas].penfra[2, np] = penfra4[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra4[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra4[3, j]
         elif kgas == 5:
           if mix3.nin5 == 0: break L70
@@ -1242,7 +1253,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp5[4 + nion5 + natt5 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra5[1, j]
-              gasTable[kgas].penfra[2, np] = penfra5[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra5[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra5[3, j]
         else:
           if mix3.nin6 == 0: break L70
@@ -1270,7 +1282,8 @@ proc mixert*() =
               gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp6[4 + nion6 + natt6 + j], 50)
               gasTable[kgas].penfra[1, np] = penfra6[1, j]
-              gasTable[kgas].penfra[2, np] = penfra6[2, j] * 1e-16 / sqrt(3.0)
+              # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+              gasTable[kgas].penfra[2, np] = penfra6[2, j] * 0.000001 / sqrt(3.0)
               gasTable[kgas].penfra[3, np] = penfra6[3, j]
       gasTable[kgas].last = np
       gasTable[kgas].isize = 1
@@ -1296,9 +1309,9 @@ proc mixert*() =
           gasTable[kgas].cf[ie, `if`] = 0.0
       fdo `if`, 2, gasTable[kgas].last:
         gasTable[kgas].cf[ie, `if`] = gasTable[kgas].cf[ie, `if`] + gasTable[kgas].cf[ie, `if` - 1]
-      fred.fcatt[ie] = fred.fcatt[ie] * mix2.eroot[ie]
-      fred.fcion[ie] = fred.fcion[ie] * mix2.eroot[ie]
       gasTable[kgas].tcf[ie] = gasTable[kgas].tcf[ie] * mix2.eroot[ie]
+    fred.fcatt[ie] = fred.fcatt[ie] * mix2.eroot[ie]
+    fred.fcion[ie] = fred.fcion[ie] * mix2.eroot[ie]
   # WRITE(6,841) (INDEX(KGAS,J),J,KGAS, J=1,IPLAST(KGAS))
   # 841 FORMAT(2X,' INDEX=',I3,' J=',I3,' KGAS=',I2)
   # SET ANISOTROPIC FLAG IF ANISOTROPIC SCATTERING DATA IS DETECTED

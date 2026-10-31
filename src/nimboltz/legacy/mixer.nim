@@ -427,7 +427,8 @@ proc mixer*() =
           mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp1[4 + nion1 + natt1 + j], 50)
           mixTable.penfra[1, np] = penfra1[1, j]
-          mixTable.penfra[2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
+          # NIMBOLTZ FIX MB-34: was 1e-16 (microns to metres)
+          mixTable.penfra[2, np] = penfra1[2, j] * 0.000001 / sqrt(3.0)
           mixTable.penfra[3, np] = penfra1[3, j]
     block L600:
       if inpt.ngas == 1: break L600
@@ -522,7 +523,8 @@ proc mixer*() =
             ionfl1.ng2[np] = ng22[kion]
             ionfl1.eg2[np] = eg22[kion]
             ionfl1.wklm[np] = wk2[kion]
-            ionfl1.efl[np] = efl1[kion]
+            # NIMBOLTZ FIX MB-30: was efl1[kion]
+            ionfl1.efl[np] = efl2[kion]
             mixTable.ipn[np] = 1
             l = 7
             mixTable.iarry[np] = l
@@ -580,9 +582,10 @@ proc mixer*() =
             mixTable.angct[ie, np] = angc
             mixTable.psct[ie, np] = psct2
             mixTable.index[np] = 1
-            if kin2[j] == 2:
-              mixTable.psct[ie, np] = peqin2[j, ie]
-              mixTable.index[np] = 2
+          # NIMBOLTZ FIX MB-31: kin2 == 2 was nested inside kin2 == 1
+          if kin2[j] == 2:
+            mixTable.psct[ie, np] = peqin2[j, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
             mixTable.rgas[np] = rgas2
             mixTable.ein[np] = ei2[j] / rgas2
@@ -1370,8 +1373,9 @@ proc mixer*() =
     qatt[6, i] = q6[4, i] * ratio.an6
     if natt6 > 1:
       qatt[6, i] = 0.0
-      fdo katt, 1, natt5:
-        qatt[5, i] = qatt[5, i] + qatt5[katt, i] * ratio.an6
+      # NIMBOLTZ FIX MB-35: was natt5, qatt[5], qatt5
+      fdo katt, 1, natt6:
+        qatt[6, i] = qatt[6, i] + qatt6[katt, i] * ratio.an6
     mix2.qt2[i] = 0.0
     mix1.qsatt[i] = 0.0
     mix1.qsum[i] = 0.0
