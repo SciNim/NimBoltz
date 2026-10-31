@@ -21,7 +21,7 @@ proc friedlandt*() =
   fdo i, 1, 4000:
     tcfsum = 0.0
     fdo kgas, 1, inpt.ngas:
-      tcfsum = tcfsum + larget.tcf[kgas, i]
+      tcfsum = tcfsum + gasTable[kgas].tcf[i]
     fr[i] = outptt.spec[i] / tcfsum
     ebar = ebar + mix2.eg[i] * outptt.spec[i] / tcfsum
     alfbar = alfbar + fred.fcion[i] * outptt.spec[i] / tcfsum

@@ -232,7 +232,7 @@ proc monteftgt*() =
                           ie = int(dmin0(ie, n4000))
                           # TEST FOR REAL OR NULL COLLISION
                           r4 = drand48(rng)
-                          ttem = larget.tcf[kgas, ie] / larget.tcfmax[kgas]
+                          ttem = gasTable[kgas].tcf[ie] / larget.tcfmax[kgas]
                           if not (r4 <= ttem):
                             outptt.nnull = outptt.nnull + 1
                             break R1
@@ -263,9 +263,9 @@ proc monteftgt*() =
                           sortt(kgas, i, r2, ie)
                           while true:
                             i = i + 1
-                            if not (larget.cf[kgas, ie, i] < r2): break
-                          s1 = larget.rgas[kgas, i]
-                          ei = larget.ein[kgas, i]
+                            if not (gasTable[kgas].cf[ie, i] < r2): break
+                          s1 = gasTable[kgas].rgas[i]
+                          ei = gasTable[kgas].ein[i]
                           if eok < ei:
                             # FIX ENERGY LOSS SMALLER THAN INCIDENT ENERGY IF A BINING ERROR OCCURS.
                             ei = eok - 0.0001
@@ -273,11 +273,11 @@ proc monteftgt*() =
                           # ENERGY LOSS = INCIDENT ENERGY - 0.024999
                           if abs(ei - 0.024999000132083893) <= 0.0001:
                             ei = ev - 0.024999000132083893
-                          if not (larget.ipn[kgas, i] == 0):
+                          if not (gasTable[kgas].ipn[i] == 0):
                             # ATTACHMENT
-                            if larget.ipn[kgas, i] == (-1):
+                            if gasTable[kgas].ipn[i] == (-1):
                               neion = neion + 1
-                              ipt = larget.iarry[kgas, i]
+                              ipt = gasTable[kgas].iarry[i]
                               id = id + 1
                               iter = iter + 1
                               iprint = iprint + 1
@@ -300,8 +300,8 @@ proc monteftgt*() =
                             r9 = drand48(rng)
                             # ESEC=R9*(EOK-EI)
                             # USE OPAL PETERSON AND BEATY SPLITTING FACTOR.
-                            esec = larget.wpl[kgas, i] * tan(r9 * arctan((eok - ei) / (2.0 * larget.wpl[kgas, i])))
-                            esec = larget.wpl[kgas, i] * pow(esec / larget.wpl[kgas, i], 0.9524000287055969)
+                            esec = gasTable[kgas].wpl[i] * tan(r9 * arctan((eok - ei) / (2.0 * gasTable[kgas].wpl[i])))
+                            esec = gasTable[kgas].wpl[i] * pow(esec / gasTable[kgas].wpl[i], 0.9524000287055969)
                             ei = esec + ei
                             # STORE POSITION ,ENERGY, DIRECTION COSINES AND TIME OF GENERATION
                             # OF IONISATION ELECTRON
@@ -360,7 +360,7 @@ proc monteftgt*() =
                                 ispt.dcz[npont] = f6
                           # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
                           # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-                          ipt = larget.iarry[kgas, i]
+                          ipt = gasTable[kgas].iarry[i]
                           id = id + 1
                           iter = iter + 1
                           iprint = iprint + 1
@@ -372,9 +372,9 @@ proc monteftgt*() =
                             if inpt.ipen == 0: break L5
                             # NIMBOLTZ FIX MB-28: WAS .EQ.0.0 (INVERTED; ALL OTHER MONTE ROUTINES
                             # USE .NE.)
-                            if larget.penfra[kgas, 1, i] != 0.0:
+                            if gasTable[kgas].penfra[1, i] != 0.0:
                               ran = drand48(rng)
-                              if ran > larget.penfra[kgas, 1, i]: break L5
+                              if ran > gasTable[kgas].penfra[1, i]: break L5
                               nclus = nclus + 1
                               npont = npont + 1
                               if npont > 8000:
@@ -382,7 +382,7 @@ proc monteftgt*() =
                                 fstop()
                               block L667:
                                 # ENTER HERE POSSIBLE DELOCALISATION LENGTH FOR PENNING TRANSFER
-                                if larget.penfra[kgas, 2, i] == 0.0:
+                                if gasTable[kgas].penfra[2, i] == 0.0:
                                   ispt.xs[npont] = outptt.x
                                   ispt.ys[npont] = outptt.y
                                   ispt.zs[npont] = outptt.z
@@ -391,20 +391,20 @@ proc monteftgt*() =
                                 ran = drand48(rng)
                                 ran1 = drand48(rng)
                                 if ran1 < 0.5: asign = -asign
-                                ispt.xs[npont] = outptt.x - ln(ran) * larget.penfra[kgas, 2, i] * asign
+                                ispt.xs[npont] = outptt.x - ln(ran) * gasTable[kgas].penfra[2, i] * asign
                                 ran = drand48(rng)
                                 ran1 = drand48(rng)
                                 if ran1 < 0.5: asign = -asign
-                                ispt.ys[npont] = outptt.y - ln(ran) * larget.penfra[kgas, 2, i] * asign
+                                ispt.ys[npont] = outptt.y - ln(ran) * gasTable[kgas].penfra[2, i] * asign
                                 ran = drand48(rng)
                                 ran1 = drand48(rng)
                                 if ran1 < 0.5: asign = -asign
-                                ispt.zs[npont] = outptt.z - ln(ran) * larget.penfra[kgas, 2, i] * asign
+                                ispt.zs[npont] = outptt.z - ln(ran) * gasTable[kgas].penfra[2, i] * asign
                               # POSSIBLE PENNING TRANSFER TIME
                               tpen = outptt.st
-                              if not (larget.penfra[kgas, 3, i] == 0.0):
+                              if not (gasTable[kgas].penfra[3, i] == 0.0):
                                 ran = drand48(rng)
-                                tpen = outptt.st - ln(ran) * larget.penfra[kgas, 3, i]
+                                tpen = outptt.st - ln(ran) * gasTable[kgas].penfra[3, i]
                               ispt.ts[npont] = tpen
                               ispt.es[npont] = 1.0
                               ispt.dcx[npont] = dcx1
@@ -426,12 +426,12 @@ proc monteftgt*() =
                           s2 = s1 * s1 / (s1 - 1.0)
                           # ANISOTROPIC SCATTERING
                           r3 = drand48(rng)
-                          if anist.index[kgas, i] == 1:
+                          if gasTable[kgas].index[i] == 1:
                             r31 = drand48(rng)
-                            f3 = 1.0 - r3 * anist.angct[kgas, ie, i]
-                            if r31 > anist.psct[kgas, ie, i]: f3 = -f3
-                          elif anist.index[kgas, i] == 2:
-                            epsi = anist.psct[kgas, ie, i]
+                            f3 = 1.0 - r3 * gasTable[kgas].angct[ie, i]
+                            if r31 > gasTable[kgas].psct[ie, i]: f3 = -f3
+                          elif gasTable[kgas].index[i] == 2:
+                            epsi = gasTable[kgas].psct[ie, i]
                             f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
                           else:
                             # ISOTROPIC SCATTERING

@@ -142,7 +142,7 @@ proc montec*() =
             # /,' SINWT=',D12.3,' WBT=',D12.3,' CY1=',D12.3)
             ie = int(trunc(ev / inpt.estep) + 1.0)
             ie = int(dmin0(ie, n4000))
-            if large.tcf[ie] > tlim:
+            if mixTable.tcf[ie] > tlim:
               tdash = tdash + ln(r1) / tlim
               large.tcfmax[i] = 1.05 * large.tcfmax[i]
               # WRITE(6,996)
@@ -150,7 +150,7 @@ proc montec*() =
               break R1
             # TEST FOR REAL OR NULL COLLISION
             r5 = drand48(rng)
-            tlim = large.tcf[ie] / tlim
+            tlim = mixTable.tcf[ie] / tlim
             if not (r5 <= tlim):
               outpt.nnull = outpt.nnull + 1
               break R1
@@ -210,14 +210,14 @@ proc montec*() =
       sort(i, r2, ie)
       while true:
         i = i + 1
-        if not (large.cf[ie, i] < r2): break
-      s1 = large.rgas[i]
-      ei = large.ein[i]
+        if not (mixTable.cf[ie, i] < r2): break
+      s1 = mixTable.rgas[i]
+      ei = mixTable.ein[i]
       # NEW CATCH FOR COLLISIONS WITH LARGE VIBRATIONAL ENERGY LOSS:
       # ENERGY LOSS = INCIDENT ENERGY -0.024999
       if abs(ei - 0.024999000132083893) <= 0.0001:
         ei = ev - 0.024999000132083893
-      if not (large.ipn[i] <= 0):
+      if not (mixTable.ipn[i] <= 0):
         # USE FLAT DISTRIBUTION OF  ELECTRON ENERGY BETWEEN E-EION AND 0.0 EV
         # SAME AS IN BOLTZMANN
         r9 = drand48(rng)
@@ -227,7 +227,7 @@ proc montec*() =
         iextra = iextra + ionfl1.nc0[i]
       # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
       # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-      ipt = large.iarry[i]
+      ipt = mixTable.iarry[i]
       outpt.icoll[ipt] = outpt.icoll[ipt] + 1
       outpt.icoln[i] = outpt.icoln[i] + 1
       if ev < ei:
@@ -240,20 +240,20 @@ proc montec*() =
         # IF EXCITATION THEN ADD PROBABILITY, PENFRA(1,I), OF TRANSFER TO GIVE
         # IONISATION OF THE OTHER GASES IN THE MIXTURE
         if inpt.ipen == 0: break L5
-        if large.penfra[1, i] != 0.0:
+        if mixTable.penfra[1, i] != 0.0:
           ran = drand48(rng)
-          if ran > large.penfra[1, i]: break L5
+          if ran > mixTable.penfra[1, i]: break L5
           # ADD EXTRA IONISATION COLLISION
           iextra = iextra + 1
       s2 = s1 * s1 / (s1 - 1.0)
       # ANISOTROPIC SCATTERING
       r3 = drand48(rng)
-      if anis.index[i] == 1:
+      if mixTable.index[i] == 1:
         r31 = drand48(rng)
-        f3 = 1.0 - r3 * anis.angct[ie, i]
-        if r31 > anis.psct[ie, i]: f3 = -f3
-      elif anis.index[i] == 2:
-        epsi = anis.psct[ie, i]
+        f3 = 1.0 - r3 * mixTable.angct[ie, i]
+        if r31 > mixTable.psct[ie, i]: f3 = -f3
+      elif mixTable.index[i] == 2:
+        epsi = mixTable.psct[ie, i]
         f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
       else:
         # ISOTROPIC SCATTERING
@@ -308,7 +308,7 @@ proc montec*() =
     xr = outpt.z * rsn + outpt.x * rcs
     ebar = 0.0
     fdo ik, 1, 4000:
-      ebar = ebar + mix2.eg[ik] * outpt.spec[ik] / large.tcf[ik]
+      ebar = ebar + mix2.eg[ik] * outpt.spec[ik] / mixTable.tcf[ik]
     outpt.ave = ebar / outpt.st
     wzst[j1] = (zr - zrold) / (outpt.st - stold) * 1000000000.0
     wyst[j1] = (yr - yrold) / (outpt.st - stold) * 1000000000.0

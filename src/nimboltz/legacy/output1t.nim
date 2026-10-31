@@ -33,7 +33,7 @@ proc output1t*() =
   fwrite(fmt1060)
   fdo j, 1, inpt.ngas:
     fwrite(fmt1065, names.nameg[j])
-    fdo k, 1, larget.last[j]:
+    fdo k, 1, gasTable[j].last:
       frelv = freq1 * float64(outptt.icoln[j, k]) / float64(nreal)
       if outptt.icoln[j, k] == 0:
         errfre = 0.0

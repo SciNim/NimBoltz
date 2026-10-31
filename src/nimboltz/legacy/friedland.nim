@@ -23,10 +23,10 @@ proc friedland*() =
     # WRITE(6,888) I,TCF(I),TTOTS
     # 888 FORMAT('IN FRIEDLAND I=',I4,' TCF(I)=',D12.4,' TTOTS=',D12.4)
     # ENDIF
-    fr[i] = outpt.spec[i] / large.tcf[i]
-    ebar = ebar + mix2.eg[i] * outpt.spec[i] / large.tcf[i]
-    alfbar = alfbar + fred.fcion[i] * outpt.spec[i] / large.tcf[i]
-    attbar = attbar + fred.fcatt[i] * outpt.spec[i] / large.tcf[i]
+    fr[i] = outpt.spec[i] / mixTable.tcf[i]
+    ebar = ebar + mix2.eg[i] * outpt.spec[i] / mixTable.tcf[i]
+    alfbar = alfbar + fred.fcion[i] * outpt.spec[i] / mixTable.tcf[i]
+    attbar = attbar + fred.fcatt[i] * outpt.spec[i] / mixTable.tcf[i]
     fsum = fsum + fr[i]
   fdo i, 1, 4000:
     fr[i] = fr[i] / fsum

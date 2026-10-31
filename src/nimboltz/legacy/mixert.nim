@@ -237,7 +237,7 @@ proc mixert*() =
     kin6[i] = 0
   fdo i, 1, 300:
     fdo mgas, 1, 6:
-      anist.index[mgas, i] = 0
+      gasTable[mgas].index[i] = 0
   fdo i, 1, 6:
     larget.tcfmax[i] = 0.0
   # CALL GAS CROSS-SECTIONS
@@ -269,124 +269,124 @@ proc mixert*() =
       # ELASTIC
       np = 1
       if kgas == 1:
-        larget.cf[kgas, ie, np] = q1[2, ie] * mratio.van1
+        gasTable[kgas].cf[ie, np] = q1[2, ie] * mratio.van1
       elif kgas == 2:
-        larget.cf[kgas, ie, np] = q2[2, ie] * mratio.van2
+        gasTable[kgas].cf[ie, np] = q2[2, ie] * mratio.van2
       elif kgas == 3:
-        larget.cf[kgas, ie, np] = q3[2, ie] * mratio.van3
+        gasTable[kgas].cf[ie, np] = q3[2, ie] * mratio.van3
       elif kgas == 4:
-        larget.cf[kgas, ie, np] = q4[2, ie] * mratio.van4
+        gasTable[kgas].cf[ie, np] = q4[2, ie] * mratio.van4
       elif kgas == 5:
-        larget.cf[kgas, ie, np] = q5[2, ie] * mratio.van5
+        gasTable[kgas].cf[ie, np] = q5[2, ie] * mratio.van5
       else:
-        larget.cf[kgas, ie, np] = q6[2, ie] * mratio.van6
-      anist.psct[kgas, ie, np] = 0.5
-      anist.angct[kgas, ie, np] = 1.0
-      anist.index[kgas, np] = 0
+        gasTable[kgas].cf[ie, np] = q6[2, ie] * mratio.van6
+      gasTable[kgas].psct[ie, np] = 0.5
+      gasTable[kgas].angct[ie, np] = 1.0
+      gasTable[kgas].index[np] = 0
       if kgas == 1:
         if kel1[2] == 1:
           psct1 = peqel1[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel1[2] == 2:
-          anist.psct[kgas, ie, np] = peqel1[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel1[2, ie]
+          gasTable[kgas].index[np] = 2
       elif kgas == 2:
         if kel2[2] == 1:
           psct1 = peqel2[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel2[2] == 2:
-          anist.psct[kgas, ie, np] = peqel2[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel2[2, ie]
+          gasTable[kgas].index[np] = 2
       elif kgas == 3:
         if kel3[2] == 1:
           psct1 = peqel3[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel3[2] == 2:
-          anist.psct[kgas, ie, np] = peqel3[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel3[2, ie]
+          gasTable[kgas].index[np] = 2
       elif kgas == 4:
         if kel4[2] == 1:
           psct1 = peqel4[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel4[2] == 2:
-          anist.psct[kgas, ie, np] = peqel4[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel4[2, ie]
+          gasTable[kgas].index[np] = 2
       elif kgas == 5:
         if kel5[2] == 1:
           psct1 = peqel5[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel5[2] == 2:
-          anist.psct[kgas, ie, np] = peqel5[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel5[2, ie]
+          gasTable[kgas].index[np] = 2
       else:
         if kel6[2] == 1:
           psct1 = peqel6[2, ie]
           angcut(psct1, angc, psct2)
-          anist.angct[kgas, ie, np] = angc
-          anist.psct[kgas, ie, np] = psct2
-          anist.index[kgas, np] = 1
+          gasTable[kgas].angct[ie, np] = angc
+          gasTable[kgas].psct[ie, np] = psct2
+          gasTable[kgas].index[np] = 1
         if kel6[2] == 2:
-          anist.psct[kgas, ie, np] = peqel6[2, ie]
-          anist.index[kgas, np] = 2
+          gasTable[kgas].psct[ie, np] = peqel6[2, ie]
+          gasTable[kgas].index[np] = 2
       if not (ie > 1):
         if kgas == 1:
           rgas1 = 1.0 + e1[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e1[2]
-          larget.rgas[kgas, np] = rgas1
+          gasTable[kgas].rgas[np] = rgas1
           script.dscrpt[kgas, np] = fstr(scrp1[2], 50)
           names.nameg[kgas] = fstr(name1, 25)
         elif kgas == 2:
           rgas2 = 1.0 + e2[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e2[2]
-          larget.rgas[kgas, np] = rgas2
+          gasTable[kgas].rgas[np] = rgas2
           script.dscrpt[kgas, np] = fstr(scrp2[2], 50)
           names.nameg[kgas] = fstr(name2, 25)
         elif kgas == 3:
           rgas3 = 1.0 + e3[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e3[2]
-          larget.rgas[kgas, np] = rgas3
+          gasTable[kgas].rgas[np] = rgas3
           script.dscrpt[kgas, np] = fstr(scrp3[2], 50)
           names.nameg[kgas] = fstr(name3, 25)
         elif kgas == 4:
           rgas4 = 1.0 + e4[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e4[2]
-          larget.rgas[kgas, np] = rgas4
+          gasTable[kgas].rgas[np] = rgas4
           script.dscrpt[kgas, np] = fstr(scrp4[2], 50)
           names.nameg[kgas] = fstr(name4, 25)
         elif kgas == 5:
           rgas5 = 1.0 + e5[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e5[2]
-          larget.rgas[kgas, np] = rgas5
+          gasTable[kgas].rgas[np] = rgas5
           script.dscrpt[kgas, np] = fstr(scrp5[2], 50)
           names.nameg[kgas] = fstr(name5, 25)
         else:
           rgas6 = 1.0 + e6[2] / 2.0
           thrm.amgas[kgas] = 2.0 * cnsts.emass / e6[2]
-          larget.rgas[kgas, np] = rgas6
+          gasTable[kgas].rgas[np] = rgas6
           script.dscrpt[kgas, np] = fstr(scrp6[2], 50)
           names.nameg[kgas] = fstr(name6, 25)
         l = 1
-        larget.iarry[kgas, np] = l
-        larget.ein[kgas, np] = 0.0
-        larget.ipn[kgas, np] = 0
-        larget.penfra[kgas, 1, np] = 0.0
-        larget.penfra[kgas, 2, np] = 0.0
-        larget.penfra[kgas, 3, np] = 0.0
+        gasTable[kgas].iarry[np] = l
+        gasTable[kgas].ein[np] = 0.0
+        gasTable[kgas].ipn[np] = 0
+        gasTable[kgas].penfra[1, np] = 0.0
+        gasTable[kgas].penfra[2, np] = 0.0
+        gasTable[kgas].penfra[3, np] = 0.0
       block L50:
         # IONISATION
         if kgas == 1:
@@ -395,227 +395,227 @@ proc mixert*() =
             block L14:
               if nion1 > 1: break L14
               np = np + 1
-              larget.cf[kgas, ie, np] = q1[3, ie] * mratio.van1
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = q1[3, ie] * mratio.van1
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqel1[3, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqel1[3, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqel1[3, ie]
+                gasTable[kgas].index[np] = 2
               break L16
             fdo kion, 1, nion1:
               np = np + 1
-              larget.cf[kgas, ie, np] = qion1[kion, ie] * mratio.van1
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = qion1[kion, ie] * mratio.van1
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqion1[kion, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqion1[kion, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqion1[kion, ie]
+                gasTable[kgas].index[np] = 2
         elif kgas == 2:
           if inpt.efinal < e2[3]: break L50
           block L19:
             block L17:
               if nion2 > 1: break L17
               np = np + 1
-              larget.cf[kgas, ie, np] = q2[3, ie] * mratio.van2
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = q2[3, ie] * mratio.van2
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel2[3] == 1:
                 psct1 = peqel2[3, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel2[3] == 2:
-                anist.psct[kgas, ie, np] = peqel2[3, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqel2[3, ie]
+                gasTable[kgas].index[np] = 2
               break L19
             fdo kion, 1, nion2:
               np = np + 1
-              larget.cf[kgas, ie, np] = qion2[kion, ie] * mratio.van2
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = qion2[kion, ie] * mratio.van2
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqion2[kion, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqion2[kion, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqion2[kion, ie]
+                gasTable[kgas].index[np] = 2
         elif kgas == 3:
           if inpt.efinal < e3[3]: break L50
           block L22:
             block L20:
               if nion3 > 1: break L20
               np = np + 1
-              larget.cf[kgas, ie, np] = q3[3, ie] * mratio.van3
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = q3[3, ie] * mratio.van3
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel3[3] == 1:
                 psct1 = peqel3[3, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel3[3] == 2:
-                anist.psct[kgas, ie, np] = peqel3[3, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqel3[3, ie]
+                gasTable[kgas].index[np] = 2
               break L22
             fdo kion, 1, nion3:
               np = np + 1
-              larget.cf[kgas, ie, np] = qion3[kion, ie] * mratio.van3
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = qion3[kion, ie] * mratio.van3
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqion3[kion, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqion3[kion, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqion3[kion, ie]
+                gasTable[kgas].index[np] = 2
         elif kgas == 4:
           if inpt.efinal < e4[3]: break L50
           block L25:
             block L23:
               if nion4 > 1: break L23
               np = np + 1
-              larget.cf[kgas, ie, np] = q4[3, ie] * mratio.van4
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = q4[3, ie] * mratio.van4
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel4[3] == 1:
                 psct1 = peqel4[3, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel4[3] == 2:
-                anist.psct[kgas, ie, np] = peqel4[3, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqel4[3, ie]
+                gasTable[kgas].index[np] = 2
               break L25
             fdo kion, 1, nion4:
               np = np + 1
-              larget.cf[kgas, ie, np] = qion4[kion, ie] * mratio.van4
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = qion4[kion, ie] * mratio.van4
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqion4[kion, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqion4[kion, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqion4[kion, ie]
+                gasTable[kgas].index[np] = 2
         elif kgas == 5:
           if inpt.efinal < e5[3]: break L50
           block L28:
             block L26:
               if nion5 > 1: break L26
               np = np + 1
-              larget.cf[kgas, ie, np] = q5[3, ie] * mratio.van5
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = q5[3, ie] * mratio.van5
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel5[3] == 1:
                 psct1 = peqel5[3, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel5[3] == 2:
-                anist.psct[kgas, ie, np] = peqel5[3, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqel5[3, ie]
+                gasTable[kgas].index[np] = 2
               break L28
             fdo kion, 1, nion5:
               np = np + 1
-              larget.cf[kgas, ie, np] = qion5[kion, ie] * mratio.van5
-              fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-              anist.psct[kgas, ie, np] = 0.5
-              anist.angct[kgas, ie, np] = 1.0
-              anist.index[kgas, np] = 0
+              gasTable[kgas].cf[ie, np] = qion5[kion, ie] * mratio.van5
+              fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+              gasTable[kgas].psct[ie, np] = 0.5
+              gasTable[kgas].angct[ie, np] = 1.0
+              gasTable[kgas].index[np] = 0
               if kel1[3] == 1:
                 psct1 = peqion5[kion, ie]
                 angcut(psct1, angc, psct2)
-                anist.angct[kgas, ie, np] = angc
-                anist.psct[kgas, ie, np] = psct2
-                anist.index[kgas, np] = 1
+                gasTable[kgas].angct[ie, np] = angc
+                gasTable[kgas].psct[ie, np] = psct2
+                gasTable[kgas].index[np] = 1
               if kel1[3] == 2:
-                anist.psct[kgas, ie, np] = peqion5[kion, ie]
-                anist.index[kgas, np] = 2
+                gasTable[kgas].psct[ie, np] = peqion5[kion, ie]
+                gasTable[kgas].index[np] = 2
         else:
           if inpt.efinal < e6[3]: break L50
           if not (nion6 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q6[3, ie] * mratio.van6
-            fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = q6[3, ie] * mratio.van6
+            fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kel6[3] == 1:
               psct1 = peqel6[3, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kel6[3] == 2:
-              anist.psct[kgas, ie, np] = peqel6[3, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqel6[3, ie]
+              gasTable[kgas].index[np] = 2
           fdo kion, 1, nion6:
             np = np + 1
-            larget.cf[kgas, ie, np] = qion6[kion, ie] * mratio.van6
-            fred.fcion[ie] = fred.fcion[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = qion6[kion, ie] * mratio.van6
+            fred.fcion[ie] = fred.fcion[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kel1[3] == 1:
               psct1 = peqion6[kion, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kel1[3] == 2:
-              anist.psct[kgas, ie, np] = peqion6[kion, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqion6[kion, ie]
+              gasTable[kgas].index[np] = 2
         if ie > 1: break L50
         if kgas == 1:
           block L34:
             block L32:
               if nion1 > 1: break L32
-              larget.rgas[kgas, np] = rgas1
-              larget.ein[kgas, np] = e1[3] / rgas1
-              larget.wpl[kgas, np] = eb1[1]
+              gasTable[kgas].rgas[np] = rgas1
+              gasTable[kgas].ein[np] = e1[3] / rgas1
+              gasTable[kgas].wpl[np] = eb1[1]
               ionfl.nc0[kgas, np] = nc01[1]
               ionfl.ec0[kgas, np] = ec01[1]
               ionfl.ng1[kgas, np] = ng11[1]
@@ -625,19 +625,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk1[1]
               ionfl.efl[kgas, np] = efl1[1]
               script.dscrpt[kgas, np] = fstr(scrp1[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L34
             np = np - nion1
             fdo kion, 1, nion1:
               np = np + 1
-              larget.rgas[kgas, np] = rgas1
-              larget.ein[kgas, np] = eion1[kion] / rgas1
-              larget.wpl[kgas, np] = eb1[kion]
+              gasTable[kgas].rgas[np] = rgas1
+              gasTable[kgas].ein[np] = eion1[kion] / rgas1
+              gasTable[kgas].wpl[np] = eb1[kion]
               ionfl.nc0[kgas, np] = nc01[kion]
               ionfl.ec0[kgas, np] = ec01[kion]
               ionfl.ng1[kgas, np] = ng11[kion]
@@ -647,19 +647,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk1[kion]
               ionfl.efl[kgas, np] = efl1[kion]
               script.dscrpt[kgas, np] = fstr(scrp1[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
         elif kgas == 2:
           block L37:
             block L35:
               if nion2 > 1: break L35
-              larget.rgas[kgas, np] = rgas2
-              larget.ein[kgas, np] = e2[3] / rgas2
-              larget.wpl[kgas, np] = eb2[1]
+              gasTable[kgas].rgas[np] = rgas2
+              gasTable[kgas].ein[np] = e2[3] / rgas2
+              gasTable[kgas].wpl[np] = eb2[1]
               ionfl.nc0[kgas, np] = nc02[1]
               ionfl.ec0[kgas, np] = ec02[1]
               ionfl.ng1[kgas, np] = ng12[1]
@@ -669,19 +669,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk2[1]
               ionfl.efl[kgas, np] = efl2[1]
               script.dscrpt[kgas, np] = fstr(scrp2[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L37
             np = np - nion2
             fdo kion, 1, nion2:
               np = np + 1
-              larget.rgas[kgas, np] = rgas2
-              larget.ein[kgas, np] = eion2[kion] / rgas2
-              larget.wpl[kgas, np] = eb2[kion]
+              gasTable[kgas].rgas[np] = rgas2
+              gasTable[kgas].ein[np] = eion2[kion] / rgas2
+              gasTable[kgas].wpl[np] = eb2[kion]
               ionfl.nc0[kgas, np] = nc02[kion]
               ionfl.ec0[kgas, np] = ec02[kion]
               ionfl.ng1[kgas, np] = ng12[kion]
@@ -691,19 +691,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk2[kion]
               ionfl.efl[kgas, np] = efl2[kion]
               script.dscrpt[kgas, np] = fstr(scrp2[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
         elif kgas == 3:
           block L40:
             block L38:
               if nion3 > 1: break L38
-              larget.rgas[kgas, np] = rgas3
-              larget.ein[kgas, np] = e3[3] / rgas3
-              larget.wpl[kgas, np] = eb3[1]
+              gasTable[kgas].rgas[np] = rgas3
+              gasTable[kgas].ein[np] = e3[3] / rgas3
+              gasTable[kgas].wpl[np] = eb3[1]
               ionfl.nc0[kgas, np] = nc03[1]
               ionfl.ec0[kgas, np] = ec03[1]
               ionfl.ng1[kgas, np] = ng13[1]
@@ -713,19 +713,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk3[1]
               ionfl.efl[kgas, np] = efl3[1]
               script.dscrpt[kgas, np] = fstr(scrp3[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L40
             np = np - nion3
             fdo kion, 1, nion3:
               np = np + 1
-              larget.rgas[kgas, np] = rgas3
-              larget.ein[kgas, np] = eion3[kion] / rgas3
-              larget.wpl[kgas, np] = eb3[kion]
+              gasTable[kgas].rgas[np] = rgas3
+              gasTable[kgas].ein[np] = eion3[kion] / rgas3
+              gasTable[kgas].wpl[np] = eb3[kion]
               ionfl.nc0[kgas, np] = nc03[kion]
               ionfl.ec0[kgas, np] = ec03[kion]
               ionfl.ng1[kgas, np] = ng13[kion]
@@ -735,19 +735,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk3[kion]
               ionfl.efl[kgas, np] = efl3[kion]
               script.dscrpt[kgas, np] = fstr(scrp3[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
         elif kgas == 4:
           block L43:
             block L41:
               if nion4 > 1: break L41
-              larget.rgas[kgas, np] = rgas4
-              larget.ein[kgas, np] = e4[3] / rgas4
-              larget.wpl[kgas, np] = eb4[1]
+              gasTable[kgas].rgas[np] = rgas4
+              gasTable[kgas].ein[np] = e4[3] / rgas4
+              gasTable[kgas].wpl[np] = eb4[1]
               ionfl.nc0[kgas, np] = nc04[1]
               ionfl.ec0[kgas, np] = ec04[1]
               ionfl.ng1[kgas, np] = ng14[1]
@@ -757,19 +757,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk4[1]
               ionfl.efl[kgas, np] = efl4[1]
               script.dscrpt[kgas, np] = fstr(scrp4[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L43
             np = np - nion4
             fdo kion, 1, nion4:
               np = np + 1
-              larget.rgas[kgas, np] = rgas4
-              larget.ein[kgas, np] = eion4[kion] / rgas4
-              larget.wpl[kgas, np] = eb4[kion]
+              gasTable[kgas].rgas[np] = rgas4
+              gasTable[kgas].ein[np] = eion4[kion] / rgas4
+              gasTable[kgas].wpl[np] = eb4[kion]
               ionfl.nc0[kgas, np] = nc04[kion]
               ionfl.ec0[kgas, np] = ec04[kion]
               ionfl.ng1[kgas, np] = ng14[kion]
@@ -779,19 +779,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk4[kion]
               ionfl.efl[kgas, np] = efl4[kion]
               script.dscrpt[kgas, np] = fstr(scrp4[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
         elif kgas == 5:
           block L46:
             block L44:
               if nion5 > 1: break L44
-              larget.rgas[kgas, np] = rgas5
-              larget.ein[kgas, np] = e5[3] / rgas5
-              larget.wpl[kgas, np] = eb5[1]
+              gasTable[kgas].rgas[np] = rgas5
+              gasTable[kgas].ein[np] = e5[3] / rgas5
+              gasTable[kgas].wpl[np] = eb5[1]
               ionfl.nc0[kgas, np] = nc05[1]
               ionfl.ec0[kgas, np] = ec05[1]
               ionfl.ng1[kgas, np] = ng15[1]
@@ -801,19 +801,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk5[1]
               ionfl.efl[kgas, np] = efl5[1]
               script.dscrpt[kgas, np] = fstr(scrp5[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L46
             np = np - nion5
             fdo kion, 1, nion5:
               np = np + 1
-              larget.rgas[kgas, np] = rgas5
-              larget.ein[kgas, np] = eion5[kion] / rgas5
-              larget.wpl[kgas, np] = eb5[kion]
+              gasTable[kgas].rgas[np] = rgas5
+              gasTable[kgas].ein[np] = eion5[kion] / rgas5
+              gasTable[kgas].wpl[np] = eb5[kion]
               ionfl.nc0[kgas, np] = nc05[kion]
               ionfl.ec0[kgas, np] = ec05[kion]
               ionfl.ng1[kgas, np] = ng15[kion]
@@ -823,19 +823,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk5[kion]
               ionfl.efl[kgas, np] = efl5[kion]
               script.dscrpt[kgas, np] = fstr(scrp5[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
         else:
           block L49:
             block L47:
               if nion6 > 1: break L47
-              larget.rgas[kgas, np] = rgas6
-              larget.ein[kgas, np] = e6[3] / rgas6
-              larget.wpl[kgas, np] = eb6[1]
+              gasTable[kgas].rgas[np] = rgas6
+              gasTable[kgas].ein[np] = e6[3] / rgas6
+              gasTable[kgas].wpl[np] = eb6[1]
               ionfl.nc0[kgas, np] = nc06[1]
               ionfl.ec0[kgas, np] = ec06[1]
               ionfl.ng1[kgas, np] = ng16[1]
@@ -845,19 +845,19 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk6[1]
               ionfl.efl[kgas, np] = efl6[1]
               script.dscrpt[kgas, np] = fstr(scrp6[3], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
               break L49
             np = np - nion6
             fdo kion, 1, nion6:
               np = np + 1
-              larget.rgas[kgas, np] = rgas6
-              larget.ein[kgas, np] = eion6[kion] / rgas6
-              larget.wpl[kgas, np] = eb6[kion]
+              gasTable[kgas].rgas[np] = rgas6
+              gasTable[kgas].ein[np] = eion6[kion] / rgas6
+              gasTable[kgas].wpl[np] = eb6[kion]
               ionfl.nc0[kgas, np] = nc06[kion]
               ionfl.ec0[kgas, np] = ec06[kion]
               ionfl.ng1[kgas, np] = ng16[kion]
@@ -867,438 +867,438 @@ proc mixert*() =
               ionfl.wklm[kgas, np] = wk6[kion]
               ionfl.efl[kgas, np] = efl6[kion]
               script.dscrpt[kgas, np] = fstr(scrp6[2 + kion], 50)
-              larget.ipn[kgas, np] = 1
+              gasTable[kgas].ipn[np] = 1
               l = 2
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       # ATTACHMENT
       if kgas == 1:
         block L5521:
           if inpt.efinal < e1[4]: break L5521
           if not (natt1 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q1[4, ie] * mratio.van1
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q1[4, ie] * mratio.van1
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5521
             script.dscrpt[kgas, np] = fstr(scrp1[3 + nion1], 50)
-            larget.rgas[kgas, np] = rgas1
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas1
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = l
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = l
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5521
           fdo jj, 1, natt1:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt1[jj, ie] * mratio.van1
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt1[jj, ie] * mratio.van1
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp1[2 + nion1 + jj], 50)
-              larget.rgas[kgas, np] = rgas1
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas1
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       elif kgas == 2:
         block L5541:
           if inpt.efinal < e2[4]: break L5541
           if not (natt2 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q2[4, ie] * mratio.van2
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q2[4, ie] * mratio.van2
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5541
             script.dscrpt[kgas, np] = fstr(scrp2[3 + nion2], 50)
-            larget.rgas[kgas, np] = rgas2
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas2
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = l
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = l
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5541
           fdo jj, 1, natt2:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt2[jj, ie] * mratio.van2
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt2[jj, ie] * mratio.van2
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp2[2 + nion2 + jj], 50)
-              larget.rgas[kgas, np] = rgas2
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas2
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       elif kgas == 3:
         block L5561:
           if inpt.efinal < e3[4]: break L5561
           if not (natt3 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q3[4, ie] * mratio.van3
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q3[4, ie] * mratio.van3
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5561
             script.dscrpt[kgas, np] = fstr(scrp3[3 + nion3], 50)
-            larget.rgas[kgas, np] = rgas3
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas3
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = 0
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = 0
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5561
           fdo jj, 1, natt3:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt3[jj, ie] * mratio.van3
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt3[jj, ie] * mratio.van3
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp3[2 + nion3 + jj], 50)
-              larget.rgas[kgas, np] = rgas3
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas3
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       elif kgas == 4:
         block L5581:
           if inpt.efinal < e4[4]: break L5581
           if not (natt4 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q4[4, ie] * mratio.van4
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q4[4, ie] * mratio.van4
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5581
             script.dscrpt[kgas, np] = fstr(scrp4[3 + nion4], 50)
-            larget.rgas[kgas, np] = rgas4
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas4
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = l
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = l
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5581
           fdo jj, 1, natt4:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt4[jj, ie] * mratio.van4
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt4[jj, ie] * mratio.van4
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp4[2 + nion4 + jj], 50)
-              larget.rgas[kgas, np] = rgas4
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas4
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       elif kgas == 5:
         block L5601:
           if inpt.efinal < e5[4]: break L5601
           if not (natt5 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q5[4, ie] * mratio.van5
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q5[4, ie] * mratio.van5
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5601
             script.dscrpt[kgas, np] = fstr(scrp5[3 + nion5], 50)
-            larget.rgas[kgas, np] = rgas5
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas5
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = l
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = l
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5601
           fdo jj, 1, natt5:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt5[jj, ie] * mratio.van5
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt5[jj, ie] * mratio.van5
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp5[2 + nion5 + jj], 50)
-              larget.rgas[kgas, np] = rgas5
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas5
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       else:
         block L5621:
           if inpt.efinal < e6[4]: break L5621
           if not (natt6 > 1):
             np = np + 1
-            larget.cf[kgas, ie, np] = q6[4, ie] * mratio.van6
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = q6[4, ie] * mratio.van6
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if ie > 1: break L5621
             script.dscrpt[kgas, np] = fstr(scrp6[3 + nion6], 50)
-            larget.rgas[kgas, np] = rgas6
-            larget.ein[kgas, np] = 0.0
-            anist.index[kgas, np] = 0
-            larget.ipn[kgas, np] = (-1)
+            gasTable[kgas].rgas[np] = rgas6
+            gasTable[kgas].ein[np] = 0.0
+            gasTable[kgas].index[np] = 0
+            gasTable[kgas].ipn[np] = (-1)
             l = 3
-            larget.iarry[kgas, np] = l
-            larget.penfra[kgas, 1, np] = 0.0
-            larget.penfra[kgas, 2, np] = 0.0
-            larget.penfra[kgas, 3, np] = 0.0
+            gasTable[kgas].iarry[np] = l
+            gasTable[kgas].penfra[1, np] = 0.0
+            gasTable[kgas].penfra[2, np] = 0.0
+            gasTable[kgas].penfra[3, np] = 0.0
             break L5621
           fdo jj, 1, natt6:
             np = np + 1
-            larget.cf[kgas, ie, np] = qatt6[jj, ie] * mratio.van6
-            fred.fcatt[ie] = fred.fcatt[ie] + larget.cf[kgas, ie, np]
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
+            gasTable[kgas].cf[ie, np] = qatt6[jj, ie] * mratio.van6
+            fred.fcatt[ie] = fred.fcatt[ie] + gasTable[kgas].cf[ie, np]
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
             if not (ie > 1):
               script.dscrpt[kgas, np] = fstr(scrp6[2 + nion6 + jj], 50)
-              larget.rgas[kgas, np] = rgas6
-              larget.ein[kgas, np] = 0.0
-              anist.index[kgas, np] = 0
-              larget.ipn[kgas, np] = (-1)
+              gasTable[kgas].rgas[np] = rgas6
+              gasTable[kgas].ein[np] = 0.0
+              gasTable[kgas].index[np] = 0
+              gasTable[kgas].ipn[np] = (-1)
               l = 3
-              larget.iarry[kgas, np] = l
-              larget.penfra[kgas, 1, np] = 0.0
-              larget.penfra[kgas, 2, np] = 0.0
-              larget.penfra[kgas, 3, np] = 0.0
+              gasTable[kgas].iarry[np] = l
+              gasTable[kgas].penfra[1, np] = 0.0
+              gasTable[kgas].penfra[2, np] = 0.0
+              gasTable[kgas].penfra[3, np] = 0.0
       block L70:
         # INELASTIC AND SUPERELASTIC
         if kgas == 1:
           if mix3.nin1 == 0: break L70
           fdo j, 1, mix3.nin1:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin1[j, ie] * mratio.van1
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin1[j, ie] * mratio.van1
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin1[j] == 1:
               psct1 = peqin1[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin1[j] == 2:
-              anist.psct[kgas, ie, np] = peqin1[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin1[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas1
-              larget.ein[kgas, np] = ei1[j] / rgas1
+              gasTable[kgas].rgas[np] = rgas1
+              gasTable[kgas].ein[np] = ei1[j] / rgas1
               l = 4
               if ei1[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp1[4 + nion1 + natt1 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra1[1, j]
-              larget.penfra[kgas, 2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra1[3, j]
+              gasTable[kgas].penfra[1, np] = penfra1[1, j]
+              gasTable[kgas].penfra[2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra1[3, j]
         elif kgas == 2:
           if mix3.nin2 == 0: break L70
           fdo j, 1, mix3.nin2:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin2[j, ie] * mratio.van2
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin2[j, ie] * mratio.van2
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin2[j] == 1:
               psct1 = peqin2[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin2[j] == 2:
-              anist.psct[kgas, ie, np] = peqin2[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin2[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas2
-              larget.ein[kgas, np] = ei2[j] / rgas2
+              gasTable[kgas].rgas[np] = rgas2
+              gasTable[kgas].ein[np] = ei2[j] / rgas2
               l = 4
               if ei2[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp2[4 + nion2 + natt2 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra2[1, j]
-              larget.penfra[kgas, 2, np] = penfra2[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra2[3, j]
+              gasTable[kgas].penfra[1, np] = penfra2[1, j]
+              gasTable[kgas].penfra[2, np] = penfra2[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra2[3, j]
         elif kgas == 3:
           if mix3.nin3 == 0: break L70
           fdo j, 1, mix3.nin3:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin3[j, ie] * mratio.van3
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin3[j, ie] * mratio.van3
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin3[j] == 1:
               psct1 = peqin3[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin3[j] == 2:
-              anist.psct[kgas, ie, np] = peqin3[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin3[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas3
-              larget.ein[kgas, np] = ei3[j] / rgas3
+              gasTable[kgas].rgas[np] = rgas3
+              gasTable[kgas].ein[np] = ei3[j] / rgas3
               l = 4
               if ei3[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp3[4 + nion3 + natt3 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra3[1, j]
-              larget.penfra[kgas, 2, np] = penfra3[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra3[3, j]
+              gasTable[kgas].penfra[1, np] = penfra3[1, j]
+              gasTable[kgas].penfra[2, np] = penfra3[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra3[3, j]
         elif kgas == 4:
           if mix3.nin4 == 0: break L70
           fdo j, 1, mix3.nin4:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin4[j, ie] * mratio.van4
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin4[j, ie] * mratio.van4
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin4[j] == 1:
               psct1 = peqin4[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin4[j] == 2:
-              anist.psct[kgas, ie, np] = peqin4[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin4[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas4
-              larget.ein[kgas, np] = ei4[j] / rgas4
+              gasTable[kgas].rgas[np] = rgas4
+              gasTable[kgas].ein[np] = ei4[j] / rgas4
               l = 4
               if ei4[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp4[4 + nion4 + natt4 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra4[1, j]
-              larget.penfra[kgas, 2, np] = penfra4[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra4[3, j]
+              gasTable[kgas].penfra[1, np] = penfra4[1, j]
+              gasTable[kgas].penfra[2, np] = penfra4[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra4[3, j]
         elif kgas == 5:
           if mix3.nin5 == 0: break L70
           fdo j, 1, mix3.nin5:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin5[j, ie] * mratio.van5
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin5[j, ie] * mratio.van5
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin5[j] == 1:
               psct1 = peqin5[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin5[j] == 2:
-              anist.psct[kgas, ie, np] = peqin5[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin5[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas5
-              larget.ein[kgas, np] = ei5[j] / rgas5
+              gasTable[kgas].rgas[np] = rgas5
+              gasTable[kgas].ein[np] = ei5[j] / rgas5
               l = 4
               if ei5[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp5[4 + nion5 + natt5 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra5[1, j]
-              larget.penfra[kgas, 2, np] = penfra5[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra5[3, j]
+              gasTable[kgas].penfra[1, np] = penfra5[1, j]
+              gasTable[kgas].penfra[2, np] = penfra5[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra5[3, j]
         else:
           if mix3.nin6 == 0: break L70
           fdo j, 1, mix3.nin6:
             np = np + 1
-            larget.cf[kgas, ie, np] = mix1.qin6[j, ie] * mratio.van6
-            anist.psct[kgas, ie, np] = 0.5
-            anist.angct[kgas, ie, np] = 1.0
-            anist.index[kgas, np] = 0
+            gasTable[kgas].cf[ie, np] = mix1.qin6[j, ie] * mratio.van6
+            gasTable[kgas].psct[ie, np] = 0.5
+            gasTable[kgas].angct[ie, np] = 1.0
+            gasTable[kgas].index[np] = 0
             if kin6[j] == 1:
               psct1 = peqin6[j, ie]
               angcut(psct1, angc, psct2)
-              anist.angct[kgas, ie, np] = angc
-              anist.psct[kgas, ie, np] = psct2
-              anist.index[kgas, np] = 1
+              gasTable[kgas].angct[ie, np] = angc
+              gasTable[kgas].psct[ie, np] = psct2
+              gasTable[kgas].index[np] = 1
             if kin6[j] == 2:
-              anist.psct[kgas, ie, np] = peqin6[j, ie]
-              anist.index[kgas, np] = 2
+              gasTable[kgas].psct[ie, np] = peqin6[j, ie]
+              gasTable[kgas].index[np] = 2
             if not (ie > 1):
-              larget.rgas[kgas, np] = rgas6
-              larget.ein[kgas, np] = ei6[j] / rgas6
+              gasTable[kgas].rgas[np] = rgas6
+              gasTable[kgas].ein[np] = ei6[j] / rgas6
               l = 4
               if ei6[j] < 0.0: l = 5
-              larget.ipn[kgas, np] = 0
-              larget.iarry[kgas, np] = l
+              gasTable[kgas].ipn[np] = 0
+              gasTable[kgas].iarry[np] = l
               script.dscrpt[kgas, np] = fstr(scrp6[4 + nion6 + natt6 + j], 50)
-              larget.penfra[kgas, 1, np] = penfra6[1, j]
-              larget.penfra[kgas, 2, np] = penfra6[2, j] * 1e-16 / sqrt(3.0)
-              larget.penfra[kgas, 3, np] = penfra6[3, j]
-      larget.last[kgas] = np
-      larget.isize[kgas] = 1
-      if larget.last[kgas] >= 2: larget.isize[kgas] = 2
-      if larget.last[kgas] >= 4: larget.isize[kgas] = 4
-      if larget.last[kgas] >= 8: larget.isize[kgas] = 8
-      if larget.last[kgas] >= 16: larget.isize[kgas] = 16
-      if larget.last[kgas] >= 32: larget.isize[kgas] = 32
-      if larget.last[kgas] >= 64: larget.isize[kgas] = 64
-      if larget.last[kgas] >= 128: larget.isize[kgas] = 128
-      if larget.last[kgas] >= 256: larget.isize[kgas] = 256
+              gasTable[kgas].penfra[1, np] = penfra6[1, j]
+              gasTable[kgas].penfra[2, np] = penfra6[2, j] * 1e-16 / sqrt(3.0)
+              gasTable[kgas].penfra[3, np] = penfra6[3, j]
+      gasTable[kgas].last = np
+      gasTable[kgas].isize = 1
+      if gasTable[kgas].last >= 2: gasTable[kgas].isize = 2
+      if gasTable[kgas].last >= 4: gasTable[kgas].isize = 4
+      if gasTable[kgas].last >= 8: gasTable[kgas].isize = 8
+      if gasTable[kgas].last >= 16: gasTable[kgas].isize = 16
+      if gasTable[kgas].last >= 32: gasTable[kgas].isize = 32
+      if gasTable[kgas].last >= 64: gasTable[kgas].isize = 64
+      if gasTable[kgas].last >= 128: gasTable[kgas].isize = 128
+      if gasTable[kgas].last >= 256: gasTable[kgas].isize = 256
       # CALCULATION OF TOTAL COLLISION FREQUENCY FOR EACH GAS COMPONENT
-      larget.tcf[kgas, ie] = 0.0
-      fdo `if`, 1, larget.last[kgas]:
-        larget.tcf[kgas, ie] = larget.tcf[kgas, ie] + larget.cf[kgas, ie, `if`]
-        if larget.cf[kgas, ie, `if`] < 0.0: fwrite(fmt776, larget.cf[kgas, ie, `if`], kgas, ie, `if`, larget.iarry[kgas, `if`], larget.ein[kgas, `if`])
-      fdo `if`, 1, larget.last[kgas]:
+      gasTable[kgas].tcf[ie] = 0.0
+      fdo `if`, 1, gasTable[kgas].last:
+        gasTable[kgas].tcf[ie] = gasTable[kgas].tcf[ie] + gasTable[kgas].cf[ie, `if`]
+        if gasTable[kgas].cf[ie, `if`] < 0.0: fwrite(fmt776, gasTable[kgas].cf[ie, `if`], kgas, ie, `if`, gasTable[kgas].iarry[`if`], gasTable[kgas].ein[`if`])
+      fdo `if`, 1, gasTable[kgas].last:
         block L620:
           block L615:
-            if larget.tcf[kgas, ie] == 0.0: break L615
-            larget.cf[kgas, ie, `if`] = larget.cf[kgas, ie, `if`] / larget.tcf[kgas, ie]
+            if gasTable[kgas].tcf[ie] == 0.0: break L615
+            gasTable[kgas].cf[ie, `if`] = gasTable[kgas].cf[ie, `if`] / gasTable[kgas].tcf[ie]
             break L620
-          larget.cf[kgas, ie, `if`] = 0.0
-      fdo `if`, 2, larget.last[kgas]:
-        larget.cf[kgas, ie, `if`] = larget.cf[kgas, ie, `if`] + larget.cf[kgas, ie, `if` - 1]
+          gasTable[kgas].cf[ie, `if`] = 0.0
+      fdo `if`, 2, gasTable[kgas].last:
+        gasTable[kgas].cf[ie, `if`] = gasTable[kgas].cf[ie, `if`] + gasTable[kgas].cf[ie, `if` - 1]
       fred.fcatt[ie] = fred.fcatt[ie] * mix2.eroot[ie]
       fred.fcion[ie] = fred.fcion[ie] * mix2.eroot[ie]
-      larget.tcf[kgas, ie] = larget.tcf[kgas, ie] * mix2.eroot[ie]
+      gasTable[kgas].tcf[ie] = gasTable[kgas].tcf[ie] * mix2.eroot[ie]
   # WRITE(6,841) (INDEX(KGAS,J),J,KGAS, J=1,IPLAST(KGAS))
   # 841 FORMAT(2X,' INDEX=',I3,' J=',I3,' KGAS=',I2)
   # SET ANISOTROPIC FLAG IF ANISOTROPIC SCATTERING DATA IS DETECTED
@@ -1314,7 +1314,7 @@ proc mixert*() =
   fdo kgas, 1, inpt.ngas:
     larget.tcfmax[kgas] = 0.0
     fdo ie, 1, 4000:
-      if larget.tcf[kgas, ie] >= larget.tcfmax[kgas]: larget.tcfmax[kgas] = larget.tcf[kgas, ie]
+      if gasTable[kgas].tcf[ie] >= larget.tcfmax[kgas]: larget.tcfmax[kgas] = gasTable[kgas].tcf[ie]
   # CALCULATE EACH GAS CUMULATIVE FRACTIONAL NULL COLLISION FREQUENCIES
   thrm.tcfmx = 0.0
   fdo kgas, 1, inpt.ngas:

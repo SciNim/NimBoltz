@@ -1,6 +1,7 @@
 ## COMMON blocks of magboltz-11.21.f, translated by f2nim; maintained by hand since.
 
-import ../frt
+import ../frt, ../tables
+export tables
 
 const nscale* {.intdefine.} = 40_000_000
   ## NSCALE of SETUP/SETUPT: collisions per unit of NMAX in the input deck.
@@ -108,21 +109,8 @@ type
     const4*: float64
     const5*: float64
   CommonLarget* = object  ## COMMON /LARGET/
-    cf*: Arr3[float64, 6, 4000, 300]
-    ein*: Arr2[float64, 6, 300]
-    tcf*: Arr2[float64, 6, 4000]
-    iarry*: Arr2[int, 6, 300]
-    rgas*: Arr2[float64, 6, 300]
-    ipn*: Arr2[int, 6, 300]
-    wpl*: Arr2[float64, 6, 300]
-    last*: array[1..6, int]
-    isize*: array[1..6, int]
-    penfra*: Arr3[float64, 6, 3, 300]
     tcfmax*: array[1..6, float64]
   CommonAnist* = object  ## COMMON /ANIST/
-    psct*: Arr3[float64, 6, 4000, 300]
-    angct*: Arr3[float64, 6, 4000, 300]
-    index*: Arr2[int, 6, 300]
     niso*: int
   CommonFred* = object  ## COMMON /FRED/
     fcion*: array[1..4000, float64]
@@ -426,21 +414,8 @@ type
   CommonScrip* = object  ## COMMON /SCRIP/
     dscrpt*: array[1..960, string]
   CommonLarge* = object  ## COMMON /LARGE/
-    cf*: Arr2[float64, 4000, 960]
-    ein*: array[1..960, float64]
-    tcf*: array[1..4000, float64]
-    iarry*: array[1..960, int]
-    rgas*: array[1..960, float64]
-    ipn*: array[1..960, int]
-    wpl*: array[1..960, float64]
-    last*: int
-    isize*: int
-    penfra*: Arr2[float64, 3, 960]
     tcfmax*: array[1..8, float64]
   CommonAnis* = object  ## COMMON /ANIS/
-    psct*: Arr2[float64, 4000, 960]
-    angct*: Arr2[float64, 4000, 960]
-    index*: array[1..960, int]
     niso*: int
   CommonIonfl1* = object  ## COMMON /IONFL1/
     nc0*: array[1..960, int]
@@ -481,7 +456,8 @@ var
   mix2*: CommonMix2
   mix3*: CommonMix3
   cnsts1*: CommonCnsts1
-  larget*: CommonLarget
+  larget*: CommonLarget  ## rest in gasTable
+  gasTable*: array[1..maxGases, CollisionTable[maxGasProcesses]]  ## /LARGET/ + /ANIST/
   anist*: CommonAnist
   fred*: CommonFred
   ionfl*: CommonIonfl
@@ -518,7 +494,8 @@ var
   tplouth*: CommonTplouth
   pttofh*: CommonPttofh
   scrip*: CommonScrip
-  large*: CommonLarge
+  large*: CommonLarge  ## rest in mixTable
+  mixTable*: CollisionTable[maxMixProcesses]  ## /LARGE/ + /ANIS/
   anis*: CommonAnis
   ionfl1*: CommonIonfl1
   outpt*: CommonOutpt

@@ -237,7 +237,7 @@ proc mixer*() =
     kin5[i] = 0
     kin6[i] = 0
   fdo i, 1, 960:
-    anis.index[i] = 0
+    mixTable.index[i] = 0
   fdo i, 1, 8:
     large.tcfmax[i] = 0.0
   # CALL GAS CROSS-SECTIONS
@@ -266,54 +266,54 @@ proc mixer*() =
     fred.fcion[ie] = 0.0
     fred.fcatt[ie] = 0.0
     np = 1
-    large.cf[ie, np] = q1[2, ie] * mratio.van1
-    anis.psct[ie, np] = 0.5
-    anis.angct[ie, np] = 1.0
-    anis.index[np] = 0
+    mixTable.cf[ie, np] = q1[2, ie] * mratio.van1
+    mixTable.psct[ie, np] = 0.5
+    mixTable.angct[ie, np] = 1.0
+    mixTable.index[np] = 0
     # ELASTIC ANG
     if kel1[2] == 1:
       psct1 = peqel1[2, ie]
       angcut(psct1, angc, psct2)
-      anis.angct[ie, np] = angc
-      anis.psct[ie, np] = psct2
-      anis.index[np] = 1
+      mixTable.angct[ie, np] = angc
+      mixTable.psct[ie, np] = psct2
+      mixTable.index[np] = 1
     if kel1[2] == 2:
-      anis.psct[ie, np] = peqel1[2, ie]
-      anis.index[np] = 2
+      mixTable.psct[ie, np] = peqel1[2, ie]
+      mixTable.index[np] = 2
     if not (ie > 1):
       rgas1 = 1.0 + e1[2] / 2.0
-      large.rgas[np] = rgas1
-      large.ein[np] = 0.0
-      large.ipn[np] = 0
+      mixTable.rgas[np] = rgas1
+      mixTable.ein[np] = 0.0
+      mixTable.ipn[np] = 0
       l = 1
-      large.iarry[np] = l
+      mixTable.iarry[np] = l
       scrip.dscrpt[np] = fstr(scrp1[2], 50)
       names.nameg[1] = fstr(name1, 25)
-      large.penfra[1, np] = 0.0
-      large.penfra[2, np] = 0.0
-      large.penfra[3, np] = 0.0
+      mixTable.penfra[1, np] = 0.0
+      mixTable.penfra[2, np] = 0.0
+      mixTable.penfra[3, np] = 0.0
     block L30:
       if inpt.efinal < e1[3]: break L30
       if not (nion1 > 1):
         np = np + 1
-        large.cf[ie, np] = q1[3, ie] * mratio.van1
-        fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-        anis.psct[ie, np] = 0.5
-        anis.angct[ie, np] = 1.0
-        anis.index[np] = 0
+        mixTable.cf[ie, np] = q1[3, ie] * mratio.van1
+        fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+        mixTable.psct[ie, np] = 0.5
+        mixTable.angct[ie, np] = 1.0
+        mixTable.index[np] = 0
         if kel1[3] == 1:
           psct1 = peqel1[3, ie]
           angcut(psct1, angc, psct2)
-          anis.angct[ie, np] = angc
-          anis.psct[ie, np] = psct2
-          anis.index[np] = 1
+          mixTable.angct[ie, np] = angc
+          mixTable.psct[ie, np] = psct2
+          mixTable.index[np] = 1
         if kel1[3] == 2:
-          anis.psct[ie, np] = peqel1[3, ie]
-          anis.index[np] = 2
+          mixTable.psct[ie, np] = peqel1[3, ie]
+          mixTable.index[np] = 2
         if ie > 1: break L30
-        large.rgas[np] = rgas1
-        large.ein[np] = e1[3] / rgas1
-        large.wpl[np] = eb1[1]
+        mixTable.rgas[np] = rgas1
+        mixTable.ein[np] = e1[3] / rgas1
+        mixTable.wpl[np] = eb1[1]
         ionfl1.nc0[np] = nc01[1]
         ionfl1.ec0[np] = ec01[1]
         ionfl1.ng1[np] = ng11[1]
@@ -322,34 +322,34 @@ proc mixer*() =
         ionfl1.eg2[np] = eg21[1]
         ionfl1.wklm[np] = wk1[1]
         ionfl1.efl[np] = efl1[1]
-        large.ipn[np] = 1
+        mixTable.ipn[np] = 1
         l = 2
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp1[3], 50)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
         break L30
       fdo kion, 1, nion1:
         np = np + 1
-        large.cf[ie, np] = qion1[kion, ie] * mratio.van1
-        fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-        anis.psct[ie, np] = 0.5
-        anis.angct[ie, np] = 1.0
-        anis.index[np] = 0
+        mixTable.cf[ie, np] = qion1[kion, ie] * mratio.van1
+        fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+        mixTable.psct[ie, np] = 0.5
+        mixTable.angct[ie, np] = 1.0
+        mixTable.index[np] = 0
         if kel1[3] == 1:
           psct1 = peqion1[kion, ie]
           angcut(psct1, angc, psct2)
-          anis.angct[ie, np] = angc
-          anis.psct[ie, np] = psct2
-          anis.index[np] = 1
+          mixTable.angct[ie, np] = angc
+          mixTable.psct[ie, np] = psct2
+          mixTable.index[np] = 1
         if kel1[3] == 2:
-          anis.psct[ie, np] = peqion1[kion, ie]
-          anis.index[np] = 2
+          mixTable.psct[ie, np] = peqion1[kion, ie]
+          mixTable.index[np] = 2
         if not (ie > 1):
-          large.rgas[np] = rgas1
-          large.ein[np] = eion1[kion] / rgas1
-          large.wpl[np] = eb1[kion]
+          mixTable.rgas[np] = rgas1
+          mixTable.ein[np] = eion1[kion] / rgas1
+          mixTable.wpl[np] = eb1[kion]
           ionfl1.nc0[np] = nc01[kion]
           ionfl1.ec0[np] = ec01[kion]
           ionfl1.ng1[np] = ng11[kion]
@@ -358,127 +358,127 @@ proc mixer*() =
           ionfl1.eg2[np] = eg21[kion]
           ionfl1.wklm[np] = wk1[kion]
           ionfl1.efl[np] = efl1[kion]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 2
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp1[2 + kion], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
     block L40:
       if inpt.efinal < e1[4]: break L40
       if not (natt1 > 1):
         np = np + 1
-        large.cf[ie, np] = q1[4, ie] * mratio.van1
-        fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-        anis.psct[ie, np] = 0.5
-        anis.angct[ie, np] = 1.0
+        mixTable.cf[ie, np] = q1[4, ie] * mratio.van1
+        fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+        mixTable.psct[ie, np] = 0.5
+        mixTable.angct[ie, np] = 1.0
         if ie > 1: break L40
-        anis.index[np] = 0
-        large.rgas[np] = rgas1
-        large.ein[np] = 0.0
-        large.ipn[np] = (-1)
+        mixTable.index[np] = 0
+        mixTable.rgas[np] = rgas1
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = (-1)
         l = 3
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp1[3 + nion1], 50)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
         break L40
       fdo jj, 1, natt1:
         np = np + 1
-        large.cf[ie, np] = qatt1[jj, ie] * mratio.van1
-        fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-        anis.psct[ie, np] = 0.5
-        anis.angct[ie, np] = 1.0
+        mixTable.cf[ie, np] = qatt1[jj, ie] * mratio.van1
+        fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+        mixTable.psct[ie, np] = 0.5
+        mixTable.angct[ie, np] = 1.0
         if not (ie > 1):
           scrip.dscrpt[np] = fstr(scrp1[2 + nion1 + jj], 50)
-          large.rgas[np] = rgas1
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
-          anis.index[np] = 0
+          mixTable.rgas[np] = rgas1
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
+          mixTable.index[np] = 0
           l = 3
-          large.iarry[np] = l
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.iarry[np] = l
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
     if not (mix3.nin1 == 0):
       fdo j, 1, mix3.nin1:
         np = np + 1
-        large.cf[ie, np] = mix1.qin1[j, ie] * mratio.van1
-        anis.psct[ie, np] = 0.5
-        anis.angct[ie, np] = 1.0
-        anis.index[np] = 0
+        mixTable.cf[ie, np] = mix1.qin1[j, ie] * mratio.van1
+        mixTable.psct[ie, np] = 0.5
+        mixTable.angct[ie, np] = 1.0
+        mixTable.index[np] = 0
         if kin1[j] == 1:
           psct1 = peqin1[j, ie]
           angcut(psct1, angc, psct2)
-          anis.angct[ie, np] = angc
-          anis.psct[ie, np] = psct2
-          anis.index[np] = 1
+          mixTable.angct[ie, np] = angc
+          mixTable.psct[ie, np] = psct2
+          mixTable.index[np] = 1
         if kin1[j] == 2:
-          anis.psct[ie, np] = peqin1[j, ie]
-          anis.index[np] = 2
+          mixTable.psct[ie, np] = peqin1[j, ie]
+          mixTable.index[np] = 2
         if not (ie > 1):
-          large.rgas[np] = rgas1
-          large.ein[np] = ei1[j] / rgas1
+          mixTable.rgas[np] = rgas1
+          mixTable.ein[np] = ei1[j] / rgas1
           l = 4
           if ei1[j] < 0.0: l = 5
-          large.ipn[np] = 0
-          large.iarry[np] = l
+          mixTable.ipn[np] = 0
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp1[4 + nion1 + natt1 + j], 50)
-          large.penfra[1, np] = penfra1[1, j]
-          large.penfra[2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
-          large.penfra[3, np] = penfra1[3, j]
+          mixTable.penfra[1, np] = penfra1[1, j]
+          mixTable.penfra[2, np] = penfra1[2, j] * 1e-16 / sqrt(3.0)
+          mixTable.penfra[3, np] = penfra1[3, j]
     block L600:
       if inpt.ngas == 1: break L600
       np = np + 1
-      large.cf[ie, np] = q2[2, ie] * mratio.van2
-      anis.psct[ie, np] = 0.5
-      anis.angct[ie, np] = 1.0
-      anis.index[np] = 0
+      mixTable.cf[ie, np] = q2[2, ie] * mratio.van2
+      mixTable.psct[ie, np] = 0.5
+      mixTable.angct[ie, np] = 1.0
+      mixTable.index[np] = 0
       if kel2[2] == 1:
         psct1 = peqel2[2, ie]
         angcut(psct1, angc, psct2)
-        anis.angct[ie, np] = angc
-        anis.psct[ie, np] = psct2
-        anis.index[np] = 1
+        mixTable.angct[ie, np] = angc
+        mixTable.psct[ie, np] = psct2
+        mixTable.index[np] = 1
       if kel2[2] == 2:
-        anis.psct[ie, np] = peqel2[2, ie]
-        anis.index[np] = 2
+        mixTable.psct[ie, np] = peqel2[2, ie]
+        mixTable.index[np] = 2
       if not (ie > 1):
         rgas2 = 1.0 + e2[2] / 2.0
-        large.rgas[np] = rgas2
-        large.ein[np] = 0.0
-        large.ipn[np] = 0
+        mixTable.rgas[np] = rgas2
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = 0
         l = 6
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp2[2], 50)
         names.nameg[2] = fstr(name2, 25)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
       block L130:
         if inpt.efinal < e2[3]: break L130
         if not (nion2 > 1):
           np = np + 1
-          large.cf[ie, np] = q2[3, ie] * mratio.van2
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = q2[3, ie] * mratio.van2
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel2[3] == 1:
             psct1 = peqel2[3, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel2[3] == 2:
-            anis.psct[ie, np] = peqel2[3, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqel2[3, ie]
+            mixTable.index[np] = 2
           if ie > 1: break L130
-          large.rgas[np] = rgas2
-          large.ein[np] = e2[3] / rgas2
-          large.wpl[np] = eb2[1]
+          mixTable.rgas[np] = rgas2
+          mixTable.ein[np] = e2[3] / rgas2
+          mixTable.wpl[np] = eb2[1]
           ionfl1.nc0[np] = nc02[1]
           ionfl1.ec0[np] = ec02[1]
           ionfl1.ng1[np] = ng12[1]
@@ -487,34 +487,34 @@ proc mixer*() =
           ionfl1.eg2[np] = eg22[1]
           ionfl1.wklm[np] = wk2[1]
           ionfl1.efl[np] = efl2[1]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 7
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp2[3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L130
         fdo kion, 1, nion2:
           np = np + 1
-          large.cf[ie, np] = qion2[kion, ie] * mratio.van2
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = qion2[kion, ie] * mratio.van2
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel2[3] == 1:
             psct1 = peqion2[kion, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel2[3] == 2:
-            anis.psct[ie, np] = peqion2[kion, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqion2[kion, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas2
-            large.ein[np] = eion2[kion] / rgas2
-            large.wpl[np] = eb2[kion]
+            mixTable.rgas[np] = rgas2
+            mixTable.ein[np] = eion2[kion] / rgas2
+            mixTable.wpl[np] = eb2[kion]
             ionfl1.nc0[np] = nc02[kion]
             ionfl1.ec0[np] = ec02[kion]
             ionfl1.ng1[np] = ng12[kion]
@@ -523,126 +523,126 @@ proc mixer*() =
             ionfl1.eg2[np] = eg22[kion]
             ionfl1.wklm[np] = wk2[kion]
             ionfl1.efl[np] = efl1[kion]
-            large.ipn[np] = 1
+            mixTable.ipn[np] = 1
             l = 7
-            large.iarry[np] = l
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp2[2 + kion], 50)
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       block L140:
         if inpt.efinal < e2[4]: break L140
         if not (natt2 > 1):
           np = np + 1
-          large.cf[ie, np] = q2[4, ie] * mratio.van2
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
+          mixTable.cf[ie, np] = q2[4, ie] * mratio.van2
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
           if ie > 1: break L140
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
-          large.rgas[np] = rgas2
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
+          mixTable.rgas[np] = rgas2
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
           l = 8
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp2[3 + nion2], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L140
         fdo jj, 1, natt2:
           np = np + 1
-          large.cf[ie, np] = qatt2[jj, ie] * mratio.van2
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = qatt2[jj, ie] * mratio.van2
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if not (ie > 1):
             scrip.dscrpt[np] = fstr(scrp2[2 + nion2 + jj], 50)
-            anis.index[np] = 0
-            large.rgas[np] = rgas2
-            large.ein[np] = 0.0
-            large.ipn[np] = (-1)
+            mixTable.index[np] = 0
+            mixTable.rgas[np] = rgas2
+            mixTable.ein[np] = 0.0
+            mixTable.ipn[np] = (-1)
             l = 8
-            large.iarry[np] = l
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.iarry[np] = l
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       if not (mix3.nin2 == 0):
         fdo j, 1, mix3.nin2:
           np = np + 1
-          large.cf[ie, np] = mix1.qin2[j, ie] * mratio.van2
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = mix1.qin2[j, ie] * mratio.van2
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kin2[j] == 1:
             psct1 = peqin2[j, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
             if kin2[j] == 2:
-              anis.psct[ie, np] = peqin2[j, ie]
-              anis.index[np] = 2
+              mixTable.psct[ie, np] = peqin2[j, ie]
+              mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas2
-            large.ein[np] = ei2[j] / rgas2
+            mixTable.rgas[np] = rgas2
+            mixTable.ein[np] = ei2[j] / rgas2
             l = 9
             if ei2[j] < 0.0: l = 10
-            large.ipn[np] = 0
-            large.iarry[np] = l
+            mixTable.ipn[np] = 0
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp2[4 + nion2 + natt2 + j], 50)
-            large.penfra[1, np] = penfra2[1, j]
-            large.penfra[2, np] = penfra2[2, j] * 0.000001 / sqrt(3.0)
-            large.penfra[3, np] = penfra2[3, j]
+            mixTable.penfra[1, np] = penfra2[1, j]
+            mixTable.penfra[2, np] = penfra2[2, j] * 0.000001 / sqrt(3.0)
+            mixTable.penfra[3, np] = penfra2[3, j]
       if inpt.ngas == 2: break L600
       np = np + 1
-      large.cf[ie, np] = q3[2, ie] * mratio.van3
-      anis.psct[ie, np] = 0.5
-      anis.angct[ie, np] = 1.0
-      anis.index[np] = 0
+      mixTable.cf[ie, np] = q3[2, ie] * mratio.van3
+      mixTable.psct[ie, np] = 0.5
+      mixTable.angct[ie, np] = 1.0
+      mixTable.index[np] = 0
       if kel3[2] == 1:
         psct1 = peqel3[2, ie]
         angcut(psct1, angc, psct2)
-        anis.angct[ie, np] = angc
-        anis.psct[ie, np] = psct2
-        anis.index[np] = 1
+        mixTable.angct[ie, np] = angc
+        mixTable.psct[ie, np] = psct2
+        mixTable.index[np] = 1
       if kel3[2] == 2:
-        anis.psct[ie, np] = peqel3[2, ie]
-        anis.index[np] = 2
+        mixTable.psct[ie, np] = peqel3[2, ie]
+        mixTable.index[np] = 2
       if not (ie > 1):
         rgas3 = 1.0 + e3[2] / 2.0
-        large.rgas[np] = rgas3
-        large.ein[np] = 0.0
-        large.ipn[np] = 0
+        mixTable.rgas[np] = rgas3
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = 0
         l = 11
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp3[2], 50)
         names.nameg[3] = fstr(name3, 25)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
       block L230:
         if inpt.efinal < e3[3]: break L230
         if not (nion3 > 1):
           np = np + 1
-          large.cf[ie, np] = q3[3, ie] * mratio.van3
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = q3[3, ie] * mratio.van3
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel3[3] == 1:
             psct1 = peqel3[3, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel3[3] == 2:
-            anis.psct[ie, np] = peqel3[3, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqel3[3, ie]
+            mixTable.index[np] = 2
           if ie > 1: break L230
-          large.rgas[np] = rgas3
-          large.ein[np] = e3[3] / rgas3
-          large.wpl[np] = eb3[1]
+          mixTable.rgas[np] = rgas3
+          mixTable.ein[np] = e3[3] / rgas3
+          mixTable.wpl[np] = eb3[1]
           ionfl1.nc0[np] = nc03[1]
           ionfl1.ec0[np] = ec03[1]
           ionfl1.ng1[np] = ng13[1]
@@ -651,34 +651,34 @@ proc mixer*() =
           ionfl1.eg2[np] = eg23[1]
           ionfl1.wklm[np] = wk3[1]
           ionfl1.efl[np] = efl3[1]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 12
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp3[3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L230
         fdo kion, 1, nion3:
           np = np + 1
-          large.cf[ie, np] = qion3[kion, ie] * mratio.van3
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = qion3[kion, ie] * mratio.van3
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel3[3] == 1:
             psct1 = peqion3[kion, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel3[3] == 2:
-            anis.psct[ie, np] = peqion3[kion, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqion3[kion, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas3
-            large.ein[np] = eion3[kion] / rgas3
-            large.wpl[np] = eb3[kion]
+            mixTable.rgas[np] = rgas3
+            mixTable.ein[np] = eion3[kion] / rgas3
+            mixTable.wpl[np] = eb3[kion]
             ionfl1.nc0[np] = nc03[kion]
             ionfl1.ec0[np] = ec03[kion]
             ionfl1.ng1[np] = ng13[kion]
@@ -687,126 +687,126 @@ proc mixer*() =
             ionfl1.eg2[np] = eg23[kion]
             ionfl1.wklm[np] = wk3[kion]
             ionfl1.efl[np] = efl3[kion]
-            large.ipn[np] = 1
+            mixTable.ipn[np] = 1
             l = 12
-            large.iarry[np] = l
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp3[2 + kion], 50)
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       block L240:
         if inpt.efinal < e3[4]: break L240
         if not (natt3 > 1):
           np = np + 1
-          large.cf[ie, np] = q3[4, ie] * mratio.van3
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = q3[4, ie] * mratio.van3
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if ie > 1: break L240
-          anis.index[np] = 0
-          large.rgas[np] = rgas3
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
+          mixTable.index[np] = 0
+          mixTable.rgas[np] = rgas3
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
           l = 13
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp3[3 + nion3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L240
         fdo jj, 1, natt3:
           np = np + 1
-          large.cf[ie, np] = qatt3[jj, ie] * mratio.van3
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = qatt3[jj, ie] * mratio.van3
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if not (ie > 1):
             scrip.dscrpt[np] = fstr(scrp3[2 + nion3 + jj], 50)
-            anis.index[np] = 0
-            large.rgas[np] = rgas3
-            large.ein[np] = 0.0
-            large.ipn[np] = (-1)
+            mixTable.index[np] = 0
+            mixTable.rgas[np] = rgas3
+            mixTable.ein[np] = 0.0
+            mixTable.ipn[np] = (-1)
             l = 13
-            large.iarry[np] = l
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.iarry[np] = l
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       if not (mix3.nin3 == 0):
         fdo j, 1, mix3.nin3:
           np = np + 1
-          large.cf[ie, np] = mix1.qin3[j, ie] * mratio.van3
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = mix1.qin3[j, ie] * mratio.van3
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kin3[j] == 1:
             psct1 = peqin3[j, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kin3[j] == 2:
-            anis.psct[ie, np] = peqin3[j, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqin3[j, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas3
-            large.ein[np] = ei3[j] / rgas3
+            mixTable.rgas[np] = rgas3
+            mixTable.ein[np] = ei3[j] / rgas3
             l = 14
             if ei3[j] < 0.0: l = 15
-            large.ipn[np] = 0
-            large.iarry[np] = l
+            mixTable.ipn[np] = 0
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp3[4 + nion3 + natt3 + j], 50)
-            large.penfra[1, np] = penfra3[1, j]
-            large.penfra[2, np] = penfra3[2, j] * 0.000001 / sqrt(3.0)
-            large.penfra[3, np] = penfra3[3, j]
+            mixTable.penfra[1, np] = penfra3[1, j]
+            mixTable.penfra[2, np] = penfra3[2, j] * 0.000001 / sqrt(3.0)
+            mixTable.penfra[3, np] = penfra3[3, j]
       if inpt.ngas == 3: break L600
       np = np + 1
-      large.cf[ie, np] = q4[2, ie] * mratio.van4
-      anis.psct[ie, np] = 0.5
-      anis.angct[ie, np] = 1.0
-      anis.index[np] = 0
+      mixTable.cf[ie, np] = q4[2, ie] * mratio.van4
+      mixTable.psct[ie, np] = 0.5
+      mixTable.angct[ie, np] = 1.0
+      mixTable.index[np] = 0
       if kel4[2] == 1:
         psct1 = peqel4[2, ie]
         angcut(psct1, angc, psct2)
-        anis.angct[ie, np] = angc
-        anis.psct[ie, np] = psct2
-        anis.index[np] = 1
+        mixTable.angct[ie, np] = angc
+        mixTable.psct[ie, np] = psct2
+        mixTable.index[np] = 1
       if kel4[2] == 2:
-        anis.psct[ie, np] = peqel4[2, ie]
-        anis.index[np] = 2
+        mixTable.psct[ie, np] = peqel4[2, ie]
+        mixTable.index[np] = 2
       if not (ie > 1):
         rgas4 = 1.0 + e4[2] / 2.0
-        large.rgas[np] = rgas4
-        large.ein[np] = 0.0
-        large.ipn[np] = 0
+        mixTable.rgas[np] = rgas4
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = 0
         l = 16
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp4[2], 50)
         names.nameg[4] = fstr(name4, 25)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
       block L330:
         if inpt.efinal < e4[3]: break L330
         if not (nion4 > 1):
           np = np + 1
-          large.cf[ie, np] = q4[3, ie] * mratio.van4
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = q4[3, ie] * mratio.van4
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel4[3] == 1:
             psct1 = peqel4[3, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel4[3] == 2:
-            anis.psct[ie, np] = peqel4[3, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqel4[3, ie]
+            mixTable.index[np] = 2
           if ie > 1: break L330
-          large.rgas[np] = rgas4
-          large.ein[np] = e4[3] / rgas4
-          large.wpl[np] = eb4[1]
+          mixTable.rgas[np] = rgas4
+          mixTable.ein[np] = e4[3] / rgas4
+          mixTable.wpl[np] = eb4[1]
           ionfl1.nc0[np] = nc04[1]
           ionfl1.ec0[np] = ec04[1]
           ionfl1.ng1[np] = ng14[1]
@@ -815,34 +815,34 @@ proc mixer*() =
           ionfl1.eg2[np] = eg24[1]
           ionfl1.wklm[np] = wk4[1]
           ionfl1.efl[np] = efl4[1]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 17
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp4[3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L330
         fdo kion, 1, nion4:
           np = np + 1
-          large.cf[ie, np] = qion4[kion, ie] * mratio.van4
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = qion4[kion, ie] * mratio.van4
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel4[3] == 1:
             psct1 = peqion4[kion, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel4[3] == 2:
-            anis.psct[ie, np] = peqion4[kion, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqion4[kion, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas4
-            large.ein[np] = eion4[kion] / rgas4
-            large.wpl[np] = eb4[kion]
+            mixTable.rgas[np] = rgas4
+            mixTable.ein[np] = eion4[kion] / rgas4
+            mixTable.wpl[np] = eb4[kion]
             ionfl1.nc0[np] = nc04[kion]
             ionfl1.ec0[np] = ec04[kion]
             ionfl1.ng1[np] = ng14[kion]
@@ -851,126 +851,126 @@ proc mixer*() =
             ionfl1.eg2[np] = eg24[kion]
             ionfl1.wklm[np] = wk4[kion]
             ionfl1.efl[np] = efl4[kion]
-            large.ipn[np] = 1
+            mixTable.ipn[np] = 1
             l = 17
-            large.iarry[np] = l
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp4[2 + kion], 50)
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       block L340:
         if inpt.efinal < e4[4]: break L340
         if not (natt4 > 1):
           np = np + 1
-          large.cf[ie, np] = q4[4, ie] * mratio.van4
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = q4[4, ie] * mratio.van4
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if ie > 1: break L340
-          anis.index[np] = 0
-          large.rgas[np] = rgas4
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
+          mixTable.index[np] = 0
+          mixTable.rgas[np] = rgas4
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
           l = 18
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp4[3 + nion4], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L340
         fdo jj, 1, natt4:
           np = np + 1
-          large.cf[ie, np] = qatt4[jj, ie] * mratio.van4
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = qatt4[jj, ie] * mratio.van4
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if not (ie > 1):
             scrip.dscrpt[np] = fstr(scrp4[2 + nion4 + jj], 50)
-            anis.index[np] = 0
-            large.rgas[np] = rgas4
-            large.ein[np] = 0.0
-            large.ipn[np] = (-1)
+            mixTable.index[np] = 0
+            mixTable.rgas[np] = rgas4
+            mixTable.ein[np] = 0.0
+            mixTable.ipn[np] = (-1)
             l = 18
-            large.iarry[np] = l
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.iarry[np] = l
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       if not (mix3.nin4 == 0):
         fdo j, 1, mix3.nin4:
           np = np + 1
-          large.cf[ie, np] = mix1.qin4[j, ie] * mratio.van4
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = mix1.qin4[j, ie] * mratio.van4
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kin4[j] == 1:
             psct1 = peqin4[j, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kin4[j] == 2:
-            anis.psct[ie, np] = peqin4[j, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqin4[j, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas4
-            large.ein[np] = ei4[j] / rgas4
+            mixTable.rgas[np] = rgas4
+            mixTable.ein[np] = ei4[j] / rgas4
             l = 19
             if ei4[j] < 0.0: l = 20
-            large.ipn[np] = 0
-            large.iarry[np] = l
+            mixTable.ipn[np] = 0
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp4[4 + nion4 + natt4 + j], 50)
-            large.penfra[1, np] = penfra4[1, j]
-            large.penfra[2, np] = penfra4[2, j] * 0.000001 / sqrt(3.0)
-            large.penfra[3, np] = penfra4[3, j]
+            mixTable.penfra[1, np] = penfra4[1, j]
+            mixTable.penfra[2, np] = penfra4[2, j] * 0.000001 / sqrt(3.0)
+            mixTable.penfra[3, np] = penfra4[3, j]
       if inpt.ngas == 4: break L600
       np = np + 1
-      large.cf[ie, np] = q5[2, ie] * mratio.van5
-      anis.psct[ie, np] = 0.5
-      anis.angct[ie, np] = 1.0
-      anis.index[np] = 0
+      mixTable.cf[ie, np] = q5[2, ie] * mratio.van5
+      mixTable.psct[ie, np] = 0.5
+      mixTable.angct[ie, np] = 1.0
+      mixTable.index[np] = 0
       if kel5[2] == 1:
         psct1 = peqel5[2, ie]
         angcut(psct1, angc, psct2)
-        anis.angct[ie, np] = angc
-        anis.psct[ie, np] = psct2
-        anis.index[np] = 1
+        mixTable.angct[ie, np] = angc
+        mixTable.psct[ie, np] = psct2
+        mixTable.index[np] = 1
       if kel5[2] == 2:
-        anis.psct[ie, np] = peqel5[2, ie]
-        anis.index[np] = 2
+        mixTable.psct[ie, np] = peqel5[2, ie]
+        mixTable.index[np] = 2
       if not (ie > 1):
         rgas5 = 1.0 + e5[2] / 2.0
-        large.rgas[np] = rgas5
-        large.ein[np] = 0.0
-        large.ipn[np] = 0
+        mixTable.rgas[np] = rgas5
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = 0
         l = 21
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp5[2], 50)
         names.nameg[5] = fstr(name5, 25)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
       block L430:
         if inpt.efinal < e5[3]: break L430
         if not (nion5 > 1):
           np = np + 1
-          large.cf[ie, np] = q5[3, ie] * mratio.van5
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = q5[3, ie] * mratio.van5
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel5[3] == 1:
             psct1 = peqel5[3, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel5[3] == 2:
-            anis.psct[ie, np] = peqel5[3, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqel5[3, ie]
+            mixTable.index[np] = 2
           if ie > 1: break L430
-          large.rgas[np] = rgas5
-          large.ein[np] = e5[3] / rgas5
-          large.wpl[np] = eb5[1]
+          mixTable.rgas[np] = rgas5
+          mixTable.ein[np] = e5[3] / rgas5
+          mixTable.wpl[np] = eb5[1]
           ionfl1.nc0[np] = nc05[1]
           ionfl1.ec0[np] = ec05[1]
           ionfl1.ng1[np] = ng15[1]
@@ -979,34 +979,34 @@ proc mixer*() =
           ionfl1.eg2[np] = eg25[1]
           ionfl1.wklm[np] = wk5[1]
           ionfl1.efl[np] = efl5[1]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 22
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp5[3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L430
         fdo kion, 1, nion5:
           np = np + 1
-          large.cf[ie, np] = qion5[kion, ie] * mratio.van5
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = qion5[kion, ie] * mratio.van5
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel5[3] == 1:
             psct1 = peqion5[kion, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel5[3] == 2:
-            anis.psct[ie, np] = peqion5[kion, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqion5[kion, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas5
-            large.ein[np] = eion5[kion] / rgas5
-            large.wpl[np] = eb5[kion]
+            mixTable.rgas[np] = rgas5
+            mixTable.ein[np] = eion5[kion] / rgas5
+            mixTable.wpl[np] = eb5[kion]
             ionfl1.nc0[np] = nc05[kion]
             ionfl1.ec0[np] = ec05[kion]
             ionfl1.ng1[np] = ng15[kion]
@@ -1015,126 +1015,126 @@ proc mixer*() =
             ionfl1.eg2[np] = eg25[kion]
             ionfl1.wklm[np] = wk5[kion]
             ionfl1.efl[np] = efl5[kion]
-            large.ipn[np] = 1
+            mixTable.ipn[np] = 1
             l = 22
-            large.iarry[np] = l
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp5[2 + kion], 50)
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       block L440:
         if inpt.efinal < e5[4]: break L440
         if not (natt5 > 1):
           np = np + 1
-          large.cf[ie, np] = q5[4, ie] * mratio.van5
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = q5[4, ie] * mratio.van5
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if ie > 1: break L440
-          anis.index[np] = 0
-          large.rgas[np] = rgas5
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
+          mixTable.index[np] = 0
+          mixTable.rgas[np] = rgas5
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
           l = 23
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp5[3 + nion5], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L440
         fdo jj, 1, natt5:
           np = np + 1
-          large.cf[ie, np] = qatt5[jj, ie] * mratio.van5
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = qatt5[jj, ie] * mratio.van5
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if not (ie > 1):
             scrip.dscrpt[np] = fstr(scrp5[2 + nion5 + jj], 50)
-            anis.index[np] = 0
-            large.rgas[np] = rgas5
-            large.ein[np] = 0.0
-            large.ipn[np] = (-1)
+            mixTable.index[np] = 0
+            mixTable.rgas[np] = rgas5
+            mixTable.ein[np] = 0.0
+            mixTable.ipn[np] = (-1)
             l = 23
-            large.iarry[np] = l
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.iarry[np] = l
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       if not (mix3.nin5 == 0):
         fdo j, 1, mix3.nin5:
           np = np + 1
-          large.cf[ie, np] = mix1.qin5[j, ie] * mratio.van5
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = mix1.qin5[j, ie] * mratio.van5
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kin5[j] == 1:
             psct1 = peqin5[j, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kin5[j] == 2:
-            anis.psct[ie, np] = peqin5[j, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqin5[j, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas5
-            large.ein[np] = ei5[j] / rgas5
+            mixTable.rgas[np] = rgas5
+            mixTable.ein[np] = ei5[j] / rgas5
             l = 24
             if ei5[j] < 0.0: l = 25
-            large.ipn[np] = 0
-            large.iarry[np] = l
+            mixTable.ipn[np] = 0
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp5[4 + nion5 + natt5 + j], 50)
-            large.penfra[1, np] = penfra5[1, j]
-            large.penfra[2, np] = penfra5[2, j] * 0.000001 / sqrt(3.0)
-            large.penfra[3, np] = penfra5[3, j]
+            mixTable.penfra[1, np] = penfra5[1, j]
+            mixTable.penfra[2, np] = penfra5[2, j] * 0.000001 / sqrt(3.0)
+            mixTable.penfra[3, np] = penfra5[3, j]
       if inpt.ngas == 5: break L600
       np = np + 1
-      large.cf[ie, np] = q6[2, ie] * mratio.van6
-      anis.psct[ie, np] = 0.5
-      anis.angct[ie, np] = 1.0
-      anis.index[np] = 0
+      mixTable.cf[ie, np] = q6[2, ie] * mratio.van6
+      mixTable.psct[ie, np] = 0.5
+      mixTable.angct[ie, np] = 1.0
+      mixTable.index[np] = 0
       if kel6[2] == 1:
         psct1 = peqel6[2, ie]
         angcut(psct1, angc, psct2)
-        anis.angct[ie, np] = angc
-        anis.psct[ie, np] = psct2
-        anis.index[np] = 1
+        mixTable.angct[ie, np] = angc
+        mixTable.psct[ie, np] = psct2
+        mixTable.index[np] = 1
       if kel6[2] == 2:
-        anis.psct[ie, np] = peqel6[2, ie]
-        anis.index[np] = 2
+        mixTable.psct[ie, np] = peqel6[2, ie]
+        mixTable.index[np] = 2
       if not (ie > 1):
         rgas6 = 1.0 + e6[2] / 2.0
-        large.rgas[np] = rgas6
-        large.ein[np] = 0.0
-        large.ipn[np] = 0
+        mixTable.rgas[np] = rgas6
+        mixTable.ein[np] = 0.0
+        mixTable.ipn[np] = 0
         l = 26
-        large.iarry[np] = l
+        mixTable.iarry[np] = l
         scrip.dscrpt[np] = fstr(scrp6[2], 50)
         names.nameg[6] = fstr(name6, 25)
-        large.penfra[1, np] = 0.0
-        large.penfra[2, np] = 0.0
-        large.penfra[3, np] = 0.0
+        mixTable.penfra[1, np] = 0.0
+        mixTable.penfra[2, np] = 0.0
+        mixTable.penfra[3, np] = 0.0
       block L530:
         if inpt.efinal < e6[3]: break L530
         if not (nion6 > 1):
           np = np + 1
-          large.cf[ie, np] = q6[3, ie] * mratio.van6
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = q6[3, ie] * mratio.van6
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel6[3] == 1:
             psct1 = peqel6[3, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel6[3] == 2:
-            anis.psct[ie, np] = peqel6[3, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqel6[3, ie]
+            mixTable.index[np] = 2
           if ie > 1: break L530
-          large.rgas[np] = rgas6
-          large.ein[np] = e6[3] / rgas6
-          large.wpl[np] = eb6[1]
+          mixTable.rgas[np] = rgas6
+          mixTable.ein[np] = e6[3] / rgas6
+          mixTable.wpl[np] = eb6[1]
           ionfl1.nc0[np] = nc06[1]
           ionfl1.ec0[np] = ec06[1]
           ionfl1.ng1[np] = ng16[1]
@@ -1143,34 +1143,34 @@ proc mixer*() =
           ionfl1.eg2[np] = eg26[1]
           ionfl1.wklm[np] = wk6[1]
           ionfl1.efl[np] = efl6[1]
-          large.ipn[np] = 1
+          mixTable.ipn[np] = 1
           l = 27
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp6[3], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L530
         fdo kion, 1, nion6:
           np = np + 1
-          large.cf[ie, np] = qion6[kion, ie] * mratio.van6
-          fred.fcion[ie] = fred.fcion[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = qion6[kion, ie] * mratio.van6
+          fred.fcion[ie] = fred.fcion[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kel6[3] == 1:
             psct1 = peqion6[kion, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kel6[3] == 2:
-            anis.psct[ie, np] = peqion6[kion, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqion6[kion, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas6
-            large.ein[np] = eion6[kion] / rgas6
-            large.wpl[np] = eb6[kion]
+            mixTable.rgas[np] = rgas6
+            mixTable.ein[np] = eion6[kion] / rgas6
+            mixTable.wpl[np] = eb6[kion]
             ionfl1.nc0[np] = nc06[kion]
             ionfl1.ec0[np] = ec06[kion]
             ionfl1.ng1[np] = ng16[kion]
@@ -1179,110 +1179,110 @@ proc mixer*() =
             ionfl1.eg2[np] = eg26[kion]
             ionfl1.wklm[np] = wk6[kion]
             ionfl1.efl[np] = efl6[kion]
-            large.ipn[np] = 1
+            mixTable.ipn[np] = 1
             l = 27
-            large.iarry[np] = l
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp6[2 + kion], 50)
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       block L540:
         if inpt.efinal < e6[4]: break L540
         if not (natt6 > 1):
           np = np + 1
-          large.cf[ie, np] = q6[4, ie] * mratio.van6
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = q6[4, ie] * mratio.van6
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if ie > 1: break L540
-          anis.index[np] = 0
-          large.rgas[np] = rgas6
-          large.ein[np] = 0.0
-          large.ipn[np] = (-1)
+          mixTable.index[np] = 0
+          mixTable.rgas[np] = rgas6
+          mixTable.ein[np] = 0.0
+          mixTable.ipn[np] = (-1)
           l = 28
-          large.iarry[np] = l
+          mixTable.iarry[np] = l
           scrip.dscrpt[np] = fstr(scrp6[3 + nion6], 50)
-          large.penfra[1, np] = 0.0
-          large.penfra[2, np] = 0.0
-          large.penfra[3, np] = 0.0
+          mixTable.penfra[1, np] = 0.0
+          mixTable.penfra[2, np] = 0.0
+          mixTable.penfra[3, np] = 0.0
           break L540
         fdo jj, 1, natt6:
           np = np + 1
-          large.cf[ie, np] = qatt6[jj, ie] * mratio.van6
-          fred.fcatt[ie] = fred.fcatt[ie] + large.cf[ie, np]
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
+          mixTable.cf[ie, np] = qatt6[jj, ie] * mratio.van6
+          fred.fcatt[ie] = fred.fcatt[ie] + mixTable.cf[ie, np]
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
           if not (ie > 1):
             scrip.dscrpt[np] = fstr(scrp6[2 + nion6 + jj], 50)
-            anis.index[np] = 0
-            large.rgas[np] = rgas6
-            large.ein[np] = 0.0
-            large.ipn[np] = (-1)
+            mixTable.index[np] = 0
+            mixTable.rgas[np] = rgas6
+            mixTable.ein[np] = 0.0
+            mixTable.ipn[np] = (-1)
             l = 28
-            large.iarry[np] = l
-            large.penfra[1, np] = 0.0
-            large.penfra[2, np] = 0.0
-            large.penfra[3, np] = 0.0
+            mixTable.iarry[np] = l
+            mixTable.penfra[1, np] = 0.0
+            mixTable.penfra[2, np] = 0.0
+            mixTable.penfra[3, np] = 0.0
       if not (mix3.nin6 == 0):
         fdo j, 1, mix3.nin6:
           np = np + 1
-          large.cf[ie, np] = mix1.qin6[j, ie] * mratio.van6
-          anis.psct[ie, np] = 0.5
-          anis.angct[ie, np] = 1.0
-          anis.index[np] = 0
+          mixTable.cf[ie, np] = mix1.qin6[j, ie] * mratio.van6
+          mixTable.psct[ie, np] = 0.5
+          mixTable.angct[ie, np] = 1.0
+          mixTable.index[np] = 0
           if kin6[j] == 1:
             psct1 = peqin6[j, ie]
             angcut(psct1, angc, psct2)
-            anis.angct[ie, np] = angc
-            anis.psct[ie, np] = psct2
-            anis.index[np] = 1
+            mixTable.angct[ie, np] = angc
+            mixTable.psct[ie, np] = psct2
+            mixTable.index[np] = 1
           if kin6[j] == 2:
-            anis.psct[ie, np] = peqin6[j, ie]
-            anis.index[np] = 2
+            mixTable.psct[ie, np] = peqin6[j, ie]
+            mixTable.index[np] = 2
           if not (ie > 1):
-            large.rgas[np] = rgas6
-            large.ein[np] = ei6[j] / rgas6
+            mixTable.rgas[np] = rgas6
+            mixTable.ein[np] = ei6[j] / rgas6
             l = 29
             if ei6[j] < 0.0: l = 30
-            large.ipn[np] = 0
-            large.iarry[np] = l
+            mixTable.ipn[np] = 0
+            mixTable.iarry[np] = l
             scrip.dscrpt[np] = fstr(scrp6[4 + nion6 + natt6 + j], 50)
-            large.penfra[1, np] = penfra6[1, j]
-            large.penfra[2, np] = penfra6[2, j] * 0.000001 / sqrt(3.0)
-            large.penfra[3, np] = penfra6[3, j]
-    large.last = np
-    large.isize = 1
-    if large.last >= 2: large.isize = 2
-    if large.last >= 4: large.isize = 4
-    if large.last >= 8: large.isize = 8
-    if large.last >= 16: large.isize = 16
-    if large.last >= 32: large.isize = 32
-    if large.last >= 64: large.isize = 64
-    if large.last >= 128: large.isize = 128
-    if large.last >= 256: large.isize = 256
-    if large.last >= 512: large.isize = 512
-    if large.last >= 1024: large.isize = 1024
+            mixTable.penfra[1, np] = penfra6[1, j]
+            mixTable.penfra[2, np] = penfra6[2, j] * 0.000001 / sqrt(3.0)
+            mixTable.penfra[3, np] = penfra6[3, j]
+    mixTable.last = np
+    mixTable.isize = 1
+    if mixTable.last >= 2: mixTable.isize = 2
+    if mixTable.last >= 4: mixTable.isize = 4
+    if mixTable.last >= 8: mixTable.isize = 8
+    if mixTable.last >= 16: mixTable.isize = 16
+    if mixTable.last >= 32: mixTable.isize = 32
+    if mixTable.last >= 64: mixTable.isize = 64
+    if mixTable.last >= 128: mixTable.isize = 128
+    if mixTable.last >= 256: mixTable.isize = 256
+    if mixTable.last >= 512: mixTable.isize = 512
+    if mixTable.last >= 1024: mixTable.isize = 1024
     # CAN INCREASE ARRAY SIZE UP TO 1800 IF MORE COMPLEX MIXTURES USED.
     # 1800 = 6 * 300 ( 6 = MAX NO OF GASES. 300 = MAX NO OF LEVELS )
-    if large.last > 960: fwrite(fmt992)
-    if large.last > 960: fstop()
+    if mixTable.last > 960: fwrite(fmt992)
+    if mixTable.last > 960: fstop()
     # CALCULATION OF TOTAL COLLISION FREQUENCY
-    large.tcf[ie] = 0.0
-    fdo `if`, 1, large.last:
-      large.tcf[ie] = large.tcf[ie] + large.cf[ie, `if`]
-      if large.cf[ie, `if`] < 0.0: fwrite(fmt776, large.cf[ie, `if`], ie, `if`, large.iarry[`if`], large.ein[`if`])
-    fdo `if`, 1, large.last:
+    mixTable.tcf[ie] = 0.0
+    fdo `if`, 1, mixTable.last:
+      mixTable.tcf[ie] = mixTable.tcf[ie] + mixTable.cf[ie, `if`]
+      if mixTable.cf[ie, `if`] < 0.0: fwrite(fmt776, mixTable.cf[ie, `if`], ie, `if`, mixTable.iarry[`if`], mixTable.ein[`if`])
+    fdo `if`, 1, mixTable.last:
       block L620:
         block L615:
-          if large.tcf[ie] == 0.0: break L615
-          large.cf[ie, `if`] = large.cf[ie, `if`] / large.tcf[ie]
+          if mixTable.tcf[ie] == 0.0: break L615
+          mixTable.cf[ie, `if`] = mixTable.cf[ie, `if`] / mixTable.tcf[ie]
           break L620
-        large.cf[ie, `if`] = 0.0
-    fdo `if`, 2, large.last:
-      large.cf[ie, `if`] = large.cf[ie, `if`] + large.cf[ie, `if` - 1]
+        mixTable.cf[ie, `if`] = 0.0
+    fdo `if`, 2, mixTable.last:
+      mixTable.cf[ie, `if`] = mixTable.cf[ie, `if`] + mixTable.cf[ie, `if` - 1]
     fred.fcatt[ie] = fred.fcatt[ie] * mix2.eroot[ie]
     fred.fcion[ie] = fred.fcion[ie] * mix2.eroot[ie]
-    large.tcf[ie] = large.tcf[ie] * mix2.eroot[ie]
+    mixTable.tcf[ie] = mixTable.tcf[ie] * mix2.eroot[ie]
   # WRITE(6,841) (INDEX(J),J, J=1,IPLAST)
   # 841 FORMAT(2X,' INDEX=',I3,' J=',I3)
   # SET ANISOTROPIC FLAG IF ANISOTROPIC SCATTERING DATA IS DETECTED
@@ -1307,7 +1307,7 @@ proc mixer*() =
     jlow = int(dmax0(jlow, none))
     jhi = int(dmin0(jhi, n4000))
     fdo j, jlow, jhi:
-      if large.tcf[j] >= large.tcfmax[i]: large.tcfmax[i] = large.tcf[j]
+      if mixTable.tcf[j] >= large.tcfmax[i]: large.tcfmax[i] = mixTable.tcf[j]
   # CROSS SECTION DATA FOR INTEGRALS IN  OUTPUT
   fdo i, 1, inpt.nstep:
     mix2.qt1[i] = ratio.an1 * q1[1, i] + ratio.an2 * q2[1, i] + ratio.an3 * q3[1, i] + ratio.an4 * q4[1, i] + ratio.an5 * q5[1, i] + ratio.an6 * q6[1, i]

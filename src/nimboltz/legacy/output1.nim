@@ -34,8 +34,8 @@ proc output1*() =
   fwrite(fmt1060)
   fdo j, 1, inpt.ngas:
     fwrite(fmt1065, names.nameg[j])
-    fdo k, 1, large.last:
-      if large.iarry[k] <= 5 * j and large.iarry[k] > 5 * (j - 1):
+    fdo k, 1, mixTable.last:
+      if mixTable.iarry[k] <= 5 * j and mixTable.iarry[k] > 5 * (j - 1):
         frelv = freq * float64(outpt.icoln[k]) / float64(nreal)
         if outpt.icoln[k] == 0:
           errfre = 0.0

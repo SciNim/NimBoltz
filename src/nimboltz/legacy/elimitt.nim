@@ -81,7 +81,7 @@ proc elimitt*(ielow: var int) =
       ie = int(dmin0(ie, n4000))
       # TEST FOR REAL OR NULL COLLISION
       r5 = drand48(rng)
-      tlim = larget.tcf[kgas, ie] / larget.tcfmax[kgas]
+      tlim = gasTable[kgas].tcf[ie] / larget.tcfmax[kgas]
       if not (r5 > tlim): break
     if ie == 4000:
       # ELECTRON ENERGY OUT OF RANGE
@@ -99,26 +99,26 @@ proc elimitt*(ielow: var int) =
     sortt(kgas, i, r2, ie)
     while true:
       i = i + 1
-      if not (larget.cf[kgas, ie, i] < r2): break
-    s1 = larget.rgas[kgas, i]
-    ei = larget.ein[kgas, i]
-    if not (larget.ipn[kgas, i] <= 0):
+      if not (gasTable[kgas].cf[ie, i] < r2): break
+    s1 = gasTable[kgas].rgas[i]
+    ei = gasTable[kgas].ein[i]
+    if not (gasTable[kgas].ipn[i] <= 0):
       r9 = drand48(rng)
       extra = r9 * (eok - ei)
       ei = extra + ei
     # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
     # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-    ipt = larget.iarry[kgas, i]
+    ipt = gasTable[kgas].iarry[i]
     if eok < ei:
       ei = eok - 0.0001
     s2 = s1 * s1 / (s1 - 1.0)
     r3 = drand48(rng)
-    if anist.index[kgas, i] == 1:
+    if gasTable[kgas].index[i] == 1:
       r31 = drand48(rng)
-      f3 = 1.0 - r3 * anist.angct[kgas, ie, i]
-      if r31 > anist.psct[kgas, ie, i]: f3 = -f3
-    elif anist.index[kgas, i] == 2:
-      epsi = anist.psct[kgas, ie, i]
+      f3 = 1.0 - r3 * gasTable[kgas].angct[ie, i]
+      if r31 > gasTable[kgas].psct[ie, i]: f3 = -f3
+    elif gasTable[kgas].index[i] == 2:
+      epsi = gasTable[kgas].psct[ie, i]
       f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
     else:
       f3 = 1.0 - 2.0 * r3

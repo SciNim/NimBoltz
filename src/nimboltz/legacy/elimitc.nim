@@ -65,13 +65,13 @@ proc elimitc*(ielow: var int) =
           ev = e1 + dz * efz100 + dx * efx100
           ie = int(trunc(ev / inpt.estep) + 1.0)
           ie = int(dmin0(ie, n4000))
-          if large.tcf[ie] > tlim:
+          if mixTable.tcf[ie] > tlim:
             tdash = tdash + ln(r1) / tlim
             large.tcfmax[i] = 1.05 * large.tcfmax[i]
             break R1
           # TEST FOR REAL OR NULL COLLISION
           r5 = drand48(rng)
-          tlim = large.tcf[ie] / tlim
+          tlim = mixTable.tcf[ie] / tlim
           if r5 > tlim: break R1
           break R1x
     # CALCULATE DIRECTION COSINES AT INSTANT BEFORE COLLISION
@@ -93,26 +93,26 @@ proc elimitc*(ielow: var int) =
     sort(i, r2, ie)
     while true:
       i = i + 1
-      if not (large.cf[ie, i] < r2): break
-    s1 = large.rgas[i]
-    ei = large.ein[i]
-    if not (large.ipn[i] <= 0):
+      if not (mixTable.cf[ie, i] < r2): break
+    s1 = mixTable.rgas[i]
+    ei = mixTable.ein[i]
+    if not (mixTable.ipn[i] <= 0):
       r9 = drand48(rng)
       extra = r9 * (ev - ei)
       ei = extra + ei
     # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
     # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-    ipt = large.iarry[i]
+    ipt = mixTable.iarry[i]
     if ev < ei:
       ei = ev - 0.0001
     s2 = s1 * s1 / (s1 - 1.0)
     r3 = drand48(rng)
-    if anis.index[i] == 1:
+    if mixTable.index[i] == 1:
       r31 = drand48(rng)
-      f3 = 1.0 - r3 * anis.angct[ie, i]
-      if r31 > anis.psct[ie, i]: f3 = -f3
-    elif anis.index[i] == 2:
-      epsi = anis.psct[ie, i]
+      f3 = 1.0 - r3 * mixTable.angct[ie, i]
+      if r31 > mixTable.psct[ie, i]: f3 = -f3
+    elif mixTable.index[i] == 2:
+      epsi = mixTable.psct[ie, i]
       f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
     else:
       f3 = 1.0 - 2.0 * r3

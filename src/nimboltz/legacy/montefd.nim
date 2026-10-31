@@ -199,7 +199,7 @@ proc montefd*() =
                           ie = int(dmin0(ie, n4000))
                           # TEST FOR REAL OR NULL COLLISION
                           r5 = drand48(rng)
-                          ttem = large.tcf[ie] / tlim
+                          ttem = mixTable.tcf[ie] / tlim
                           if not (r5 <= ttem):
                             outpt.nnull = outpt.nnull + 1
                             break R1
@@ -234,9 +234,9 @@ proc montefd*() =
                           sort(i, r2, ie)
                           while true:
                             i = i + 1
-                            if not (large.cf[ie, i] < r2): break
-                          s1 = large.rgas[i]
-                          ei = large.ein[i]
+                            if not (mixTable.cf[ie, i] < r2): break
+                          s1 = mixTable.rgas[i]
+                          ei = mixTable.ein[i]
                           if ev < ei:
                             # FIX ENERGY LOSS SMALLER THAN INCIDENT ENERGY IF A BINING ERROR OCCURS.
                             # WRITE(6,994) E,EI,ITER
@@ -247,11 +247,11 @@ proc montefd*() =
                           # ENERGY LOSS = INCIDENT ENERGY - 0.024999
                           if abs(ei - 0.024999000132083893) <= 0.0001:
                             ei = ev - 0.024999000132083893
-                          if not (large.ipn[i] == 0):
+                          if not (mixTable.ipn[i] == 0):
                             # ATTACHMENT
-                            if large.ipn[i] == (-1):
+                            if mixTable.ipn[i] == (-1):
                               neion = neion + 1
-                              ipt = large.iarry[i]
+                              ipt = mixTable.iarry[i]
                               id = id + 1
                               iter = iter + 1
                               iprint = iprint + 1
@@ -276,8 +276,8 @@ proc montefd*() =
                             r9 = drand48(rng)
                             # ESEC=R9*(E-EI)
                             # USE OPAL PETERSON AND BEATY SPLITTING FACTOR.
-                            esec = large.wpl[i] * tan(r9 * arctan((ev - ei) / (2.0 * large.wpl[i])))
-                            esec = large.wpl[i] * pow(esec / large.wpl[i], 0.9524000287055969)
+                            esec = mixTable.wpl[i] * tan(r9 * arctan((ev - ei) / (2.0 * mixTable.wpl[i])))
+                            esec = mixTable.wpl[i] * pow(esec / mixTable.wpl[i], 0.9524000287055969)
                             ei = esec + ei
                             # STORE POSITION ,ENERGY, DIRECTION COSINES AND TIME OF GENERATION
                             # OF IONISATION ELECTRON
@@ -344,7 +344,7 @@ proc montefd*() =
                                 splout.nesst[ips.ipls[npont]] = splout.nesst[ips.ipls[npont]] + 1
                           # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
                           # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-                          ipt = large.iarry[i]
+                          ipt = mixTable.iarry[i]
                           id = id + 1
                           iter = iter + 1
                           iprint = iprint + 1
@@ -354,9 +354,9 @@ proc montefd*() =
                             # IF EXCITATION THEN ADD PROBABILITY,PENFRA(1,I), OF TRANSFER TO GIVE
                             # IONISATION OF THE OTHER GASES IN THE MIXTURE.
                             if inpt.ipen == 0: break L5
-                            if large.penfra[1, i] != 0.0:
+                            if mixTable.penfra[1, i] != 0.0:
                               ran = drand48(rng)
-                              if ran > large.penfra[1, i]: break L5
+                              if ran > mixTable.penfra[1, i]: break L5
                               nclus = nclus + 1
                               npont = npont + 1
                               if npont > 8000:
@@ -365,7 +365,7 @@ proc montefd*() =
                               block L669:
                                 block L667:
                                   # ENTER HERE POSSIBLE DELOCALISATION LENGTH FOR PENNING TRANSFER
-                                  if large.penfra[2, i] == 0.0:
+                                  if mixTable.penfra[2, i] == 0.0:
                                     ips.xss[npont] = outpt.x
                                     ips.yss[npont] = outpt.y
                                     ips.zss[npont] = outpt.z
@@ -375,21 +375,21 @@ proc montefd*() =
                                   ran = drand48(rng)
                                   ran1 = drand48(rng)
                                   if ran1 < 0.5: asign = -asign
-                                  ips.xss[npont] = outpt.x - ln(ran) * large.penfra[2, i] * asign
+                                  ips.xss[npont] = outpt.x - ln(ran) * mixTable.penfra[2, i] * asign
                                   ran = drand48(rng)
                                   ran1 = drand48(rng)
                                   if ran1 < 0.5: asign = -asign
-                                  ips.yss[npont] = outpt.y - ln(ran) * large.penfra[2, i] * asign
+                                  ips.yss[npont] = outpt.y - ln(ran) * mixTable.penfra[2, i] * asign
                                   ran = drand48(rng)
                                   ran1 = drand48(rng)
                                   if ran1 < 0.5: asign = -asign
-                                  ips.zss[npont] = outpt.z - ln(ran) * large.penfra[2, i] * asign
+                                  ips.zss[npont] = outpt.z - ln(ran) * mixTable.penfra[2, i] * asign
                                   if ips.zss[npont] < 0.0: break L669
                                   if ips.zss[npont] > cion.zfinal or ips.zss[npont] < 0.0: break L669
                                 tpen = outpt.st
-                                if not (large.penfra[3, i] == 0.0):
+                                if not (mixTable.penfra[3, i] == 0.0):
                                   ran = drand48(rng)
-                                  tpen = outpt.st - ln(ran) * large.penfra[3, i]
+                                  tpen = outpt.st - ln(ran) * mixTable.penfra[3, i]
                                 ips.tss[npont] = tpen
                                 ips.ess[npont] = 1.0
                                 ips.dcxs[npont] = dcx1
@@ -408,12 +408,12 @@ proc montefd*() =
                           s2 = s1 * s1 / (s1 - 1.0)
                           # ANISOTROPIC SCATTERING
                           r3 = drand48(rng)
-                          if anis.index[i] == 1:
+                          if mixTable.index[i] == 1:
                             r31 = drand48(rng)
-                            f3 = 1.0 - r3 * anis.angct[ie, i]
-                            if r31 > anis.psct[ie, i]: f3 = -f3
-                          elif anis.index[i] == 2:
-                            epsi = anis.psct[ie, i]
+                            f3 = 1.0 - r3 * mixTable.angct[ie, i]
+                            if r31 > mixTable.psct[ie, i]: f3 = -f3
+                          elif mixTable.index[i] == 2:
+                            epsi = mixTable.psct[ie, i]
                             f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
                           else:
                             # ISOTROPIC SCATTERING

@@ -168,7 +168,7 @@ proc montect*() =
             ie = int(dmin0(ie, n4000))
             # TEST FOR REAL OR NULL COLLISION
             r4 = drand48(rng)
-            tlim = larget.tcf[kgas, ie] / larget.tcfmax[kgas]
+            tlim = gasTable[kgas].tcf[ie] / larget.tcfmax[kgas]
             if r4 > tlim:
               outptt.nnull = outptt.nnull + 1
               break R1
@@ -226,14 +226,14 @@ proc montect*() =
       sortt(kgas, i, r2, ie)
       while true:
         i = i + 1
-        if not (larget.cf[kgas, ie, i] < r2): break
-      s1 = larget.rgas[kgas, i]
-      ei = larget.ein[kgas, i]
+        if not (gasTable[kgas].cf[ie, i] < r2): break
+      s1 = gasTable[kgas].rgas[i]
+      ei = gasTable[kgas].ein[i]
       # NEW CATCH FOR COLLISIONS WITH LARGE VIBRATIONAL ENERGY LOSS:
       # ENERGY LOSS = INCIDENT ENERGY - 0.024999
       if abs(ei - 0.024999000132083893) <= 0.0001:
         ei = ev - 0.024999000132083893
-      if not (larget.ipn[kgas, i] <= 0):
+      if not (gasTable[kgas].ipn[i] <= 0):
         # USE FLAT DISTRIBUTION OF  ELECTRON ENERGY BETWEEN E-EION AND 0.0 EV
         # SAME AS IN BOLTZMANN
         r9 = drand48(rng)
@@ -243,7 +243,7 @@ proc montect*() =
         iextra = iextra + ionfl.nc0[kgas, i]
       # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
       # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
-      ipt = larget.iarry[kgas, i]
+      ipt = gasTable[kgas].iarry[i]
       outptt.icoll[kgas, ipt] = outptt.icoll[kgas, ipt] + 1
       outptt.icoln[kgas, i] = outptt.icoln[kgas, i] + 1
       if eok < ei:
@@ -252,20 +252,20 @@ proc montect*() =
         # IF EXCITATION THEN ADD PROBABILITY, PENFRA(1,I), OF TRANSFER TO GIVE
         # IONISATION OF THE OTHER GASES IN THE MIXTURE
         if inpt.ipen == 0: break L5
-        if larget.penfra[kgas, 1, i] != 0.0:
+        if gasTable[kgas].penfra[1, i] != 0.0:
           ran = drand48(rng)
-          if ran > larget.penfra[kgas, 1, i]: break L5
+          if ran > gasTable[kgas].penfra[1, i]: break L5
           # ADD EXTRA IONISATION COLLISION
           iextra = iextra + 1
       s2 = s1 * s1 / (s1 - 1.0)
       # ANISOTROPIC SCATTERING
       r3 = drand48(rng)
-      if anist.index[kgas, i] == 1:
+      if gasTable[kgas].index[i] == 1:
         r31 = drand48(rng)
-        f3 = 1.0 - r3 * anist.angct[kgas, ie, i]
-        if r31 > anist.psct[kgas, ie, i]: f3 = -f3
-      elif anist.index[kgas, i] == 2:
-        epsi = anist.psct[kgas, ie, i]
+        f3 = 1.0 - r3 * gasTable[kgas].angct[ie, i]
+        if r31 > gasTable[kgas].psct[ie, i]: f3 = -f3
+      elif gasTable[kgas].index[i] == 2:
+        epsi = gasTable[kgas].psct[ie, i]
         f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
       else:
         # ISOTROPIC SCATTERING
@@ -325,7 +325,7 @@ proc montect*() =
     fdo ik, 1, 4000:
       tcfsum = 0.0
       fdo ki, 1, inpt.ngas:
-        tcfsum = tcfsum + larget.tcf[ki, ik]
+        tcfsum = tcfsum + gasTable[ki].tcf[ik]
       ebar = ebar + mix2.eg[ik] * outptt.spec[ik] / tcfsum
     outptt.ave = ebar / outptt.st
     wzst[j1] = (zr - zrold) / (outptt.st - stold) * 1000000000.0

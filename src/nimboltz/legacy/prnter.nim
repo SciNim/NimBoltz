@@ -62,6 +62,6 @@ proc prnter*() =
   block:
     var w: seq[FVal]
     fdo l, 250, 3750, 500:
-      w.add toFVal(large.tcf[l])
+      w.add toFVal(mixTable.tcf[l])
     fwrite(fmt111, w)
   return

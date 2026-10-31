@@ -8,14 +8,14 @@ proc sort*(i: var int, r2: float64, ie: int) =
   # SELECTS COLLISION TYPE FROM COLLISION ARRAY BY BINARY STEP SAMPLING
   # REDUCES SAMPLING RANGE TO WITHIN 4 POSITIONS IN ARRAY
   # OUTPUT =  I   ( POSITION WITHIN 4 OF CORRECT VALUE)
-  istep = large.isize
+  istep = mixTable.isize
   incr = 0
   fdo k, 1, 12:
     i = incr
     if istep == 2: return
     i = incr + istep
-    if not (i > large.last):
-      if large.cf[ie, i] < r2:
+    if not (i > mixTable.last):
+      if mixTable.cf[ie, i] < r2:
         incr = incr + istep
     istep = istep div 2
   return
