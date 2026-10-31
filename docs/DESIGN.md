@@ -110,8 +110,17 @@ Magboltz's printed errors:
   of the decks with EFINAL fixed at twice the value Fortran chose
   (`fixefinal.nim`); ELIMIT itself is covered by `tests/regress`.
 
-An empirical error per result, from several seeds of the unchanged port,
-would remove the guesswork from the floor; not done yet.
+Measured errors (2026-10-31): `tests/stat/spread.sh` runs each deck with
+8 more seeds of the unchanged port and records, per printed result, the
+spread of the 9 runs (with the Fortran run) in `spread-fast.tsv`; `run.sh`
+uses the larger of that and the printed error, with a floor of 0.25%. Ratio
+of measured to printed error over 91 decks (5 too slow): drift velocity and mean energy
+median 0.93 (worst 1.7); longitudinal diffusion median 1.3, 10% of decks
+above 2.4, worst 4.8 (low-field noble gases, fast mode: ±25% printed,
+100–125% real); α/attachment median 0.8, worst 16 (CCl₄ attachment ±0.09%
+printed, 1.4% real; SF₆ ±0.08% / 0.6%). With these errors seed 1 of the
+unchanged port passes all 91 decks (mean Σz²/n = 0.43, max |z| = 3.2),
+including the SST cases that failed with the printed errors.
 - Bitwise comparison stays as a cheap tripwire while a change keeps the
   evaluation order, as the ELIMIT rewrite does. `tests/regress` (MC decks)
   and `tests/gasdump` (every gas routine) remain the tools for that.

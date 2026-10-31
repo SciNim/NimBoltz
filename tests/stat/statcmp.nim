@@ -1,12 +1,15 @@
 ## Statistical comparison of two Magboltz outputs.
 ##
-##   statcmp [--z=5] [--floor=1] a.out b.out
+##   statcmp [--z=5] [--floor=1] [--errors=TSV --deck=NAME] a.out b.out
 ##
 ## Every result printed with an error ("value ... +- p %", "+/- p PERCENT")
 ## is paired with the result of the same label in the other output, and
 ##   z = (a - b) / sqrt(σa² + σb²),   σ = |value|·sqrt(p² + floor²)/100.
 ## The floor (percent) covers errors Magboltz underestimates: attachment
 ## rates of strongly attaching gases (SF6: ±0.08% printed, ~1% real).
+## With --errors, p is the larger of the printed error and the spread
+## measured over several random streams (spread.nim output, rows of
+## deck NAME), so the floor can be small.
 ##
 ## Not compared: the per-process collision frequencies ("DETAILED COLLISION
 ## FREQUENCIES" up to the next run): their errors are counting errors that
@@ -19,113 +22,36 @@
 ## zmax, 1 a pair beyond zmax, 2 no pair beyond zmax but an aborted run.
 
 import std/[strutils, math, tables, strformat, parseopt]
-
-type
-  Result = object
-    key: string        # label (line without value and error) and occurrence
-    line: string
-    value, pct: float
-
-proc isNumber(t: string): bool =
-  ## plain number, Fortran exponent allowed: 12, -1.5, .5, 0.1D+04
-  var i = 0
-  if i < t.len and t[i] in {'+', '-'}: inc i
-  var digits = 0
-  while i < t.len and t[i].isDigit: (inc i; inc digits)
-  if i < t.len and t[i] == '.':
-    inc i
-    while i < t.len and t[i].isDigit: (inc i; inc digits)
-  if digits == 0: return false
-  if i < t.len and t[i] in {'D', 'E'}:
-    inc i
-    if i < t.len and t[i] in {'+', '-'}: inc i
-    if i == t.len or not t[i].isDigit: return false
-    while i < t.len and t[i].isDigit: inc i
-  i == t.len
-
-proc parseNum(s: string): float = parseFloat(s.replace('D', 'E'))
-
-proc findError(line: string, start: int): tuple[first, last: int, pct: string] =
-  ## next "+- p %" or "+/- p PERCENT" at or after start; first = -1 if none
-  var i = start
-  while true:
-    var j = line.find("+-", i)
-    var k = line.find("+/-", i)
-    if j < 0 and k < 0: return (-1, -1, "")
-    var p: int
-    if j >= 0 and (k < 0 or j < k): (p = j + 2; k = j)
-    else: (p = k + 3)
-    while p < line.len and line[p] == ' ': inc p
-    let q0 = p
-    while p < line.len and (line[p].isDigit or line[p] == '.'): inc p
-    let pct = line[q0 ..< p]
-    while p < line.len and line[p] == ' ': inc p
-    if pct.isNumber:
-      if line.continuesWith("%", p): return (k, p, pct)
-      if line.continuesWith("PERCENT", p): return (k, p + 6, pct)
-    i = k + 1
-
-proc lastNumber(s: string): tuple[first, last: int] =
-  ## span of the last plain number in s (tokens split at blanks and '=')
-  var e = s.len - 1
-  while e >= 0:
-    while e >= 0 and s[e] in {' ', '='}: dec e
-    if e < 0: break
-    var b = e
-    while b > 0 and s[b - 1] notin {' ', '='}: dec b
-    if s[b .. e].isNumber: return (b, e)
-    e = b - 1
-  (-1, -1)
-
-type Parsed = object
-  results: seq[Result]
-  aborted: bool
-
-proc parse(path: string): Parsed =
-  var seen: CountTable[string]
-  var inFrequencies = false
-  for line in lines(path):
-    if "PROGRAM MAGBOLTZ" in line: inFrequencies = false
-    if "DETAILED COLLISION FREQUENCIES" in line: inFrequencies = true
-    if "ENERGY OUT OF RANGE" in line: result.aborted = true
-    if inFrequencies: continue
-    var pos = 0
-    var label = ""
-    var found: seq[(float, float)]
-    while true:
-      let (first, last, pct) = findError(line, pos)
-      if first < 0: break
-      let seg = line[pos ..< first]
-      let (vb, ve) = lastNumber(seg)
-      if vb >= 0:
-        label.add seg[0 ..< vb]
-        label.add seg[ve + 1 .. ^1]
-        label.add " ± "
-        found.add (parseNum(seg[vb .. ve]), parseNum(pct))
-      pos = last + 1
-    if found.len == 0: continue
-    if pos < line.len: label.add line[pos .. ^1]
-    label = label.splitWhitespace.join(" ")
-    seen.inc label
-    for k, (v, p) in found:
-      result.results.add Result(key: &"{label} #{seen[label]} @{k}",
-                                line: line.strip, value: v, pct: p)
+import magout
 
 proc main =
   var zmax = 5.0
   var floor = 1.0
+  var errorsFile, deck = ""
   var files: seq[string]
   for kind, key, val in getopt():
     case kind
     of cmdLongOption, cmdShortOption:
       if key == "z": zmax = parseFloat(val)
       elif key == "floor": floor = parseFloat(val)
+      elif key == "errors": errorsFile = val
+      elif key == "deck": deck = val
       else: quit("unknown option " & key)
     of cmdArgument: files.add key
     of cmdEnd: discard
   if files.len != 2: quit("usage: statcmp [--z=5] [--floor=1] a.out b.out")
-  let a = parse(files[0])
-  let b = parse(files[1])
+  var a = parse(files[0])
+  var b = parse(files[1])
+  if errorsFile != "":
+    var spread: Table[string, float]
+    for line in lines(errorsFile):
+      let c = line.split('\t')
+      if c.len >= 7 and c[0] == deck:
+        let e = parseFloat(c[4])
+        if e.classify notin {fcNan, fcInf}: spread[c[1]] = e
+    for p in [addr a, addr b]:
+      for r in p.results.mitems:
+        r.pct = max(r.pct, spread.getOrDefault(r.key))
   var bByKey: Table[string, Result]
   for r in b.results: bByKey[r.key] = r
   var n = 0

@@ -2,7 +2,10 @@
 # Statistical comparison with the reference Fortran build: the Nim build
 # runs every deck with its own random numbers (NIMBOLTZ_SEED) and each
 # result must agree with the cached Fortran result within ZMAX combined
-# standard errors (statcmp.nim, with an error floor of FLOOR percent).
+# standard errors (statcmp.nim, with an error floor of FLOOR percent). The
+# errors are the printed ones or, where larger, the spread measured over
+# several random streams (spread-$mode.tsv, written by spread.sh): Magboltz
+# underestimates some errors by up to a factor 16 (docs/DESIGN.md).
 #
 # Both builds run a copy of each deck with a fixed energy range: twice the
 # EFINAL that Fortran chose for the original deck (fixefinal.nim). The
@@ -13,7 +16,8 @@
 #   ./run.sh [deck-glob]          decks of tests/regress
 #
 # Env: as tests/regress (MAGBOLTZ_SRC, WORK, JOBS, FULL, TIMEOUT), plus
-#      SEED (default 1), ZMAX (default 5), FLOOR (default 1).
+#      SEED (default 1), ZMAX (default 5), FLOOR (default 0.25 with a spread
+#      table, else 1).
 #      Calibration (docs/DESIGN.md): unchanged port, seed 1, fast mode:
 #      90 of 96 decks pass; expected failures are SST fits whose printed
 #      errors are too small (penning_neco2_t0; gas15 with other seeds).
@@ -25,7 +29,8 @@ glob=${1:-*}
 jobs=${JOBS:-$(nproc)}
 seed=${SEED:-1}
 zmax=${ZMAX:-5}
-floor=${FLOOR:-1}
+errors=$here/spread-$mode.tsv
+if [ -f "$errors" ]; then floor=${FLOOR:-0.25}; else floor=${FLOOR:-1}; fi
 out=$work/stat-$mode
 mkdir -p "$out"
 reference_setup
@@ -65,7 +70,9 @@ for d in "${decks[@]}"; do
   if [ "$(cat "$refout/$n.rc" 2>/dev/null)" = 124 ] || [ "$(cat "$out/$n.s$seed.rc")" = 124 ]; then
     partial=$((partial+1)); echo "part  $n (timeout)"; continue
   fi
-  rc=0; res=$("$out/statcmp" --z=$zmax --floor=$floor "$refout/$n.out" "$out/$n.s$seed.out") || rc=$?
+  opts=( --z=$zmax --floor=$floor )
+  [ -f "$errors" ] && opts+=( --errors="$errors" --deck=$n )
+  rc=0; res=$("$out/statcmp" "${opts[@]}" "$refout/$n.out" "$out/$n.s$seed.out") || rc=$?
   case $rc in
     0) echo "ok    $n: $res" ;;
     2) aborted=$((aborted+1)); echo "abort $n: $res" ;;
