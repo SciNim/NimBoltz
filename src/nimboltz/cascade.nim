@@ -576,7 +576,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
       var f6s = cos(thsec)
       if s.cosTheta < 0.0: f6s = -f6s
       var phis = s.phi + PI
-      if phis > 2.0 * PI: phis = s.phi - 2.0 * PI
+      if phis > 2.0 * PI: phis = phis - 2.0 * PI  # MB-39
       c.stack[secondary].dir = rotate(h.din, f6s, f5s, cos(phis), sin(phis))
     when T is ColdBound:
       c.el = afterCollision[G](c.f, s.e, s.dir)
