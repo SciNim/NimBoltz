@@ -22,7 +22,7 @@ reference_setup
 
 # Nim build
 echo "== nim c"
-nim c --hints:off --warnings:off -d:release -d:nscale=$nscale -o:"$work/magboltz-nim" \
+nim c --hints:off --warnings:off -d:release -d:nscale=$nscale --nimcache:"$work/nimcache" -o:"$work/magboltz-nim" \
   "$root/src/nimboltz/magboltz_main.nim"
 
 # Run both on every deck, in parallel

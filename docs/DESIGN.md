@@ -77,7 +77,36 @@ amplifies any change into a different random history. The criteria:
   relative epsilon, with a dump comparison like `tests/gasdump`.
 - MC results: equal within their statistical errors, i.e. Nim and Fortran
   runs with independent random streams agree within a few combined σ
-  (`tests/stat`, to be written).
+  (`tests/stat`: the Nim build runs with `NIMBOLTZ_SEED`, `statcmp`
+  compares every result Magboltz prints with an error, |z| ≤ 5 with a 1%
+  error floor added in quadrature).
+
+Calibration of `tests/stat` (2026-10-31, port unchanged, so only the
+random numbers differ; fast mode, seed 1): of 96 decks, 90 pass (mean
+Σz²/n = 0.67, max |z| ≤ 4.7), 5 are not compared (one of the runs took
+more than an hour), 1 fails (penning_neco2_t0). What it showed about
+Magboltz's printed errors:
+
+- The per-process collision frequencies carry counting errors (±0.05% for
+  4·10⁶ collisions) but differ by several percent between random streams,
+  because collisions along one electron's history are correlated. They
+  are not compared.
+- Attachment rates of strongly attaching gases have the same problem
+  (SF₆: ±0.08% printed, 1.3% difference); the 1% floor covers it.
+- The SST fits can print errors far below their real scatter: gas15 SST
+  drift 15.9 ± 0.13% against 13.9 ± 1.6% from the MC of the same run;
+  penning_neco2_t0 SST longitudinal diffusion 4283 ± 0.3% vs 5406 ± 0.8%
+  (TOF values agree). These are the expected failures with this criterion.
+- In fast mode the MC diffusion estimates have heavy tails (gas04,
+  longitudinal: 46 ± 24% with one seed, 440 ± 24% with another).
+- EFINAL found by ELIMIT depends on the random numbers; with NMAX/10
+  collisions it is often too low for the main run, which then stops with
+  "ENERGY OUT OF RANGE". `tests/stat` therefore runs both builds on copies
+  of the decks with EFINAL fixed at twice the value Fortran chose
+  (`fixefinal.nim`); ELIMIT itself is covered by `tests/regress`.
+
+An empirical error per result, from several seeds of the unchanged port,
+would remove the guesswork from the floor; not done yet.
 - Bitwise comparison stays as a cheap tripwire while a change keeps the
   evaluation order, as the ELIMIT rewrite does. `tests/regress` (MC decks)
   and `tests/gasdump` (every gas routine) remain the tools for that.

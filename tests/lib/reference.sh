@@ -2,7 +2,8 @@
 # and tests/stat. Source it, then:
 #   reference_setup             builds $ref/magboltz-f if needed
 #   reference_cmds deck...      prints one command per deck whose cached
-#                               output $ref/<deck>.out is missing or stale
+#                               output $refout/<deck>.out is missing or stale
+#                               (refout defaults to $ref)
 #                               ($ref/<deck>.rc: exit status, 124 = timeout)
 # Env: MAGBOLTZ_SRC, WORK, FULL (1: unmodified NSCALE; default 4e7 -> 4e6),
 #      TIMEOUT (seconds per run, default 3600).
@@ -30,11 +31,12 @@ reference_setup() {
 }
 
 reference_cmds() {
-  local d n
+  local d n o=${refout:-$ref}
+  mkdir -p "$o"
   for d in "$@"; do
     n=$(basename "$d" .in)
-    if [ ! "$ref/$n.out" -nt "$ref/magboltz-f" ] || [ ! "$ref/$n.out" -nt "$d" ]; then
-      echo "timeout $to $ref/magboltz-f < $d > $ref/$n.out.tmp 2>/dev/null; echo \$? > $ref/$n.rc; mv $ref/$n.out.tmp $ref/$n.out"
+    if [ ! "$o/$n.out" -nt "$ref/magboltz-f" ] || [ ! "$o/$n.out" -nt "$d" ]; then
+      echo "timeout $to $ref/magboltz-f < $d > $o/$n.out.tmp 2>/dev/null; echo \$? > $o/$n.rc; mv $o/$n.out.tmp $o/$n.out"
     fi
   done
 }
