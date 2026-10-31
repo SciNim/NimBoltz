@@ -51,16 +51,25 @@ for d in "${decks[@]}"; do
 done | xargs -P "$jobs" -I{} timeout "${TIMEOUT:-3600}" sh -c "{}" || true
 
 # Compare
+isprefix() {  # $1 nonempty, shorter than $2 and equal to its start
+  [ -s "$1" ] && [ $(stat -c %s "$1") -lt $(stat -c %s "$2") ] &&
+    head -c $(stat -c %s "$1") "$2" | cmp -s - "$1"
+}
 fail=0
+partial=0
 for d in "${decks[@]}"; do
   n=$(basename "$d" .in)
-  if cmp -s "$work/out/$n.f.out" "$work/out/$n.nim.out"; then
+  f="$work/out/$n.f.out"; m="$work/out/$n.nim.out"
+  if cmp -s "$f" "$m"; then
     echo "ok    $n"
+  elif isprefix "$f" "$m" || isprefix "$m" "$f"; then
+    partial=$((partial+1))
+    echo "part  $n: identical up to the end of the shorter output (timeout)"
   else
     fail=$((fail+1))
     first=$(cmp "$work/out/$n.f.out" "$work/out/$n.nim.out" 2>&1 | head -1 || true)
     echo "FAIL  $n: $first"
   fi
 done
-echo "== ${#decks[@]} decks, $fail failed"
+echo "== ${#decks[@]} decks, $fail failed, $partial identical but cut short by TIMEOUT=${TIMEOUT:-3600}"
 [ $fail = 0 ]

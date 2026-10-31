@@ -2,6 +2,8 @@
 ##
 ## Usage: f2nim <source.f> <outdir> [UNIT ...]
 ##   Translates all units (or only the listed ones; COMMON blocks always).
+##        f2nim <source.f> --undef
+##   Lists locals that are read but never written in their unit.
 ##   DRAND48 and RM48 are skipped: they are hand-ported in port/rm48.nim.
 
 import std/[os, tables, sets, strutils, strformat, algorithm, sequtils]
@@ -247,6 +249,14 @@ proc main() =
   let g = Gen(prog: prog)
   for ui in prog.units.values: g.resolveUnit(ui)
   g.computeIntents()
+  if dir == "--undef":
+    # locals that are read but never written anywhere in their unit
+    # (no assignment, DO, READ, out argument or DATA): always undefined
+    for ui in prog.units.values:
+      for s in ui.syms.values:
+        if s.storage == stLocal and s.used and not s.written and s.data.len == 0:
+          echo ui.u.name, " ", s.name
+    return
   buildCommons(prog)
   assignNames(prog)
   emitCommons(prog, dir, src.extractFilename)

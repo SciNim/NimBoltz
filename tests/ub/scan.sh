@@ -13,6 +13,7 @@ root=$(cd "$here/../.." && pwd)
 src=${MAGBOLTZ_SRC:-$HOME/src/Magboltz/magboltz-11.21.f}
 work=${WORK:-/tmp/ubscan}
 jobs=${JOBS:-$(nproc)}
+to=${TIMEOUT:-3600}       # per run; status 124 in the report = timed out
 rm -rf "$work"; mkdir -p "$work/out"
 sed 's/NSCALE=40000000/NSCALE=4000000/' "$src" > "$work/magboltz.f"
 start=$(grep -n '^      PROGRAM MAGBOLTZ' "$work/magboltz.f" | cut -d: -f1)
@@ -28,20 +29,22 @@ cd "$work"
 {
 for d in "$root"/tests/regress/decks/*.in; do
   n=$(basename "$d" .in)
-  for b in bounds zero poison; do echo "./mb-$b < $d > out/$n.$b 2> out/$n.$b.err"; done
+  for b in bounds zero poison; do echo "timeout $to ./mb-$b < $d > out/$n.$b 2> out/$n.$b.err; echo \$? > out/$n.$b.rc"; done
 done
 for g in $(seq 1 61); do
   for ef in 0.3 4.0 40.0 400.0 8000.0 200000.0; do for an in 0 1 2; do for fr in 100.0 10.0; do
     echo "echo '$g $an $ef 20.0 760.0 $fr' | ./gasdmp-bounds /dev/null > /dev/null 2> out/g${g}_${an}_${ef}_$fr.err"
   done; done; done
 done
-} | xargs -P "$jobs" -I{} timeout "${TIMEOUT:-7200}" sh -c "{}" || true
+} | xargs -P "$jobs" -I{} timeout $((to + 60)) sh -c "{}" || true
 {
 echo "== out-of-bounds (count, first error per run)"
-grep -h -A1 'At line' out/*.err | grep -v '^--' | paste - - | sed 's/Fortran runtime error: //' | sort | uniq -c | sort -rn
-echo "== zero vs poison initialisation"
-for f in out/*.zero; do n=${f%.zero}; cmp -s "$f" "$n.poison" || echo "differs: $(basename $n)"; done
-echo "== runs that did not finish normally"
-for f in out/*.bounds out/*.zero out/*.poison; do grep -q 'RM48' "$f" 2>/dev/null || echo "no output: $f"; done | head -20
+{ grep -h -A1 'At line' out/*.err || true; } | grep -v '^--' | paste - - | sed 's/Fortran runtime error: //' | sort | uniq -c | sort -rn
+echo "== zero vs poison initialisation (runs that finished)"
+for f in out/*.zero; do n=${f%.zero}
+  [ "$(cat $n.zero.rc 2>/dev/null)" = 0 ] && [ "$(cat $n.poison.rc 2>/dev/null)" = 0 ] || continue
+  cmp -s "$f" "$n.poison" || echo "differs: $(basename $n)"; done
+echo "== runs that did not finish normally (exit status)"
+for f in out/*.rc; do r=$(cat $f); [ "$r" = 0 ] || echo "$(basename $f .rc): $r"; done
 } > report.txt
 cat report.txt

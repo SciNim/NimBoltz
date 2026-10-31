@@ -14,7 +14,7 @@ proc elimitbt*(ielow: var int) =
   var dxcom, dycom, dzcom, s1, ei, r9, extra, s2: float64
   var r3, r31, f3, epsi, theta0, r4, phi0, f8: float64
   var f9, arg1, d, q, f6, u, csqd, f5: float64
-  var dcz2, argz: float64
+  var argz: float64
   # CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY
   # LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED.
   # IF ENERGY LIMIT IS OK       IELOW = 0
@@ -140,7 +140,8 @@ proc elimitbt*(ielow: var int) =
     csqd = f3 * f3
     if f3 < 0.0 and csqd > u: f6 = -(1.0 * f6)
     f5 = sin(setp.theta)
-    dcz2 = min(dzcom, 1.0)
+    # NIMBOLTZ FIX MB-29: WAS DCZ2= (UNUSED), AS IN ELIMITT/ELIMITCT: DZCOM=
+    dzcom = min(dzcom, 1.0)
     argz = sqrt(dxcom * dxcom + dycom * dycom)
     block L130:
       if argz == 0.0:
