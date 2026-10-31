@@ -11,7 +11,8 @@
 ## value objects without references. The adaptive null-collision bounds
 ## (TCFMAX) change during the Monte Carlo and are not part of the table.
 
-import frt
+import farrays
+export farrays
 
 const
   nEnergyBins* = 4000      ## energy grid of all tables (NSTEP in MIXER)

@@ -2,7 +2,7 @@
 ## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
 
 import ../frt, commons
-import alpcalc, alpcalct, alpclca, alpclcat, alpclcb, alpclcbt, alpclcc, alpclcct, elimit, elimitb, elimitbt, elimitc, elimitct, elimitt, mixer, mixert, monte, montea, monteat, monteb, montebt, montec, montect, montet, output, output2, output2t, outputt, prnter, prntert, readin, setup, setupt
+import alpcalc, alpcalct, alpclca, alpclcat, alpclcb, alpclcbt, alpclcc, alpclcct, elimits, mixer, mixert, monte, montea, monteat, monteb, montebt, montec, montect, montet, output, output2, output2t, outputt, prnter, prntert, readin, setup, setupt
 
 # PROGRAM MAGBOLTZ 2   VERSION 11.20    NOVEMBER 2024
 # COPYRIGHT 2024   STEPHEN FRANCIS BIAGI
@@ -410,16 +410,8 @@ proc magboltz*() =
                   while true:
                     block R2:
                       mixert()
-                      block L10:
-                        # LOOP TO CALCULATE EFINAL
-                        if bfld.bmag == 0.0 or bfld.btheta == 0.0 or abs(bfld.btheta) == 180.0:
-                          elimitt(ielow)
-                          break L10
-                        if bfld.btheta == 90.0:
-                          elimitbt(ielow)
-                          break L10
-                        else:
-                          elimitct(ielow)
+                      # LOOP TO CALCULATE EFINAL
+                      elimit(thermalMotion = true, ielow)
                       if ielow == 1:
                         inpt.efinal = inpt.efinal * sqrt(2.0)
                         setp.estart = inpt.efinal / 50.0
@@ -477,16 +469,8 @@ proc magboltz*() =
                 while true:
                   block R12:
                     mixer()
-                    block L20:
-                      # LOOP TO CALCULATE EFINAL
-                      if bfld.bmag == 0.0 or bfld.btheta == 0.0 or abs(bfld.btheta) == 180.0:
-                        elimit(ielow)
-                        break L20
-                      if bfld.btheta == 90.0:
-                        elimitb(ielow)
-                        break L20
-                      else:
-                        elimitc(ielow)
+                    # LOOP TO CALCULATE EFINAL
+                    elimit(thermalMotion = false, ielow)
                     if ielow == 1:
                       inpt.efinal = inpt.efinal * sqrt(2.0)
                       setp.estart = inpt.efinal / 50.0
