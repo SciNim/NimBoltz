@@ -35,6 +35,8 @@ type
     wpl*: array[1..N, float64]    ## binding energy of the ionised shell (eV)
     iarry*: array[1..N, int]      ## process kind L (1 elastic, 2 ionisation, ...)
     ipn*: array[1..N, int]        ## > 0: ionisation, energy shared with the secondary
+    augerCount*: array[1..N, int]       ## ionisation: Auger electrons emitted (NC0)
+    augerEnergy*: array[1..N, float64]  ## ionisation: their total energy, eV (EC0)
     index*: array[1..N, int]      ## 0 isotropic, 1 forward/backward cut, 2 screened
     penfra*: Arr2[float64, 3, N]  ## Penning transfer fraction, distance, time
     last*: int                    ## number of processes in use

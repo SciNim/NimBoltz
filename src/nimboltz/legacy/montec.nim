@@ -224,7 +224,7 @@ proc montec*() =
         extra = r9 * (ev - ei)
         ei = extra + ei
         # IF AUGER OR FLUORESCENCE ADD EXTRA IONISATION ELECTRONS
-        iextra = iextra + ionfl1.nc0[i]
+        iextra = iextra + mixTable.augerCount[i]
       # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
       # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
       ipt = mixTable.iarry[i]

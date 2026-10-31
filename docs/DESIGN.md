@@ -10,12 +10,15 @@ the fixes MB-01..MB-29 of the `fixes` branch of the Magboltz fork) that
 translator is retired: a better translator cannot produce idiomatic code.
 From now on `legacy/` is edited by hand and shrinks as routine families
 are rewritten. f2nim stays for one-off jobs (extracting DATA tables,
-diffing a new Magboltz release).
+diffing a new Magboltz release). Defects found later (MB-30 onwards) are
+fixed by hand in both `legacy/` and the fork, so that the bitwise
+comparison keeps holding.
 
 ## Order of work
 
 1. ELIMIT family (done first: small, and it settles the patterns below).
-2. SETUP / MIXER / OUTPUT: inputs, the tables, the results.
+2. SETUP / MIXER / OUTPUT: inputs, the tables, the results. MIXER and
+   MIXERT done (`mixture.nim`, one builder for both table layouts).
 3. The MONTE family (MONTE, MONTEA/B/C, thermal versions, MONTEFT*, ...).
 4. Gas cross sections (95 kLOC): data tables as data, shared interpolation
    helpers.
@@ -65,7 +68,9 @@ Rules:
 
 Known leftovers that matter here: table layout is Magboltz's (`cf[ie, i]`
 with the energy bin fastest), which is poor for the per-bin scan over
-processes. It will be transposed once MIXER is rewritten.
+processes in theory. Tried after the MIXER rewrite (2026-10-31): storing
+each bin's processes contiguously made the legacy MONTE 3–8% slower, so
+the layout is revisited with the MONTE rewrite.
 
 ## Equivalence with Magboltz
 
@@ -124,5 +129,7 @@ src/nimboltz/
   collisions.nim process choice, scattering
   thermal.nim    ThermalGas, Maxwell velocities
   elimit.nim     upper energy limit search (ELIMIT*)
+  mixture.nim    GasXsec (output of a gas routine), collision tables of a
+                 mixture (MIXER, MIXERT)
   magboltz_main.nim  program: reads the deck on stdin
 ```

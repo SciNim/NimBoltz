@@ -335,8 +335,8 @@ proc monteftgt*() =
                             # STORE POSSIBLE SHELL EMISSIONS AUGER OR FLUORESCENCE
                             if eistr > 30.0:
                               # AUGER EMISSION WITHOUT FLUORESCENCE
-                              naug = ionfl.nc0[kgas, i]
-                              eavaug = ionfl.ec0[kgas, i] / float64(naug)
+                              naug = gasTable[kgas].augerCount[i]
+                              eavaug = gasTable[kgas].augerEnergy[i] / float64(naug)
                               fdo jfl, 1, naug:
                                 nclus = nclus + 1
                                 npont = npont + 1

@@ -216,7 +216,7 @@ proc montet*() =
         extra = r9 * (eok - ei)
         ei = extra + ei
         # IF AUGER OR FLUORESCENCE ADD EXTRA IONISATION COLLISIONS
-        iextra = iextra + ionfl.nc0[kgas, i]
+        iextra = iextra + gasTable[kgas].augerCount[i]
       # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
       # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
       ipt = gasTable[kgas].iarry[i]

@@ -63,45 +63,9 @@ type
     frac*: array[1..6, float64]
   CommonGasn* = object  ## COMMON /GASN/
     ngasn*: array[1..6, int]
-  CommonMix1* = object  ## COMMON /MIX1/
-    qelm*: array[1..4000, float64]
-    qsum*: array[1..4000, float64]
-    qion*: Arr2[float64, 6, 4000]
-    qin1*: Arr2[float64, 250, 4000]
-    qin2*: Arr2[float64, 250, 4000]
-    qin3*: Arr2[float64, 250, 4000]
-    qin4*: Arr2[float64, 250, 4000]
-    qin5*: Arr2[float64, 250, 4000]
-    qin6*: Arr2[float64, 250, 4000]
-    qsatt*: array[1..4000, float64]
-  CommonMix2* = object  ## COMMON /MIX2/
+  CommonMix2* = object  ## COMMON /MIX2/ (energy grid; cross sections dropped)
     eg*: array[1..4000, float64]
     eroot*: array[1..4000, float64]
-    qt1*: array[1..4000, float64]
-    qt2*: array[1..4000, float64]
-    qt3*: array[1..4000, float64]
-    qt4*: array[1..4000, float64]
-  CommonMix3* = object  ## COMMON /MIX3/
-    nin1*: int
-    nin2*: int
-    nin3*: int
-    nin4*: int
-    nin5*: int
-    nin6*: int
-    lion*: array[1..6, int]
-    lin1*: array[1..250, int]
-    lin2*: array[1..250, int]
-    lin3*: array[1..250, int]
-    lin4*: array[1..250, int]
-    lin5*: array[1..250, int]
-    lin6*: array[1..250, int]
-    alion*: array[1..6, float64]
-    alin1*: array[1..250, float64]
-    alin2*: array[1..250, float64]
-    alin3*: array[1..250, float64]
-    alin4*: array[1..250, float64]
-    alin5*: array[1..250, float64]
-    alin6*: array[1..250, float64]
   CommonCnsts1* = object  ## COMMON /CNSTS1/
     const1*: float64
     const2*: float64
@@ -115,15 +79,6 @@ type
   CommonFred* = object  ## COMMON /FRED/
     fcion*: array[1..4000, float64]
     fcatt*: array[1..4000, float64]
-  CommonIonfl* = object  ## COMMON /IONFL/
-    nc0*: Arr2[int, 6, 300]
-    ec0*: Arr2[float64, 6, 300]
-    ng1*: Arr2[int, 6, 300]
-    eg1*: Arr2[float64, 6, 300]
-    ng2*: Arr2[int, 6, 300]
-    eg2*: Arr2[float64, 6, 300]
-    wklm*: Arr2[float64, 6, 300]
-    efl*: Arr2[float64, 6, 300]
   CommonMratio* = object  ## COMMON /MRATIO/
     van1*: float64
     van2*: float64
@@ -417,15 +372,6 @@ type
     tcfmax*: array[1..8, float64]
   CommonAnis* = object  ## COMMON /ANIS/
     niso*: int
-  CommonIonfl1* = object  ## COMMON /IONFL1/
-    nc0*: array[1..960, int]
-    ec0*: array[1..960, float64]
-    ng1*: array[1..960, int]
-    eg1*: array[1..960, float64]
-    ng2*: array[1..960, int]
-    eg2*: array[1..960, float64]
-    wklm*: array[1..960, float64]
-    efl*: array[1..960, float64]
   CommonOutpt* = object  ## COMMON /OUTPT/
     time*: array[1..300, float64]
     icoll*: array[1..30, int]
@@ -452,15 +398,12 @@ var
   cnsts*: CommonCnsts
   ratio*: CommonRatio
   gasn*: CommonGasn
-  mix1*: CommonMix1
   mix2*: CommonMix2
-  mix3*: CommonMix3
   cnsts1*: CommonCnsts1
   larget*: CommonLarget  ## rest in gasTable
   gasTable*: array[1..maxGases, CollisionTable[maxGasProcesses]]  ## /LARGET/ + /ANIST/
   anist*: CommonAnist
   fred*: CommonFred
-  ionfl*: CommonIonfl
   mratio*: CommonMratio
   vel*: CommonVel
   velerr*: CommonVelerr
@@ -497,5 +440,4 @@ var
   large*: CommonLarge  ## rest in mixTable
   mixTable*: CollisionTable[maxMixProcesses]  ## /LARGE/ + /ANIS/
   anis*: CommonAnis
-  ionfl1*: CommonIonfl1
   outpt*: CommonOutpt
