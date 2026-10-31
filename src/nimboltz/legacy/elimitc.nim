@@ -1,0 +1,154 @@
+## SUBROUTINE ELIMITC of magboltz-11.21.f (line 13833).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+import dmin0, sort
+
+proc elimitc*(ielow: var int) =
+  var isamp, n4000, intem, j2m, j1, i, ie, ipt: int
+  var rtheta, efz100, efx100, f1, eovbr, rdum, e1, tdash: float64
+  var const9, dcz1, dcx1, dcy1, vtot, cx1, cy1, cz1: float64
+  var f4, deltae, r1, tlim, t, wbt, coswt, sinwt: float64
+  var dz, dx, ev, r5, cx2, cy2, cz2, dcx2: float64
+  var dcy2, dcz2, r2, s1, ei, r9, extra, s2: float64
+  var r3, r31, f3, epsi, theta0, r4, phi0, f8: float64
+  var f9, arg1, d, q, f6, u, csqd, f5: float64
+  var argz: float64
+  # CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY
+  # LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED.
+  # IF ENERGY LIMIT IS OK       IELOW = 0
+  # IF ENERGY LIMIT IS EXCEEDED IELOW = 1
+  # THE TEST IS CARRIED OUT FOR A SAMPLE OF COLLISIONS THAT ARE
+  # SMALLER THAN THE FULL SAMPLE BY A FACTOR OF 1/ISAMP
+  # USED WITH MAGNETIC FIELD B AT ANGLES BETWEEN 0 AND 90 DEGREES TO
+  # THE ELECTRIC FIELD.
+  isamp = 20
+  setp.small = 1e-20
+  rtheta = bfld.btheta * arccos((-1.0)) / 180.0
+  efz100 = setp.efield * 100.0 * sin(rtheta)
+  efx100 = setp.efield * 100.0 * cos(rtheta)
+  f1 = setp.efield * cnsts1.const2 * cos(rtheta)
+  eovbr = bfld.eovb * sin(rtheta)
+  rdum = setp.rstart
+  e1 = setp.estart
+  n4000 = 4000
+  intem = 8
+  tdash = 0.0
+  const9 = cnsts1.const3 * 0.01
+  # INITIAL DIRECTION COSINES
+  dcz1 = cos(setp.theta)
+  dcx1 = sin(setp.theta) * cos(setp.phi)
+  dcy1 = sin(setp.theta) * sin(setp.phi)
+  vtot = const9 * sqrt(e1)
+  cx1 = dcx1 * vtot
+  cy1 = dcy1 * vtot
+  cz1 = dcz1 * vtot
+  f4 = 2.0 * arccos((-1.0))
+  deltae = inpt.efinal / float64(intem)
+  j2m = setp.nmax div isamp
+  # MAIN LOOP
+  fdo j1, 1, j2m:
+    block R1x:
+      while true:
+        block R1:
+          r1 = drand48(rng)
+          i = int(trunc(e1 / deltae) + 1.0)
+          i = int(dmin0(i, intem))
+          tlim = large.tcfmax[i]
+          t = -(ln(r1) / tlim) + tdash
+          tdash = t
+          wbt = bfld.wb * t
+          coswt = cos(wbt)
+          sinwt = sin(wbt)
+          dz = (cz1 * sinwt + (eovbr - cy1) * (1.0 - coswt)) / bfld.wb
+          dx = cx1 * t + f1 * t * t
+          ev = e1 + dz * efz100 + dx * efx100
+          ie = int(trunc(ev / inpt.estep) + 1.0)
+          ie = int(dmin0(ie, n4000))
+          if large.tcf[ie] > tlim:
+            tdash = tdash + ln(r1) / tlim
+            large.tcfmax[i] = 1.05 * large.tcfmax[i]
+            break R1
+          # TEST FOR REAL OR NULL COLLISION
+          r5 = drand48(rng)
+          tlim = large.tcf[ie] / tlim
+          if r5 > tlim: break R1
+          break R1x
+    # CALCULATE DIRECTION COSINES AT INSTANT BEFORE COLLISION
+    if ie == 4000:
+      # ELECTRON ENERGY OUT OF RANGE
+      ielow = 1
+      return
+    tdash = 0.0
+    cx2 = cx1 + 2.0 * f1 * t
+    cy2 = (cy1 - eovbr) * coswt + cz1 * sinwt + eovbr
+    cz2 = cz1 * coswt - (cy1 - eovbr) * sinwt
+    vtot = sqrt(cx2 * cx2 + cy2 * cy2 + cz2 * cz2)
+    dcx2 = cx2 / vtot
+    dcy2 = cy2 / vtot
+    dcz2 = cz2 / vtot
+    # DETERMINATION OF REAL COLLISION TYPE
+    r2 = drand48(rng)
+    # FIND LOCATION WITHIN 4 UNITS IN COLLISION ARRAY
+    sort(i, r2, ie)
+    while true:
+      i = i + 1
+      if not (large.cf[ie, i] < r2): break
+    s1 = large.rgas[i]
+    ei = large.ein[i]
+    if not (large.ipn[i] <= 0):
+      r9 = drand48(rng)
+      extra = r9 * (ev - ei)
+      ei = extra + ei
+    # GENERATE SCATTERING ANGLES AND UPDATE  LABORATORY COSINES AFTER
+    # COLLISION ALSO UPDATE ENERGY OF ELECTRON.
+    ipt = large.iarry[i]
+    if ev < ei:
+      ei = ev - 0.0001
+    s2 = s1 * s1 / (s1 - 1.0)
+    r3 = drand48(rng)
+    if anis.index[i] == 1:
+      r31 = drand48(rng)
+      f3 = 1.0 - r3 * anis.angct[ie, i]
+      if r31 > anis.psct[ie, i]: f3 = -f3
+    elif anis.index[i] == 2:
+      epsi = anis.psct[ie, i]
+      f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
+    else:
+      f3 = 1.0 - 2.0 * r3
+    theta0 = arccos(f3)
+    r4 = drand48(rng)
+    phi0 = f4 * r4
+    f8 = sin(phi0)
+    f9 = cos(phi0)
+    arg1 = 1.0 - s1 * ei / ev
+    arg1 = max(arg1, setp.small)
+    d = 1.0 - f3 * sqrt(arg1)
+    e1 = ev * (1.0 - ei / (s1 * ev) - 2.0 * d / s2)
+    e1 = max(e1, setp.small)
+    q = sqrt(ev / e1 * arg1) / s1
+    q = min(q, 1.0)
+    setp.theta = arcsin(q * sin(theta0))
+    f6 = cos(setp.theta)
+    u = (s1 - 1.0) * (s1 - 1.0) / arg1
+    csqd = f3 * f3
+    if f3 < 0.0 and csqd > u: f6 = -(1.0 * f6)
+    f5 = sin(setp.theta)
+    dcz2 = min(dcz2, 1.0)
+    vtot = const9 * sqrt(e1)
+    argz = sqrt(dcx2 * dcx2 + dcy2 * dcy2)
+    block L130:
+      if argz == 0.0:
+        dcz1 = f6
+        dcx1 = f9 * f5
+        dcy1 = f8 * f5
+        break L130
+      dcz1 = dcz2 * f6 + argz * f5 * f8
+      dcy1 = dcy2 * f6 + f5 / argz * (dcx2 * f9 - dcy2 * dcz2 * f8)
+      dcx1 = dcx2 * f6 - f5 / argz * (dcy2 * f9 + dcx2 * dcz2 * f8)
+    cx1 = dcx1 * vtot
+    cy1 = dcy1 * vtot
+    cz1 = dcz1 * vtot
+    # LOOP
+  ielow = 0
+  return

@@ -1,0 +1,36 @@
+## SUBROUTINE PTH of magboltz-11.21.f (line 9020).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+
+const
+  fmt900 = "(2(/),\' PULSED TOWNSEND RESULTS AT\',I2,\' SEQUENTIAL TIME PLANES\',/,\'PLANE   (ION-ATT)FRQ.    ENERGY      WVZ       WVY       WVX  NO.OF ELECTRNS\',/)"
+  fmt910 = "(1X,I2,4X,D12.4,4X,F7.2,4X,F6.1,4X,F6.1,4X,F6.1,4X,I8)"
+
+proc pth*() =
+  var antpl: array[1..8, float64]
+  var i, ipl: int
+  # CALCULATES PULSED TOWNSEND COEFFICIENTS
+  antpl[1] = float64(tplouth.netpl[1])
+  pttofh.ri[1] = (ln(antpl[1]) - ln(float64(cion.iprim))) / cion.tstep
+  pttofh.ept[1] = tplouth.etpl[1] / antpl[1]
+  pttofh.ttest[1] = tplouth.ttpl[1] / antpl[1]
+  pttofh.vzpt[1] = 1000000000.0 * tplouth.vztpl[1] / antpl[1]
+  pttofh.vypt[1] = 1000000000.0 * tplouth.vytpl[1] / antpl[1]
+  pttofh.vxpt[1] = 1000000000.0 * tplouth.vxtpl[1] / antpl[1]
+  block L11:
+    fdo i, 2, cion.itfinal:
+      if tplouth.netpl[i] == 0:
+        cion.itfinal = i - 1
+        break L11
+      antpl[i] = float64(tplouth.netpl[i])
+      pttofh.ri[i] = (ln(antpl[i]) - ln(antpl[i - 1])) / cion.tstep
+      pttofh.ept[i] = tplouth.etpl[i] / antpl[i]
+      pttofh.ttest[i] = tplouth.ttpl[i] / antpl[i]
+      pttofh.vzpt[i] = 1000000000.0 * tplouth.vztpl[i] / antpl[i]
+      pttofh.vypt[i] = 1000000000.0 * tplouth.vytpl[i] / antpl[i]
+      pttofh.vxpt[i] = 1000000000.0 * tplouth.vxtpl[i] / antpl[i]
+  fwrite(fmt900, cion.itfinal)
+  fdo ipl, 1, cion.itfinal:
+    fwrite(fmt910, ipl, pttofh.ri[ipl], pttofh.ept[ipl], pttofh.vzpt[ipl], pttofh.vypt[ipl], pttofh.vxpt[ipl], tplouth.netpl[ipl])
+  return

@@ -1,0 +1,69 @@
+## SUBROUTINE ALPCLCB of magboltz-11.21.f (line 15732).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+import friedland, monteftg, ptg, tofg
+
+const
+  fmt25 = "(/,2X,\'SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAMETERS\',/,\'  --------------------------------------------------------------\')"
+  fmt26 = "(1(/),\'  TIME STEP BETWEEN SAMPLING PLANES =\',D12.5,\' PICOSECS.\',/)"
+  fmt27 = "(/,\'PT IONISATION AND ATTACHMENT RATES *10**12/SEC\',/,\'ALPHA=\',D10.3,\' +- \',F6.2,\' %      ATT=\',D10.3,\' +- \',F6.2,\' %\')"
+  fmt28 = "(/,\'TOF DIFFUSION\')"
+  fmt29 = "(/,\'DZZ=\',F8.1,\' +- \',F5.1,\' %\',/,\'DXX=\',F8.1,\' +- \',F5.1,\' %\',/,\'DYY=\',F8.1,\' +- \',F5.1,\' %\',/,\'DYZ=\',F8.1,\' +- \',F5.1,\' %\')"
+  fmt30 = "(/,\'TOF DRIFT VELOCITY\')"
+  fmt31 = "(/,\'WRZ=\',F8.2,\' +-\',F6.1,\' %    WRY=\',F8.2,\' +-\',F6.1,\' %\')"
+  fmt888 = "(/,\'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESULTS:\',/,\' ALPHA-ATT /CM.=\',D11.4,\' N.B. APPROXIMATE FORMULA NOT ACCURATE\',/)"
+
+proc alpclcb*() =
+  var imax: int
+  var corr, tofwr, wrzn, fc1, fc2, alpzz, alp1er, att1et: float64
+  # ESTIMATE TIME STEP  FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM.
+  # USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES.
+  # CALLS TOF AND PT SUBROUTINES AND UPDATES ALPHA AND ATT
+  # VERSION WITH BFIELD ALONG X-AXIS AND EFIELD ALONG Z-AXIS (90 DEGREES)
+  imax = setp.nmax div 10000000
+  if imax < 5: imax = 5
+  setp.nmax = imax * 10000000
+  corr = 760.0 * (inpt.tempc + 273.1499938964844) / (inpt.torr * 293.1499938964844)
+  cion.alphast = 0.85 * abs(ctowns.alpha - ctowns.att)
+  if ctowns.alpha > 10.0 * cion.alphast or ctowns.att > 10.0 * cion.alphast:
+    # LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP BY 30.0
+    if ctowns.alpha > 100.0 * corr:
+      cion.alphast = cion.alphast * 30.0
+    elif ctowns.alpha > 50.0 * corr:
+      cion.alphast = cion.alphast * 15.0
+    else:
+      cion.alphast = cion.alphast * 8.0
+  cion.vdst = vel.wz * 0.00001
+  cion.tstep = ln(3.0) / (cion.alphast * cion.vdst * 100000.0)
+  cion.tstep = cion.tstep * 1000000000000.0
+  cion.tfinal = 7.0 * cion.tstep
+  cion.itfinal = 7
+  # CALC TIME OF FLIGHT AND PT
+  fwrite(fmt25)
+  fwrite(fmt26, cion.tstep)
+  monteftg()
+  friedland()
+  ptg()
+  tofg()
+  fwrite(fmt27, tofgout.ralpha, tofgout.ralper, tofgout.rattof, tofgout.ratofer)
+  fwrite(fmt28)
+  fwrite(fmt29, tofgout.tofdzz, tofgout.tofdzzer, tofgout.tofdxx, tofgout.tofdxxer, tofgout.tofdyy, tofgout.tofdyyer, tofgout.tofdyz, tofgout.tofdyzer)
+  fwrite(fmt30)
+  fwrite(fmt31, tofgout.tofwrz, tofgout.tofwrzer, tofgout.tofwry, tofgout.tofwryer)
+  # CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
+  tofwr = sqrt(tofgout.tofwrz * tofgout.tofwrz + tofgout.tofwry * tofgout.tofwry)
+  wrzn = tofgout.tofwrz * 100000.0
+  fc1 = wrzn / (2.0 * tofgout.tofdzz)
+  fc2 = (tofgout.ralpha - tofgout.rattof) * 1000000000000.0 / tofgout.tofdzz
+  alpzz = fc1 - sqrt(fc1*fc1 - fc2)
+  fwrite(fmt888, alpzz)
+  # ---- -------------------------------------------------
+  # LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
+  # ---- -------------------------------------------
+  ctowns.alpha = tofgout.ralpha / tofwr * 10000000.0
+  ctowns.att = tofgout.rattof / tofwr * 10000000.0
+  alp1er = tofgout.ralper * ctowns.alpha / 100.0
+  att1et = tofgout.ratofer * ctowns.att / 100.0
+  # --- -------------------------------------------
+  return

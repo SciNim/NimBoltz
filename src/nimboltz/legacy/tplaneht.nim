@@ -1,0 +1,61 @@
+## SUBROUTINE TPLANEHT of magboltz-11.21.f (line 8954).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+
+proc tplaneht*(t: float64, e1: float64, cx1: float64, cy1: float64, cz1: float64, efld: float64, iplane: int) =
+  var timesp, timlft, t2lft, wbt, coswt, sinwt, cx2, cy2: float64
+  var cz2, vtot, dcz2, dcy2, dcx2, dx, xplane, yplane: float64
+  var dz, zplane, zplaner, yplaner, xplaner, eplane, vzplane, vyplane: float64
+  var vxplane, vzplner, vyplner, vxplner: float64
+  # STORES POSITION, TIME AND ENERGY AND SUMS REQUIRED
+  # TO CALCULATE DEVIATIONS AND MEANS AT PLANE =IPLANE
+  # USED WITH BFIELD AT ANGLE BTHETA TO EFIELD
+  # ROTATES STORED POSITIONS INTO LAB FRAME.
+  timesp = float64(iplane) * cion.tstep
+  # CALC TIME LEFT TO ARRIVE AT PLANE
+  timlft = timesp - outptt.st
+  t2lft = timlft * timlft
+  wbt = bfld.wb * timlft
+  coswt = cos(wbt)
+  sinwt = sin(wbt)
+  cx2 = cx1 + 2.0 * rots.f1 * timlft
+  cy2 = (cy1 - rots.eovbr) * coswt + cz1 * sinwt + rots.eovbr
+  cz2 = cz1 * coswt - (cy1 - rots.eovbr) * sinwt
+  vtot = sqrt(cx2 * cx2 + cy2 * cy2 + cz2 * cz2)
+  dcz2 = cz2 / vtot
+  dcy2 = cy2 / vtot
+  dcx2 = cx2 / vtot
+  dx = cx1 * timlft + rots.f1 * timlft * timlft
+  xplane = outptt.x + dx
+  yplane = outptt.y + rots.eovbr * timlft + ((cy1 - rots.eovbr) * sinwt + cz1 * (1.0 - coswt)) / bfld.wb
+  dz = (cz1 * sinwt + (rots.eovbr - cy1) * (1.0 - coswt)) / bfld.wb
+  zplane = outptt.z + dz
+  # ROTATE POSITIONS
+  zplaner = zplane * rots.rcs - xplane * rots.rsn
+  yplaner = yplane
+  xplaner = zplane * rots.rsn + xplane * rots.rcs
+  eplane = e1 + dz * rots.efz100 + dx * rots.efx100
+  vzplane = dcz2 * sqrt(eplane) * cnsts1.const3 * 0.01
+  vyplane = dcy2 * sqrt(eplane) * cnsts1.const3 * 0.01
+  vxplane = dcx2 * sqrt(eplane) * cnsts1.const3 * 0.01
+  tplouth.xtpl[iplane] = tplouth.xtpl[iplane] + xplaner
+  tplouth.ytpl[iplane] = tplouth.ytpl[iplane] + yplaner
+  tplouth.ztpl[iplane] = tplouth.ztpl[iplane] + zplaner
+  tplouth.xxtpl[iplane] = tplouth.xxtpl[iplane] + xplaner * xplaner
+  tplouth.yytpl[iplane] = tplouth.yytpl[iplane] + yplaner * yplaner
+  tplouth.zztpl[iplane] = tplouth.zztpl[iplane] + zplaner * zplaner
+  tplouth.yztpl[iplane] = tplouth.yztpl[iplane] + yplaner * zplaner
+  tplouth.xztpl[iplane] = tplouth.xztpl[iplane] + xplaner * zplaner
+  tplouth.xytpl[iplane] = tplouth.xytpl[iplane] + xplaner * yplaner
+  tplouth.etpl[iplane] = tplouth.etpl[iplane] + eplane
+  tplouth.ttpl[iplane] = tplouth.ttpl[iplane] + outptt.st + timlft
+  # ROTATE VELOCITIES
+  vzplner = vzplane * rots.rcs - vxplane * rots.rsn
+  vyplner = vyplane
+  vxplner = vzplane * rots.rsn + vxplane * rots.rcs
+  tplouth.vztpl[iplane] = tplouth.vztpl[iplane] + vzplner
+  tplouth.vytpl[iplane] = tplouth.vytpl[iplane] + vyplner
+  tplouth.vxtpl[iplane] = tplouth.vxtpl[iplane] + vxplner
+  tplouth.netpl[iplane] = tplouth.netpl[iplane] + 1
+  return

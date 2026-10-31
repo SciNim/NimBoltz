@@ -1,0 +1,29 @@
+## SUBROUTINE COLFT of magboltz-11.21.f (line 15584).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+
+proc colft*(freq: var float64, freel: var float64, freion: var float64, freatt: var float64, frein: var float64, ntotal: var int) =
+  var ninel, nela, natt, nion, j, nreal: int
+  # CALCULATES REAL COLLISION FREQUENCIES FOR EVENT TYPES
+  ninel = 0
+  nela = 0
+  natt = 0
+  nion = 0
+  fdo j, 1, inpt.ngas:
+    ninel = ninel + outptt.icoll[j, 4] + outptt.icoll[j, 5]
+    nela = nela + outptt.icoll[j, 1]
+    natt = natt + outptt.icoll[j, 3]
+    nion = nion + outptt.icoll[j, 2]
+  ntotal = nela + ninel + natt + nion
+  if ttrm.ttots == 0.0:
+    nreal = ntotal
+    ttrm.ttots = outptt.st
+  else:
+    nreal = ntotal
+  freq = float64(nreal) / ttrm.ttots
+  frein = float64(ninel) / ttrm.ttots
+  freel = float64(nela) / ttrm.ttots
+  freion = float64(nion) / ttrm.ttots
+  freatt = float64(natt) / ttrm.ttots
+  return

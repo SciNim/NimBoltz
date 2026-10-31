@@ -17,7 +17,7 @@ start=$(grep -n '^      PROGRAM MAGBOLTZ' "$src" | cut -d: -f1)
 end=$(awk -v s="$start" 'NR>s && /^      SUBROUTINE ANGCUT/{print NR-1; exit}' "$src")
 awk -v s="$start" -v e="$end" 'NR<s || NR>e' "$src" > "$work/mblib.f"
 gfortran -O0 -ffp-contract=off -std=legacy -finit-local-zero "$here/gasdmp.f" "$work/mblib.f" -o "$work/gasdmp-f" 2>&1 | grep -v -i warning || true
-nim c --hints:off --warnings:off -d:release --path:"$root/port" -o:"$work/gasdmp-nim" "$here/gasdmp.nim"
+nim c --hints:off --warnings:off -d:release --path:"$root/src" -o:"$work/gasdmp-nim" "$here/gasdmp.nim"
 nim c --hints:off --warnings:off -d:release -o:"$work/dumpdiff" "$here/dumpdiff.nim"
 
 gases=${*:-$(seq 1 61)}

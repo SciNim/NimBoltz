@@ -1,0 +1,134 @@
+## SUBROUTINE TOFH of magboltz-11.21.f (line 9064).
+## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
+
+import ../frt, commons
+
+const
+  fmt900 = "(2(/),\' TIME OF FLIGHT RESULTS AT\',I2,\' SEQUENTIAL TIME PLANES\',/,\'PLANE    DZZ     DXX     DYY     DYZ     DXZ     DXY      WRZ     WRY     WRX\',/)"
+  fmt910 = "(1X,I2,2X,6F8.1,3F8.2)"
+
+proc tofh*() =
+  var dztf, dxtf, dytf, dyztf, dxytf, dxztf, wrz, wry: array[1..8, float64]
+  var wrx, antpl: array[1..8, float64]
+  var i, ipl, i1, i2: int
+  var anst2, anst3, anst4, anst5, anst6, anst7, anst8, ater: float64
+  # CALCULATES TIME OF FLIGHT COEFFICIENTS
+  antpl[1] = float64(tplouth.netpl[1])
+  wrz[1] = tplouth.ztpl[1] / (antpl[1] * cion.tstep)
+  wry[1] = tplouth.ytpl[1] / (antpl[1] * cion.tstep)
+  wrx[1] = tplouth.xtpl[1] / (antpl[1] * cion.tstep)
+  dztf[1] = (tplouth.zztpl[1] / antpl[1] - pow2(tplouth.ztpl[1] / antpl[1])) / (2.0 * cion.tstep)
+  dxtf[1] = (tplouth.xxtpl[1] / antpl[1] - pow2(tplouth.xtpl[1] / antpl[1])) / (2.0 * cion.tstep)
+  dytf[1] = (tplouth.yytpl[1] / antpl[1] - pow2(tplouth.ytpl[1] / antpl[1])) / (2.0 * cion.tstep)
+  dyztf[1] = (tplouth.yztpl[1] / antpl[1] - tplouth.ytpl[1] * tplouth.ztpl[1] / (antpl[1]*antpl[1])) / (2.0 * cion.tstep)
+  dxztf[1] = (tplouth.xztpl[1] / antpl[1] - tplouth.xtpl[1] * tplouth.ztpl[1] / (antpl[1]*antpl[1])) / (2.0 * cion.tstep)
+  dxytf[1] = (tplouth.xytpl[1] / antpl[1] - tplouth.xtpl[1] * tplouth.ytpl[1] / (antpl[1]*antpl[1])) / (2.0 * cion.tstep)
+  fdo i, 2, cion.itfinal:
+    antpl[i] = float64(tplouth.netpl[i])
+    wrz[i] = (tplouth.ztpl[i] / antpl[i] - tplouth.ztpl[i - 1] / antpl[i - 1]) / cion.tstep
+    wry[i] = (tplouth.ytpl[i] / antpl[i] - tplouth.ytpl[i - 1] / antpl[i - 1]) / cion.tstep
+    wrx[i] = (tplouth.xtpl[i] / antpl[i] - tplouth.xtpl[i - 1] / antpl[i - 1]) / cion.tstep
+    dztf[i] = (tplouth.zztpl[i] / antpl[i] - pow2(tplouth.ztpl[i] / antpl[i]) - tplouth.zztpl[i - 1] / antpl[i - 1] + pow2(tplouth.ztpl[i - 1] / antpl[i - 1])) / (2.0 * cion.tstep)
+    dxtf[i] = (tplouth.xxtpl[i] / antpl[i] - pow2(tplouth.xtpl[i] / antpl[i]) - tplouth.xxtpl[i - 1] / antpl[i - 1] + pow2(tplouth.xtpl[i - 1] / antpl[i - 1])) / (2.0 * cion.tstep)
+    dytf[i] = (tplouth.yytpl[i] / antpl[i] - pow2(tplouth.ytpl[i] / antpl[i]) - tplouth.yytpl[i - 1] / antpl[i - 1] + pow2(tplouth.ytpl[i - 1] / antpl[i - 1])) / (2.0 * cion.tstep)
+    dyztf[i] = (tplouth.yztpl[i] / antpl[i] - tplouth.ytpl[i] * tplouth.ztpl[i] / (antpl[i]*antpl[i]) - tplouth.yztpl[i - 1] / antpl[i - 1] + tplouth.ytpl[i - 1] * tplouth.ztpl[i - 1] / pow2(antpl[i - 1])) / (2.0 * cion.tstep)
+    dxztf[i] = (tplouth.xztpl[i] / antpl[i] - tplouth.xtpl[i] * tplouth.ztpl[i] / (antpl[i]*antpl[i]) - tplouth.xztpl[i - 1] / antpl[i - 1] + tplouth.xtpl[i - 1] * tplouth.ztpl[i - 1] / pow2(antpl[i - 1])) / (2.0 * cion.tstep)
+    dxytf[i] = (tplouth.xytpl[i] / antpl[i] - tplouth.xtpl[i] * tplouth.ytpl[i] / (antpl[i]*antpl[i]) - tplouth.xytpl[i - 1] / antpl[i - 1] + tplouth.xtpl[i - 1] * tplouth.ytpl[i - 1] / pow2(antpl[i - 1])) / (2.0 * cion.tstep)
+  fdo i, 1, cion.itfinal:
+    wrz[i] = wrz[i] * 1000000000.0
+    wry[i] = wry[i] * 1000000000.0
+    wrx[i] = wrx[i] * 1000000000.0
+    dztf[i] = dztf[i] * 10000000000000000.0
+    dxtf[i] = dxtf[i] * 10000000000000000.0
+    dytf[i] = dytf[i] * 10000000000000000.0
+    dyztf[i] = dyztf[i] * 10000000000000000.0
+    dxztf[i] = dxztf[i] * 10000000000000000.0
+    dxytf[i] = dxytf[i] * 10000000000000000.0
+  fwrite(fmt900, cion.itfinal)
+  fdo ipl, 1, cion.itfinal:
+    fwrite(fmt910, ipl, dztf[ipl], dxtf[ipl], dytf[ipl], dyztf[ipl], dxztf[ipl], dxytf[ipl], wrz[ipl], wry[ipl], wrx[ipl])
+  if tplouth.netpl[1] > tplouth.netpl[cion.itfinal]:
+    # NET ATTACHMENT TAKE RESULTS FROM PLANE 2
+    tofhout.tofene = pttofh.ept[2]
+    tofhout.tofener = 100.0 * abs((pttofh.ept[2] - pttofh.ept[3]) / (2.0 * pttofh.ept[2]))
+    tofhout.tofwvz = pttofh.vzpt[2]
+    tofhout.tofwvzer = 100.0 * abs((pttofh.vzpt[2] - pttofh.vzpt[3]) / (2.0 * pttofh.vzpt[2]))
+    tofhout.tofwvy = pttofh.vypt[2]
+    tofhout.tofwvyer = 100.0 * abs((pttofh.vypt[2] - pttofh.vypt[3]) / (2.0 * pttofh.vypt[2]))
+    tofhout.tofwvx = pttofh.vxpt[2]
+    tofhout.tofwvxer = 100.0 * abs((pttofh.vxpt[2] - pttofh.vxpt[3]) / (2.0 * pttofh.vxpt[2]))
+    tofhout.tofdzz = dztf[2]
+    tofhout.tofdzzer = 100.0 * abs((dztf[2] - dztf[3]) / (2.0 * dztf[2]))
+    tofhout.tofdxx = dxtf[2]
+    tofhout.tofdxxer = 100.0 * abs((dxtf[2] - dxtf[3]) / (2.0 * dxtf[2]))
+    tofhout.tofdyy = dytf[2]
+    tofhout.tofdyyer = 100.0 * abs((dytf[2] - dytf[3]) / (2.0 * dytf[2]))
+    tofhout.tofdyz = dyztf[2]
+    tofhout.tofdyzer = 100.0 * abs((dyztf[2] - dyztf[3]) / (2.0 * dyztf[2]))
+    tofhout.tofdxz = dxztf[2]
+    tofhout.tofdxzer = 100.0 * abs((dxztf[2] - dxztf[3]) / (2.0 * dxztf[2]))
+    tofhout.tofdxy = dxytf[2]
+    tofhout.tofdxyer = 100.0 * abs((dxytf[2] - dxytf[3]) / (2.0 * dxytf[2]))
+    tofhout.tofwrz = wrz[2]
+    tofhout.tofwry = wry[2]
+    tofhout.tofwrx = wrx[2]
+    tofhout.tofwrzer = 100.0 * abs((wrz[2] - wrz[3]) / (2.0 * wrz[2]))
+    tofhout.tofwryer = 100.0 * abs((wry[2] - wry[3]) / (2.0 * wry[2]))
+    tofhout.tofwrxer = 100.0 * abs((wrx[2] - wrx[3]) / (2.0 * wrx[2]))
+    anst2 = float64(tplouth.netpl[2])
+    anst3 = float64(tplouth.netpl[3])
+    anst4 = anst3 - sqrt(anst3)
+    anst5 = ln(anst2 / anst3)
+    anst6 = ln(anst2 / anst4)
+    anst7 = anst6 / anst5
+    anst8 = anst7 - 1.0
+    if tplouth.attoint == (-1.0):
+      # NO IONISATION
+      tofhout.ralpha = 0.0
+      tofhout.ralper = 0.0
+      tofhout.rattof = -pttofh.ri[2]
+      tofhout.ratofer = 100.0 * sqrt(anst8*anst8 + tplouth.attert*tplouth.attert)
+    else:
+      tofhout.ralpha = pttofh.ri[2] / (1.0 - tplouth.attoint)
+      tofhout.ralper = 100.0 * sqrt(anst8*anst8 + tplouth.aioert*tplouth.aioert)
+      tofhout.rattof = tplouth.attoint * pttofh.ri[2] / (1.0 - tplouth.attoint)
+      tofhout.ratofer = 100.0 * sqrt(anst8*anst8 + tplouth.attert*tplouth.attert)
+  else:
+    # NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
+    i1 = cion.itfinal
+    i2 = cion.itfinal - 1
+    tofhout.tofene = pttofh.ept[i1]
+    tofhout.tofener = 100.0 * abs((pttofh.ept[i1] - pttofh.ept[i2]) / (2.0 * pttofh.ept[i1]))
+    tofhout.tofwvz = pttofh.vzpt[i1]
+    tofhout.tofwvzer = 100.0 * abs((pttofh.vzpt[i1] - pttofh.vzpt[i2]) / (2.0 * pttofh.vzpt[i1]))
+    tofhout.tofwvy = pttofh.vypt[i1]
+    tofhout.tofwvyer = 100.0 * abs((pttofh.vypt[i1] - pttofh.vypt[i2]) / (2.0 * pttofh.vypt[i1]))
+    tofhout.tofwvx = pttofh.vxpt[i1]
+    tofhout.tofwvxer = 100.0 * abs((pttofh.vxpt[i1] - pttofh.vxpt[i2]) / (2.0 * pttofh.vxpt[i1]))
+    tofhout.tofdzz = dztf[i1]
+    tofhout.tofdzzer = 100.0 * abs((dztf[i1] - dztf[i2]) / (2.0 * dztf[i1]))
+    tofhout.tofdxx = dxtf[i1]
+    tofhout.tofdxxer = 100.0 * abs((dxtf[i1] - dxtf[i2]) / (2.0 * dxtf[i1]))
+    tofhout.tofdyy = dytf[i1]
+    tofhout.tofdyyer = 100.0 * abs((dytf[i1] - dytf[i2]) / (2.0 * dytf[i1]))
+    tofhout.tofdyz = dyztf[i1]
+    tofhout.tofdyzer = 100.0 * abs((dyztf[i1] - dyztf[i2]) / (2.0 * dyztf[i1]))
+    tofhout.tofdxz = dxztf[i1]
+    tofhout.tofdxzer = 100.0 * abs((dxztf[i1] - dxztf[i2]) / (2.0 * dxztf[i1]))
+    tofhout.tofdxy = dxytf[i1]
+    tofhout.tofdxyer = 100.0 * abs((dxytf[i1] - dxytf[i2]) / (2.0 * dxytf[i1]))
+    tofhout.tofwrz = wrz[i1]
+    tofhout.tofwry = wry[i1]
+    tofhout.tofwrx = wrx[i1]
+    tofhout.tofwrzer = 100.0 * abs((wrz[i1] - wrz[i2]) / (2.0 * wrz[i1]))
+    tofhout.tofwryer = 100.0 * abs((wry[i1] - wry[i2]) / (2.0 * wry[i1]))
+    tofhout.tofwrxer = 100.0 * abs((wrx[i1] - wrx[i2]) / (2.0 * wrx[i1]))
+    ater = abs((pttofh.ri[i1] - pttofh.ri[i2]) / (2.0 * pttofh.ri[i1]))
+    tofhout.ralpha = pttofh.ri[i1] / (1.0 - tplouth.attoint)
+    tofhout.ralper = 100.0 * sqrt(ater*ater + tplouth.aioert*tplouth.aioert)
+    tofhout.rattof = tplouth.attoint * pttofh.ri[i1] / (1.0 - tplouth.attoint)
+    if tplouth.attoint != 0.0:
+      tofhout.ratofer = 100.0 * sqrt(ater*ater + tplouth.attert*tplouth.attert)
+    else:
+      tofhout.ratofer = 0.0
+  return

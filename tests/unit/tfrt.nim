@@ -1,7 +1,7 @@
 ## Unit tests of the Fortran runtime helpers (port/frt.nim) against values
 ## gfortran produces. Run: nim c -r --path:port tests/unit/tfrt.nim
 import std/unittest
-import frt
+import nimboltz/frt
 
 suite "frt":
   test "integer powers (libgcc __powidf2 / __powisf2)":

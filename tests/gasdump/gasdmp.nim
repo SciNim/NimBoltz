@@ -2,7 +2,7 @@
 ## Build: nim c -d:release --path:../../port gasdmp.nim
 
 import std/[os, strutils]
-import frt, gen/[commons, setupt, gasmix]
+import nimboltz/frt, nimboltz/legacy/[commons, setupt, gasmix]
 
 var
   q, peqel: Arr2[float64, 6, 4000]

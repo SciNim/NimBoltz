@@ -1,5 +1,5 @@
-port/tests/*
-!port/tests/*.nim
-port/main
+tests/unit/*
+!tests/unit/*.nim
+src/nimboltz/magboltz_main
 tools/f2nim/f2nim
 tools/f2nim/ftest_parse
