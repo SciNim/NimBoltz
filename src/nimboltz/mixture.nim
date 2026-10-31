@@ -268,6 +268,7 @@ func thermalGas*(tabs: openArray[CollisionTable[maxGasProcesses]],
                  gases: openArray[GasXsec], kT, echarg, emass: float64): ThermalGas =
   ## null-collision bounds and thermal speeds of each gas (end of MIXERT);
   ## kT in eV
+  result.count = gases.len
   for k in 1 .. gases.len:
     for ie in 1 .. nEnergyBins:
       if tabs[k - 1].tcf[ie] >= result.tcfmax[k]: result.tcfmax[k] = tabs[k - 1].tcf[ie]

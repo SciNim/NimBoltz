@@ -7,6 +7,7 @@ import rm48, tables, vec3
 type
   ThermalGas* = object
     ## per-gas null-collision bounds and thermal speeds (/THRM/, TCFMAX of /LARGET/)
+    count*: int                             ## number of gases
     tcfmx*: float64                         ## sum of the per-gas bounds
     tcfmxg*: array[1..maxGases, float64]    ## cumulative share of each gas in tcfmx
     tcfmax*: array[1..maxGases, float64]    ## null-collision bound of each gas

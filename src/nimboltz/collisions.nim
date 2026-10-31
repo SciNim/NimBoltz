@@ -46,31 +46,52 @@ func rotate*(din: Vec3, cosTheta, sinTheta, cosPhi, sinPhi: float64): Vec3 =
          din.y * cosTheta + sinTheta / argz * (din.x * cosPhi - din.y * dz * sinPhi),
          dz * cosTheta + argz * sinTheta * sinPhi)
 
-proc collide*[N](tab: CollisionTable[N], i, ie: int, e: float64, din: Vec3,
-                 rng: var MagRng): Scattered =
-  ## Process i at energy e (bin ie), incoming direction din: energy loss,
-  ## scattering angles and the outgoing state.
-  let s1 = tab.rgas[i]
-  var ei = tab.ein[i]
+const vibrationMark = 0.024999000132083893
+  ## EIN of a process whose energy loss is "all but 0.025 eV" (0.024999 as
+  ## REAL*4 widened, as Magboltz compares it)
+
+proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng,
+                    vibrationCatch: static bool = false): float64 =
+  ## Energy lost in process i at energy e. Ionisation shares the energy above
+  ## threshold with the secondary electron (a uniform fraction). With
+  ## `vibrationCatch` (MONTE*, not ELIMIT*), a process marked by an energy
+  ## loss of 0.024999 eV takes all but 0.024999 eV of the energy.
+  result = tab.ein[i]
+  when vibrationCatch:
+    if abs(result - vibrationMark) <= 0.0001:
+      result = e - vibrationMark
   if tab.ipn[i] > 0:
-    # ionisation: the energy above threshold is shared with the secondary
     let r9 = drand48(rng)
-    let extra = r9 * (e - ei)
-    ei = extra + ei
-  if e < ei:
-    ei = e - 0.0001
+    let extra = r9 * (e - result)
+    result = extra + result
+  if e < result:
+    result = e - 0.0001
+
+proc scatter*[N](tab: CollisionTable[N], i, ie: int, e, ei: float64, din: Vec3,
+                 rng: var MagRng, r31First: static bool = false): Scattered =
+  ## Process i at energy e (bin ie) with energy loss ei, incoming direction
+  ## din: scattering angles and the outgoing state. `r31First`: draw the
+  ## forward/backward choice of INDEX=1 before the angle (MONTE; every other
+  ## Magboltz routine draws the angle first).
+  let s1 = tab.rgas[i]
   let s2 = s1 * s1 / (s1 - 1.0)
-  let r3 = drand48(rng)
-  var f3: float64
+  var r3, f3: float64
   case tab.index[i]
   of 1:
-    let r31 = drand48(rng)
+    when r31First:
+      let r31 = drand48(rng)
+      r3 = drand48(rng)
+    else:
+      r3 = drand48(rng)
+      let r31 = drand48(rng)
     f3 = 1.0 - r3 * tab.angct[ie, i]
     if r31 > tab.psct[ie, i]: f3 = -f3
   of 2:
+    r3 = drand48(rng)
     let epsi = tab.psct[ie, i]
     f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
   else:
+    r3 = drand48(rng)
     f3 = 1.0 - 2.0 * r3
   let theta0 = arccos(f3)
   let r4 = drand48(rng)

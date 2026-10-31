@@ -62,14 +62,14 @@ suite "collisions":
 
 suite "fields":
   test "E only: unit direction, transverse velocity conserved":
-    let f = field(fgAlongE, 1000.0, 0, 0)
-    let el = initElectron[fgAlongE](f, 2.0, 0.7, 0.4)
-    let fl = fly[fgAlongE](f, el, 3.0)
-    let d = directionAt[fgAlongE](f, el, fl)
+    let f = field(fgElectric, 1000.0, 0, 0)
+    let el = initElectron[fgElectric](f, 2.0, 0.7, 0.4)
+    let fl = fly[fgElectric](f, el, 3.0)
+    let d = directionAt[fgElectric](f, el, fl)
     check abs(norm2(d) - 1) < 1e-12
     # transverse momentum is conserved
     let v0 = el.dir * (f.vfac * sqrt(el.e))
-    let v1 = velocityAt[fgAlongE](f, el, fl)
+    let v1 = velocityAt[fgElectric](f, el, fl)
     check abs(v1.x - v0.x) < 1e-12 * abs(v0.x)
     check abs(v1.y - v0.y) < 1e-12 * abs(v0.y)
 
