@@ -16,7 +16,9 @@ proc tofg*() =
   # CALCULATES TIME OF FLIGHT COEFFICIENTS
   if thrm.ithrm == 1: colft(dum1, dum2, frion, fratt, dum3, idum4)
   if thrm.ithrm == 0: colf(dum1, dum2, frion, fratt, dum3, idum4)
-  tploutg.attoint = fratt / frion
+  # NIMBOLTZ FIX MB-40: without ionisation FRATT/FRION is infinite (NaN in the
+  # results); keep ATTOINT = -1 from MONTEFTG, handled below
+  if frion > 0.0: tploutg.attoint = fratt / frion
   antpl[1] = float64(tploutg.netpl[1])
   wrz[1] = tploutg.ztpl[1] / (antpl[1] * cion.tstep)
   wry[1] = tploutg.ytpl[1] / (antpl[1] * cion.tstep)
