@@ -31,13 +31,13 @@ proc refill(m: var MaxwellSampler, rng: var MagRng) =
 proc initMaxwellSampler*(rng: var MagRng): MaxwellSampler =
   result.refill(rng)
 
-proc velocity*(m: var MaxwellSampler, vth: float64, rng: var MagRng): Vec3 =
+proc velocity*(m: var MaxwellSampler, vth: float64, rng: var MagRng): Vec3 {.inline.} =
   ## velocity of a gas molecule with thermal speed vth
   if m.used == 6: m.refill(rng)
   result = vec3(vth * m.rn[m.used + 1], vth * m.rn[m.used + 2], vth * m.rn[m.used + 3])
   m.used += 3
 
-func pickGas*(g: ThermalGas, r: float64): int =
+func pickGas*(g: ThermalGas, r: float64): int {.inline.} =
   ## gas hit by a collision, from a uniform random number r
   result = 1
   while g.tcfmxg[result] < r: inc result

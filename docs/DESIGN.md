@@ -19,7 +19,9 @@ comparison keeps holding.
 1. ELIMIT family (done first: small, and it settles the patterns below).
 2. SETUP / MIXER / OUTPUT: inputs, the tables, the results. MIXER and
    MIXERT done (`mixture.nim`, one builder for both table layouts).
-3. The MONTE family (MONTE, MONTEA/B/C, thermal versions, MONTEFT*, ...).
+3. The MONTE family. The main Monte Carlo (MONTE, MONTEA/B/C and the
+   thermal versions) done (`drift.nim`, one generic driver); the MONTEFT*
+   family (SST and time-of-flight analyses) next.
 4. Gas cross sections (95 kLOC): data tables as data, shared interpolation
    helpers.
 
@@ -71,6 +73,25 @@ with the energy bin fastest), which is poor for the per-bin scan over
 processes in theory. Tried after the MIXER rewrite (2026-10-31): storing
 each bin's processes contiguously made the legacy MONTE 3–8% slower, so
 the layout is revisited with the MONTE rewrite.
+
+`drift.nim` keeps Magboltz's statistics as they are: one trajectory, 10
+segments, errors from the scatter of the segment estimates, diffusion from
+pairs of collisions NCORLN apart, kept in a ring of NCOLM positions
+(64 MB). Each geometry has its own estimators (B ⊥ E splits the y-z spread
+along and across the drift; B at other angles rotates the tensor to the
+frame of E). The bridge `legacy/montes.nim` keeps one ring per Magboltz
+routine across runs, because the Fortran arrays are static and MONTEC
+reads unfilled entries when NCOLM exceeds two segments (reduced NSCALE
+only). Merging walkers (threads) needs per-walker rings and a different
+error estimate; not done.
+
+Speed (2026-10-31): `drift.nim` is 2–4% slower than the legacy routines.
+Nim emits a generic instance into the C file of the module that first
+uses it, so calls between modules cannot be inlined; the small hot procs
+(`fly`, `velocityAt`, `findProcess`, ...) are therefore `{.inline.}`. With
+LTO (`--passC:-flto=auto --passL:-flto=auto`) the gap is 0–2%, at the
+cost of much slower builds (95 kLOC of gas routines). About half of the
+run time is the random number generator (RM48) and the Maxwell sampler.
 
 ## Equivalence with Magboltz
 
@@ -137,7 +158,11 @@ src/nimboltz/
   fields.nim     FieldGeometry, Field, Electron, free flight
   collisions.nim process choice, scattering
   thermal.nim    ThermalGas, Maxwell velocities
+  freeflight.nim next real collision (null-collision method), gas at 0 K
+                 or with thermal motion
   elimit.nim     upper energy limit search (ELIMIT*)
+  drift.nim      main Monte Carlo: drift velocity, diffusion, mean energy,
+                 Townsend coefficients (MONTE, MONTEA/B/C, MONTE*T)
   mixture.nim    GasXsec (output of a gas routine), collision tables of a
                  mixture (MIXER, MIXERT)
   magboltz_main.nim  program: reads the deck on stdin

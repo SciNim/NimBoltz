@@ -15,7 +15,7 @@ type
     dir*: Vec3       ## direction cosines after the collision
     theta*: float64  ## polar scattering angle (rad, against the incoming direction)
 
-func findProcess*[N](tab: CollisionTable[N], ie: int, r: float64): int =
+func findProcess*[N](tab: CollisionTable[N], ie: int, r: float64): int {.inline.} =
   ## First process i with cf[ie, i] >= r (SORT/SORTT, then a linear scan):
   ## a binary step search narrows it down to 4 processes first.
   ## Needs tab.last >= 2 (as SORT, which reads cf[ie, 0] otherwise).
@@ -35,7 +35,7 @@ func findProcess*[N](tab: CollisionTable[N], ie: int, r: float64): int =
     if not (tab.cf[ie, i] < r): break
   i
 
-func rotate*(din: Vec3, cosTheta, sinTheta, cosPhi, sinPhi: float64): Vec3 =
+func rotate*(din: Vec3, cosTheta, sinTheta, cosPhi, sinPhi: float64): Vec3 {.inline.} =
   ## Direction at polar angle theta and azimuth phi around the direction din.
   let dz = min(din.z, 1.0)
   let argz = sqrt(din.x * din.x + din.y * din.y)
@@ -50,22 +50,33 @@ const vibrationMark = 0.024999000132083893
   ## EIN of a process whose energy loss is "all but 0.025 eV" (0.024999 as
   ## REAL*4 widened, as Magboltz compares it)
 
-proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng,
-                    vibrationCatch: static bool = false): float64 =
-  ## Energy lost in process i at energy e. Ionisation shares the energy above
-  ## threshold with the secondary electron (a uniform fraction). With
-  ## `vibrationCatch` (MONTE*, not ELIMIT*), a process marked by an energy
-  ## loss of 0.024999 eV takes all but 0.024999 eV of the energy.
-  result = tab.ein[i]
-  when vibrationCatch:
-    if abs(result - vibrationMark) <= 0.0001:
-      result = e - vibrationMark
+proc shareWithSecondary[N](tab: CollisionTable[N], i: int, e, ei: float64,
+                           rng: var MagRng): float64 =
+  ## Ionisation shares the energy above threshold with the secondary
+  ## electron (a uniform fraction); the loss never exceeds e.
+  result = ei
   if tab.ipn[i] > 0:
     let r9 = drand48(rng)
     let extra = r9 * (e - result)
     result = extra + result
   if e < result:
     result = e - 0.0001
+
+proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng): float64 =
+  ## Energy lost in process i at energy e (ELIMIT*).
+  shareWithSecondary(tab, i, e, tab.ein[i], rng)
+
+proc energyLoss*[N](tab: CollisionTable[N], i: int, e: float64, rng: var MagRng,
+                    eFlight: float64): float64 =
+  ## Energy lost in process i at energy e (MONTE*): as above, but a process
+  ## marked by an energy loss of 0.024999 eV takes all but 0.024999 eV of
+  ## `eFlight`, the energy at the end of the free flight in the lab frame.
+  ## (With thermal motion e is the energy in the rest frame of the
+  ## molecule; Magboltz still uses the lab energy here.)
+  var ei = tab.ein[i]
+  if abs(ei - vibrationMark) <= 0.0001:
+    ei = eFlight - vibrationMark
+  shareWithSecondary(tab, i, e, ei, rng)
 
 proc scatter*[N](tab: CollisionTable[N], i, ie: int, e, ei: float64, din: Vec3,
                  rng: var MagRng, r31First: static bool = false): Scattered =

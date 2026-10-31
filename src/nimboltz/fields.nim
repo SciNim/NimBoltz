@@ -87,7 +87,7 @@ func initElectron*[G: static FieldGeometry](f: Field, e, theta, phi: float64): E
   when G != fgElectric:
     result.vel = result.dir * (f.vfac * sqrt(e))
 
-func fly*[G: static FieldGeometry](f: Field, el: Electron, t: float64): Flight =
+func fly*[G: static FieldGeometry](f: Field, el: Electron, t: float64): Flight {.inline.} =
   ## energy after a free flight of duration t; for fgParallel call
   ## `finishFlight` before asking for the velocity or the position
   result.t = t
@@ -113,8 +113,8 @@ func finishFlight*[G: static FieldGeometry](f: Field, fl: var Flight) {.inline.}
     fl.cwt = cos(wbt)
     fl.swt = sin(wbt)
 
-func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3
-func directionAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 =
+func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 {.inline.}
+func directionAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 {.inline.} =
   ## direction cosines at the end of the flight
   when G == fgElectric:
     result = el.dir * sqrt(el.e / fl.e)
@@ -146,7 +146,7 @@ func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): V
     result.z = el.vel.z * fl.cwt - (el.vel.y - f.eovb) * fl.swt
 
 func advance*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight,
-                                       pos: var Vec3): tuple[xx, yy: float64] =
+                                       pos: var Vec3): tuple[xx, yy: float64] {.inline.} =
   ## Moves `pos` over the flight. Returns the flight's contributions to
   ## Magboltz's transverse diffusion estimate for isotropic scattering
   ## (squared x and y displacement; for fgOblique none).
@@ -175,7 +175,7 @@ func advance*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight,
     pos.y = pos.y + f.eovb * fl.t + ((el.vel.y - f.eovb) * fl.swt + el.vel.z * (1.0 - fl.cwt)) / f.wb
     pos.z = pos.z + fl.dz
 
-func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): float64 =
+func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): float64 {.inline.} =
   ## ∫ e dt over the flight (fgElectric, fgParallel: exact; the energy is
   ## quadratic in t)
   static: doAssert G in {fgElectric, fgParallel}
@@ -184,7 +184,7 @@ func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight
   let b = f.bp * (fl.t * fl.t)
   fl.t * (el.e + a / 2.0 + b / 3.0)
 
-func afterCollision*[G: static FieldGeometry](f: Field, e: float64, dir: Vec3): Electron =
+func afterCollision*[G: static FieldGeometry](f: Field, e: float64, dir: Vec3): Electron {.inline.} =
   ## lab-frame state leaving a collision with energy e and direction dir
   result.e = e
   result.dir = dir

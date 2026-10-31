@@ -101,11 +101,11 @@ proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var Wa
     inc nnull
   result.din = vrel * (1.0 / (f.vfac * sqrt(result.e)))
 
-func leave*[G: static FieldGeometry](target: ColdGas, f: Field, s: Scattered, h: Hit): Electron =
+func leave*[G: static FieldGeometry](target: ColdGas, f: Field, s: Scattered, h: Hit): Electron {.inline.} =
   ## state after the collision, in the lab frame
   afterCollision[G](f, s.e, s.dir)
 
-func leave*[G: static FieldGeometry](target: WarmGas, f: Field, s: Scattered, h: Hit): Electron =
+func leave*[G: static FieldGeometry](target: WarmGas, f: Field, s: Scattered, h: Hit): Electron {.inline.} =
   ## state after the collision, transformed back to the lab frame
   let v = s.dir * (f.vfac * sqrt(s.e)) + h.vgas
   result.e = norm2(v) / f.vfac2
