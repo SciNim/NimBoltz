@@ -2,7 +2,7 @@
 ## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
 
 import ../frt, commons
-import friedlandt, monteftat, pt, tof
+import friedlandt, montefs, pt, tof
 
 const
   fmt25 = "(/,2X,\'SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAMETERS\',/,\'  --------------------------------------------------------------\')"

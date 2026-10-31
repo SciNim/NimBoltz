@@ -14,6 +14,8 @@ type
     e*: float64      ## energy after the collision (eV)
     dir*: Vec3       ## direction cosines after the collision
     theta*: float64  ## polar scattering angle (rad, against the incoming direction)
+    cosTheta*, sinTheta*: float64  ## of the polar angle, as used (backward: cosTheta < 0)
+    phi*: float64    ## azimuth (rad)
 
 func findProcess*[N](tab: CollisionTable[N], ie: int, r: float64): int {.inline.} =
   ## First process i with cf[ie, i] >= r (SORT/SORTT, then a linear scan):
@@ -46,7 +48,7 @@ func rotate*(din: Vec3, cosTheta, sinTheta, cosPhi, sinPhi: float64): Vec3 {.inl
          din.y * cosTheta + sinTheta / argz * (din.x * cosPhi - din.y * dz * sinPhi),
          dz * cosTheta + argz * sinTheta * sinPhi)
 
-const vibrationMark = 0.024999000132083893
+const vibrationMark* = 0.024999000132083893
   ## EIN of a process whose energy loss is "all but 0.025 eV" (0.024999 as
   ## REAL*4 widened, as Magboltz compares it)
 
@@ -97,6 +99,7 @@ proc scatter*[N](tab: CollisionTable[N], i, ie: int, e, ei: float64, din: Vec3,
   let theta0 = arccos(f3)
   let r4 = drand48(rng)
   let phi0 = 2.0 * PI * r4
+  result.phi = phi0
   let arg1 = max(1.0 - s1 * ei / e, small)
   let d = 1.0 - f3 * sqrt(arg1)
   result.e = max(e * (1.0 - ei / (s1 * e) - 2.0 * d / s2), small)
@@ -105,4 +108,6 @@ proc scatter*[N](tab: CollisionTable[N], i, ie: int, e, ei: float64, din: Vec3,
   var f6 = cos(result.theta)
   let u = (s1 - 1.0) * (s1 - 1.0) / arg1
   if f3 < 0.0 and f3 * f3 > u: f6 = -f6
-  result.dir = rotate(din, f6, sin(result.theta), cos(phi0), sin(phi0))
+  result.cosTheta = f6
+  result.sinTheta = sin(result.theta)
+  result.dir = rotate(din, f6, result.sinTheta, cos(phi0), sin(phi0))

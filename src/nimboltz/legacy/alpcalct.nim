@@ -2,7 +2,7 @@
 ## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
 
 import ../frt, commons
-import friedlandt, montefdt, monteftt, pt, sst, tof
+import friedlandt, montefs, pt, sst, tof
 
 const
   fmt11 = "(/,2X,\'SOLUTION FOR STEADY STATE TOWNSEND PARAMETERS\',/,\'  -------------------------------------------------\')"

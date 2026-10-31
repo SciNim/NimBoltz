@@ -27,14 +27,14 @@ type
     vfac*: float64     ## speed per sqrt(energy): v = vfac * sqrt(e)  (CONST9)
     vfac2*: float64    ## vfac²  (CONST10)
     # fgElectric, fgParallel
-    bp, f2, const5: float64
+    bp*, f2*, const5*: float64
     # all but fgCrossed: acceleration term of the position along E (fgOblique: along B)
-    f1: float64
+    f1*: float64
     # fgParallel, fgCrossed, fgOblique
     wb*: float64       ## cyclotron frequency (rad/ps)
     # fgCrossed, fgOblique
     eovb*: float64     ## E×B drift speed for the E component ⊥ B (m/ps)
-    ez100, ex100: float64
+    ez100*, ex100*: float64
 
   Electron* = object
     ## state of an electron right after a collision (or at the start)
@@ -46,8 +46,8 @@ type
     ## free flight of duration t from an `Electron` state
     t*: float64        ## duration (ps)
     e*: float64        ## energy at the end (eV)
-    cwt, swt: float64  ## cos ωt, sin ωt  (B ≠ 0)
-    dz, dx: float64    ## displacement along z, x (fgCrossed: dz; fgOblique: both)
+    cwt*, swt*: float64  ## cos ωt, sin ωt  (B ≠ 0)
+    dz*, dx*: float64    ## displacement along z, x (fgCrossed: dz; fgOblique: both)
 
 func geometryOf*(bmag, btheta: float64): FieldGeometry =
   ## Field geometry; B ∥ E includes the angle -180° (MONTE dispatches -180°

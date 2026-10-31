@@ -196,16 +196,6 @@ type
     zfinal*: float64
     itfinal*: int
     iprim*: int
-  CommonIspt* = object  ## COMMON /ISPT/
-    xs*: array[1..8000, float64]
-    ys*: array[1..8000, float64]
-    zs*: array[1..8000, float64]
-    ts*: array[1..8000, float64]
-    es*: array[1..8000, float64]
-    dcx*: array[1..8000, float64]
-    dcy*: array[1..8000, float64]
-    dcz*: array[1..8000, float64]
-    ipl*: array[1..8000, int]
   CommonTplout* = object  ## COMMON /TPLOUT/
     etpl*: array[1..8, float64]
     xtpl*: array[1..8, float64]
@@ -225,16 +215,6 @@ type
     ept*: array[1..8, float64]
     vzpt*: array[1..8, float64]
     ttest*: array[1..8, float64]
-  CommonIps* = object  ## COMMON /IPS/
-    xss*: array[1..8000, float64]
-    yss*: array[1..8000, float64]
-    zss*: array[1..8000, float64]
-    tss*: array[1..8000, float64]
-    ess*: array[1..8000, float64]
-    dcxs*: array[1..8000, float64]
-    dcys*: array[1..8000, float64]
-    dczs*: array[1..8000, float64]
-    ipls*: array[1..8000, int]
   CommonSplout* = object  ## COMMON /SPLOUT/
     espl*: array[1..8, float64]
     xspl*: array[1..8, float64]
@@ -333,13 +313,6 @@ type
     tofwrxer*: float64
     rattof*: float64
     ratofer*: float64
-  CommonRots* = object  ## COMMON /ROTS/
-    rcs*: float64
-    rsn*: float64
-    efz100*: float64
-    efx100*: float64
-    f1*: float64
-    eovbr*: float64
   CommonTplouth* = object  ## COMMON /TPLOUTH/
     etpl*: array[1..8, float64]
     xtpl*: array[1..8, float64]
@@ -423,17 +396,14 @@ var
   tofout*: CommonTofout
   ctcalc*: CommonCtcalc
   cion*: CommonCion
-  ispt*: CommonIspt
   tplout*: CommonTplout
   pttof*: CommonPttof
-  ips*: CommonIps
   splout*: CommonSplout
   spl1*: CommonSpl1
   tofgout*: CommonTofgout
   tploutg*: CommonTploutg
   pttofg*: CommonPttofg
   tofhout*: CommonTofhout
-  rots*: CommonRots
   tplouth*: CommonTplouth
   pttofh*: CommonPttofh
   scrip*: CommonScrip

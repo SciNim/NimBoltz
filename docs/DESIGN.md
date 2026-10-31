@@ -19,9 +19,11 @@ comparison keeps holding.
 1. ELIMIT family (done first: small, and it settles the patterns below).
 2. SETUP / MIXER / OUTPUT: inputs, the tables, the results. MIXER and
    MIXERT done (`mixture.nim`, one builder for both table layouts).
-3. The MONTE family. The main Monte Carlo (MONTE, MONTEA/B/C and the
-   thermal versions) done (`drift.nim`, one generic driver); the MONTEFT*
-   family (SST and time-of-flight analyses) next.
+3. The MONTE family. Done: the main Monte Carlo (MONTE, MONTEA/B/C and
+   the thermal versions; `drift.nim`) and the avalanche runs behind the
+   SST and time-of-flight analyses (MONTEFT, MONTEFTA/G/H, MONTEFD and
+   the thermal versions; `cascade.nim`), one generic driver each. Next:
+   their analyses (ALPCALC family, SST, PT, TOF, FRIEDLAND, OUTPUT1).
 4. Gas cross sections (95 kLOC): data tables as data, shared interpolation
    helpers.
 
@@ -84,6 +86,18 @@ routine across runs, because the Fortran arrays are static and MONTEC
 reads unfilled entries when NCOLM exceeds two segments (reduced NSCALE
 only). Merging walkers (threads) needs per-walker rings and a different
 error estimate; not done.
+
+`cascade.nim` (MONTEF*) follows avalanches: primaries one after another,
+secondaries, Auger and Penning electrons on a stack (8000, as Magboltz),
+sampled where they cross planes in time (`pkTime`) or in space along E
+(`pkSpace`, B = 0 only), a static parameter like the field geometry. The
+ten Fortran routines differ in details beyond their variant (the energy
+loss clamp after ionisation, the order of a few products, MONTEFDT's
+renormalised direction); these are reproduced under `when` with a comment
+naming the routine, so bitwise comparison holds. Thermal runs compute the
+ionisation secondary in the rest frame of the molecule and push it
+without transforming it back to the lab frame, as Magboltz does (an
+error of order v_gas/v_e). Speed equal to the legacy routines (±4%).
 
 Speed (2026-10-31): `drift.nim` is 2–4% slower than the legacy routines.
 Nim emits a generic instance into the C file of the module that first
@@ -163,6 +177,8 @@ src/nimboltz/
   elimit.nim     upper energy limit search (ELIMIT*)
   drift.nim      main Monte Carlo: drift velocity, diffusion, mean energy,
                  Townsend coefficients (MONTE, MONTEA/B/C, MONTE*T)
+  cascade.nim    avalanches sampled at time or space planes (MONTEFT*,
+                 MONTEFD, MONTEF*T)
   mixture.nim    GasXsec (output of a gas routine), collision tables of a
                  mixture (MIXER, MIXERT)
   magboltz_main.nim  program: reads the deck on stdin
