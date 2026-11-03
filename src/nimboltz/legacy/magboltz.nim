@@ -2,7 +2,7 @@
 ## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
 
 import ../frt, commons
-import alpcalc, alpcalct, alpclca, alpclcat, alpclcb, alpclcbt, alpclcc, alpclcct, elimits, mixers, montes, output, output2, output2t, outputt, prnter, prntert, readin, setup, setupt
+import alpcalcs, elimits, mixers, montes, output, output2, output2t, outputt, prnter, prntert, readin, setup, setupt
 
 # PROGRAM MAGBOLTZ 2   VERSION 11.20    NOVEMBER 2024
 # COPYRIGHT 2024   STEPHEN FRANCIS BIAGI

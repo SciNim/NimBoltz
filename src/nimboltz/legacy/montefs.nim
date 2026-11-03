@@ -1,11 +1,12 @@
 ## MONTEFT, MONTEFTA, MONTEFTG, MONTEFTH, MONTEFD and the thermal versions
 ## MONTEFTT, MONTEFTAT, MONTEFTGT, MONTEFTHT, MONTEFDT of magboltz-11.21.f:
-## bridge from the COMMON blocks to nimboltz/cascade. The routines print
-## the same messages with slightly different formats; each entry point
-## passes its own.
+## bridge from the COMMON blocks to nimboltz/cascade. A run returns the
+## plane sums for the analyses (legacy/alpcalcs.nim) and leaves the
+## collision counts in /OUTPT/ or /OUTPTT/ and /TTRM/ for OUTPUT1 and COLF.
+## The routines print the same messages with slightly different formats.
 
 import ../frt, commons
-import ../[tables, fields, collisions, freeflight, thermal, cascade]
+import ../[tables, fields, collisions, freeflight, thermal, cascade, townsend]
 
 type
   Formats = object
@@ -63,85 +64,33 @@ proc store(o: var (CommonOutpt | CommonOutptt), c: Cascade) =
   o.nnull = c.nnull
   o.xid = float64(c.id)
 
-template storeTime(o: untyped, s: TimeSums) =
-  o.etpl = s.e
-  o.xtpl = s.x
-  o.ytpl = s.y
-  o.ztpl = s.z
-  o.ttpl = s.t
-  o.xxtpl = s.xx
-  o.yytpl = s.yy
-  o.zztpl = s.zz
-  o.vztpl = s.vz
-  o.netpl = s.n
-
-proc storePlanes[G: static FieldGeometry; T](c: Cascade[G, pkTime, T]) =
-  let aneion = float64(c.neion)
-  template ratios(o: untyped) =
-    if c.nelec > c.iprim:
-      let anbt = float64(c.nelec - c.iprim)
-      o.attoint = aneion / anbt
-      o.attert = sqrt(aneion) / aneion
-      o.aioert = sqrt(anbt) / anbt
+type
+  AvalancheRun*[P: static PlaneKind] = object
+    ## what the analyses need from a run
+    when P == pkTime:
+      sums*: TimeSums
     else:
-      o.attoint = -1.0
-      o.attert = sqrt(aneion) / aneion
-  when G in {fgElectric, fgParallel}:
-    tplout.storeTime(c.sums)
-    ratios(tplout)
-  elif G == fgCrossed:
-    tploutg.storeTime(c.sums)
-    tploutg.yztpl = c.sums.yz
-    tploutg.vytpl = c.sums.vy
-    ratios(tploutg)
-  else:
-    tplouth.storeTime(c.sums)
-    tplouth.yztpl = c.sums.yz
-    tplouth.xztpl = c.sums.xz
-    tplouth.xytpl = c.sums.xy
-    tplouth.vytpl = c.sums.vy
-    tplouth.vxtpl = c.sums.vx
-    ratios(tplouth)
+      sums*: SpaceSums
+    iprim*: int
+    ratio*: AttachmentRatio
 
-proc storePlanes[G: static FieldGeometry; T](c: Cascade[G, pkSpace, T]) =
-  let s = c.sums
-  splout.espl = s.e
-  splout.xspl = s.x
-  splout.yspl = s.y
-  splout.zspl = s.z
-  splout.tspl = s.rate
-  splout.xxspl = s.xx
-  splout.yyspl = s.yy
-  splout.zzspl = s.zz
-  splout.vzspl = s.vz
-  splout.tssum = s.w
-  splout.tssum2 = s.w2
-  splout.nesst = s.born
-  spl1.tmspl = s.t
-  spl1.ttmspl = s.tt
-  spl1.rspl = s.r
-  spl1.rrspl = default(array[1..8, float64])
-  spl1.rrspm = s.rr
-  let aneion = float64(c.neion)
-  if c.nelec > c.iprim:
-    let anbt = float64(c.nelec - c.iprim)
-    splout.attoion = aneion / anbt
-    splout.attater = sqrt(aneion) / aneion
-    splout.attioer = sqrt(anbt) / anbt
+func formatsOf(G: FieldGeometry, P: PlaneKind, thermalMotion: bool): Formats =
+  if P == pkSpace: formatsD
   else:
-    splout.attoion = -1.0
-    splout.attater = sqrt(aneion) / aneion
+    case G
+    of fgElectric: formatsT
+    of fgParallel: (if thermalMotion: formatsAT else: formatsA)
+    of fgCrossed, fgOblique: formatsG
 
-proc run[G: static FieldGeometry; P: static PlaneKind](thermalMotion: bool, fm: Formats) =
+proc avalanche*[G: static FieldGeometry; P: static PlaneKind](thermalMotion: bool,
+                                                               planes: Planes): AvalancheRun[P] =
+  ## one run of avalanches sampled at `planes`
+  let fm = formatsOf(G, P, thermalMotion)
   let f = initField(G, setp.efield, cnsts1.const1, cnsts1.const2, cnsts1.const3,
                     cnsts1.const5, bfld.wb, bfld.eovb, bfld.btheta)
   let start = initElectron[G](f, setp.estart, setp.theta, setp.phi)
   setp.small = small
   setp.api = arccos(-1.0)
-  let planes = Planes(tstep: cion.tstep, tfinal: cion.tfinal, itfinal: cion.itfinal,
-                      zstep: cion.zstep, zfinal: cion.zfinal, izfinal: ctcalc.izfinal,
-                      zplane: [ctcalc.zplane1, ctcalc.zplane2, ctcalc.zplane3, ctcalc.zplane4,
-                               ctcalc.zplane5, ctcalc.zplane6, ctcalc.zplane7, ctcalc.zplane8])
 
   template finish(c: untyped) =
     for w in c.warnings: printNegative(fm, f, w)
@@ -154,12 +103,13 @@ proc run[G: static FieldGeometry; P: static PlaneKind](thermalMotion: bool, fm: 
       when P == pkSpace: fstop()
     of stNone: discard
     setp.theta = c.theta
-    cion.iprim = c.iprim
     ttrm.ztot = c.ztot
     ttrm.ttot = c.ttot
     ttrm.ztots = c.ztots
     ttrm.ttots = c.ttots
-    storePlanes(c)
+    result.sums = c.sums
+    result.iprim = c.iprim
+    result.ratio = attachmentRatio(c.neion, c.nelec, c.iprim)
     if c.j1 == 1:
       when P == pkTime:
         fwrite(fm.tooFew, c.nclus, c.id)
@@ -196,14 +146,3 @@ proc run[G: static FieldGeometry; P: static PlaneKind](thermalMotion: bool, fm: 
     outpt.icoll = c.tally.kinds
     outpt.icoln = c.tally.processes
     finish(c)
-
-proc monteft*() = run[fgElectric, pkTime](false, formatsT)
-proc montefta*() = run[fgParallel, pkTime](false, formatsA)
-proc monteftg*() = run[fgCrossed, pkTime](false, formatsG)
-proc montefth*() = run[fgOblique, pkTime](false, formatsG)
-proc montefd*() = run[fgElectric, pkSpace](false, formatsD)
-proc monteftt*() = run[fgElectric, pkTime](true, formatsT)
-proc monteftat*() = run[fgParallel, pkTime](true, formatsAT)
-proc monteftgt*() = run[fgCrossed, pkTime](true, formatsG)
-proc monteftht*() = run[fgOblique, pkTime](true, formatsG)
-proc montefdt*() = run[fgElectric, pkSpace](true, formatsD)
