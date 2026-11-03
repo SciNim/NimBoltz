@@ -22,8 +22,9 @@ comparison keeps holding.
 3. The MONTE family. Done: the main Monte Carlo (MONTE, MONTEA/B/C and
    the thermal versions; `drift.nim`) and the avalanche runs behind the
    SST and time-of-flight analyses (MONTEFT, MONTEFTA/G/H, MONTEFD and
-   the thermal versions; `cascade.nim`), one generic driver each. Next:
-   their analyses (ALPCALC family, SST, PT, TOF, FRIEDLAND, OUTPUT1).
+   the thermal versions; `cascade.nim`), one generic driver each, and
+   their analyses (the eight ALPCALC drivers, SST, PT, TOF, FRIEDLAND;
+   `townsend.nim`). Left in `legacy/`: OUTPUT*, SETUP*, PRNTER*.
 4. Gas cross sections (95 kLOC): data tables as data, shared interpolation
    helpers.
 
@@ -179,6 +180,8 @@ src/nimboltz/
                  Townsend coefficients (MONTE, MONTEA/B/C, MONTE*T)
   cascade.nim    avalanches sampled at time or space planes (MONTEFT*,
                  MONTEFD, MONTEF*T)
+  townsend.nim   analyses of the avalanches: sampling planes, steady-state
+                 and pulsed Townsend, time of flight, Friedland estimate
   mixture.nim    GasXsec (output of a gas routine), collision tables of a
                  mixture (MIXER, MIXERT)
   magboltz_main.nim  program: reads the deck on stdin
