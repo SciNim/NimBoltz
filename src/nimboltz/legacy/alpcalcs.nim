@@ -121,10 +121,7 @@ proc run[G: static FieldGeometry](thermalMotion: bool) =
   var imax = setp.nmax div 10000000
   if imax < 5: imax = 5
   setp.nmax = imax * 10000000
-  # as ALPCALCT: no shorter spacing when α and η nearly cancel
-  let boost = not (G == fgElectric and thermalMotion)
-  let (planes, _, _) = samplingPlanes(ctowns.alpha, ctowns.att, vel.wz, inpt.tempc, inpt.torr,
-                                      boost)
+  let (planes, _, _) = samplingPlanes(ctowns.alpha, ctowns.att, vel.wz, inpt.tempc, inpt.torr)
   when G == fgElectric:
     # steady-state Townsend
     fwrite(fmt11)

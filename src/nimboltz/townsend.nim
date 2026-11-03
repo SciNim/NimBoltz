@@ -88,21 +88,21 @@ func attachmentRatio*(neion, nelec, iprim: int): AttachmentRatio =
     result.ratio = -1.0
     result.attErr = sqrt(aneion) / aneion
 
-func samplingPlanes*(alpha, att, wz, tempc, torr: float64,
-                     boost: bool): tuple[planes: Planes, alphast, vdst: float64] =
+func samplingPlanes*(alpha, att, wz, tempc, torr: float64):
+    tuple[planes: Planes, alphast, vdst: float64] =
   ## Planes for an expected gain of 3 between neighbours, from the Townsend
-  ## coefficients of MONTE (1/cm) and the drift velocity wz (cm/s). With
-  ## `boost`, a large cancellation of α and η shortens the spacing.
+  ## coefficients of MONTE (1/cm) and the drift velocity wz (cm/s). A large
+  ## cancellation of α and η shortens the spacing.
   var alphast = 0.85 * abs(alpha - att)
-  if boost:
-    let corr = 760.0 * (tempc + 273.1499938964844) / (torr * 293.1499938964844)
-    if alpha > 10.0 * alphast or att > 10.0 * alphast:
-      if alpha > 100.0 * corr:
-        alphast = alphast * 30.0
-      elif alpha > 50.0 * corr:
-        alphast = alphast * 15.0
-      else:
-        alphast = alphast * 8.0
+  # NIMBOLTZ FIX MB-41: ALPCALCT (thermal, B = 0) lacked the shorter spacing
+  let corr = 760.0 * (tempc + 273.1499938964844) / (torr * 293.1499938964844)
+  if alpha > 10.0 * alphast or att > 10.0 * alphast:
+    if alpha > 100.0 * corr:
+      alphast = alphast * 30.0
+    elif alpha > 50.0 * corr:
+      alphast = alphast * 15.0
+    else:
+      alphast = alphast * 8.0
   let vdst = wz * 0.00001
   var tstep = ln(3.0) / (alphast * vdst * 100000.0)
   var zstep = ln(3.0) / alphast
