@@ -169,9 +169,10 @@ proc run[G: static FieldGeometry](thermalMotion: bool) =
     fwrite(fmt888, fc1 - sqrt(fc1*fc1 - fc2))
     when G == fgParallel:
       ctowns.alpha = tof.alpha / tof.w.z * 10000000.0
-      ctwner.alper = tof.alphaErr * ctowns.alpha / 100.0
       ctowns.att = tof.att / tof.w.z * 10000000.0
-      ctwner.atter = tof.attErr * ctowns.att / 100.0
+      # NIMBOLTZ FIX MB-42: /CTWNER/ holds percent (was errAlpha·α/100)
+      ctwner.alper = tof.alphaErr
+      ctwner.atter = tof.attErr
   else:
     let d = tof.d
     let de = tof.dErr
@@ -194,14 +195,10 @@ proc run[G: static FieldGeometry](thermalMotion: bool) =
     fwrite(fmt888, fc1 - sqrt(fc1*fc1 - fc2))
     ctowns.alpha = tof.alpha / tofwr * 10000000.0
     ctowns.att = tof.att / tofwr * 10000000.0
-    when G == fgCrossed:
-      if thermalMotion:
-        ctwner.alper = tof.alphaErr * ctowns.alpha / 100.0
-        ctwner.atter = tof.attErr * ctowns.att * 100.0  # as ALPCLCBT
-      # ALPCLCB leaves /CTWNER/ alone
-    else:
-      ctwner.alper = tof.alphaErr * ctowns.alpha / 100.0
-      ctwner.atter = tof.attErr * ctowns.att / 100.0
+    # NIMBOLTZ FIX MB-42: /CTWNER/ holds percent (was errAlpha·α/100; ALPCLCB
+    # stored that in locals, ALPCLCBT multiplied the η error by 100)
+    ctwner.alper = tof.alphaErr
+    ctwner.atter = tof.attErr
 
 proc alpcalc*() = run[fgElectric](false)
 proc alpcalct*() = run[fgElectric](true)
