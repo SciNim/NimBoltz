@@ -374,7 +374,9 @@ func hitVelocity[G: static FieldGeometry; P: static PlaneKind](f: Field, el: Ele
     # as MONTEFDT: the direction is renormalised through its z component
     var d = directionAt[G](f, el, fl)
     let ais = (if d.z < 0.0: -1.0 else: 1.0)
-    d.z = ais * sqrt(1.0 - d.x * d.x - d.y * d.y)
+    # NIMBOLTZ FIX MB-43: near a turning point rounding makes the argument
+    # -1e-16; d.z was NaN and the avalanche could not end
+    d.z = ais * sqrt(max(0.0, 1.0 - d.x * d.x - d.y * d.y))
     let vtot = f.vfac * sqrt(fl.e)
     d * vtot
   else:
