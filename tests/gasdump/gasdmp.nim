@@ -3,6 +3,7 @@
 
 import std/[os, strutils]
 import nimboltz/frt, nimboltz/legacy/[commons, setupt, gasmix]
+import nimboltz/gases
 
 var
   q, peqel: Arr2[float64, 6, 4000]
@@ -23,6 +24,7 @@ var
   name: string
   nin, nion, natt, nnull, last: int
   virl: float64
+  x: GasXsec      # gases rewritten in nimboltz/gases
 
 proc put[T](f: File, x: T) =
   when T is string:
@@ -79,9 +81,21 @@ for line in stdin.lines:
   for s in scrptn.mitems: s = repeat(' ', 50)
   name = repeat(' ', 25)
   nin = 0; nion = 0; natt = 0; nnull = 0; virl = 0.0
-  gasmix(ngs, q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel,
-         kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0,
-         ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
+  reset x
+  let inp = GasInput(e: mix2.eg, naniso: inpt.naniso, kT: inpt.akt,
+                     efinal: inpt.efinal, penning: inpt.ipen != 0)
+  if crossSections(ngs, inp, x):
+    # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
+    q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei
+    name = fstr(x.name, 25); eb = x.eb; peqel = x.peqel; peqin = x.peqin
+    penfra = x.penfra; kel = x.kel; kin = x.kin; qion = x.qion
+    peqion = x.peqion; eion = x.eion; nion = x.nion; qatt = x.qatt
+    natt = x.natt; nc0 = x.nc0; ec0 = x.ec0
+    for k in 1 .. 300: scrpt[k] = fstr(x.scrp[k], 50)
+  else:
+    gasmix(ngs, q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel,
+           kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0,
+           ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
   f.put q; f.put qin; f.put nin; f.put ev; f.put ei; f.putStr(name, 25)
   f.put virl; f.put eb; f.put peqel; f.put peqin; f.put penfra; f.put kel
   f.put kin; f.put qion; f.put peqion; f.put eion; f.put nion; f.put qatt
@@ -89,7 +103,8 @@ for line in stdin.lines:
   f.put wk; f.put efl; f.put ng1; f.put eg1; f.put ng2; f.put eg2
   for s in scrpt: f.putStr(s, 50)
   for s in scrptn: f.putStr(s, 50)
-  f.put mix2.eg; f.put mix2.eroot; f.put mix2.qt1; f.put mix2.qt2
-  f.put mix2.qt3; f.put mix2.qt4; f.put dens.den
+  f.put mix2.eg; f.put mix2.eroot
+  for k in 1 .. 4: f.put default(array[4000, float64])   # QT1..QT4 (unused)
+  f.put dens.den
   f.put inpt.naniso; f.put inpt.estep; f.put inpt.akt
 f.close()

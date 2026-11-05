@@ -1,6 +1,8 @@
 ## Decodes the differences between two gasdmp dumps (one case each):
-##   dumpdiff ref.bin test.bin [maxShown]
+##   dumpdiff [-u] ref.bin test.bin [maxShown]
 ## prints field name, Fortran indices and both values of differing elements.
+## -u: only the outputs that Magboltz uses (see `used`); exit code 1 if any
+## of them differ.
 
 import std/[os, strutils, strformat, math]
 
@@ -30,9 +32,46 @@ proc idx(dims: seq[int], k: int): string =
     k = k div d
   "(" & parts.join(",") & ")"
 
-let a = readFile(paramStr(1))
-let b = readFile(paramStr(2))
-let maxShown = if paramCount() >= 3: parseInt(paramStr(3)) else: 20
+var args = commandLineParams()
+let onlyUsed = args.len > 0 and args[0] == "-u"
+if onlyUsed: args.delete(0)
+let a = readFile(args[0])
+let b = readFile(args[1])
+let maxShown = if args.len >= 3: parseInt(args[2]) else: 20
+
+proc intField(d: string, name: string): int =
+  var off = 0
+  for f in layout:
+    let n = (if f.dims.len == 0: 1 else: prod(f.dims))
+    if f.name == name:
+      var x: int64
+      copyMem(addr x, unsafeAddr d[off], 8)
+      return int(x)
+    off += n * (if f.kind == 'c': 1 else: 8)
+
+let (nion, natt, nin) = (intField(a, "NION"), intField(a, "NATT"), intField(a, "NIN"))
+
+proc used(name: string, k: int): bool =
+  ## element k (column-major) of a field is read by MIXER/MIXERT (mixture.nim)
+  let r = k mod 6 + 1           # row of the 6 x 4000 arrays
+  case name
+  of "Q": r == 2 or (r == 3 and nion <= 1) or (r == 4 and natt <= 1)
+  of "PEQEL": r == 2 or (r == 3 and nion <= 1)
+  of "E": k + 1 in 2 .. 4
+  of "NIN", "NION", "NATT", "NAME", "KEL": true
+  of "QIN", "PEQIN": k mod 250 + 1 <= nin
+  of "EI", "KIN": k + 1 <= nin
+  of "PENFRA": k div 3 + 1 <= nin
+  of "EB", "NC0", "EC0": k + 1 <= max(nion, 1)
+  of "EION": nion > 1 and k + 1 <= nion
+  of "QION", "PEQION": nion > 1 and k mod 30 + 1 <= nion
+  of "QATT": natt > 1 and k mod 8 + 1 <= natt
+  of "SCRPT":
+    let j = k + 1
+    j == 2 or (if nion <= 1: j == 3 else: j in 3 .. 2 + nion) or
+      (if natt <= 1: j == 3 + nion else: j in 3 + nion .. 2 + nion + natt) or
+      j in 5 + nion + natt .. 4 + nion + natt + nin
+  else: false
 if a.len != b.len: echo &"sizes differ: {a.len} vs {b.len}"
 var off = 0
 var shown = 0
@@ -45,6 +84,7 @@ for f in layout:
     let w = f.dims[0]
     for k in 0 ..< n div w:
       let o = off + k * w
+      if onlyUsed and not used(f.name, k): continue
       if o + w <= min(a.len, b.len) and a[o ..< o+w] != b[o ..< o+w]:
         inc cnt
         if shown < maxShown:
@@ -54,6 +94,7 @@ for f in layout:
     for k in 0 ..< n:
       let o = off + k * 8
       if o + 8 > min(a.len, b.len): break
+      if onlyUsed and not used(f.name, k): continue
       if a[o ..< o+8] != b[o ..< o+8]:
         inc cnt
         if shown < maxShown:
@@ -70,3 +111,4 @@ for f in layout:
   off += n * size
 if off != a.len: echo &"layout covers {off} bytes, dump has {a.len}"
 for (n, c) in perField: echo &"  {n}: {c} elements differ"
+if onlyUsed and perField.len > 0: quit 1

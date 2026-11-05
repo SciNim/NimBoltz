@@ -1,7 +1,8 @@
 #!/bin/bash
 # Bitwise check of every GAS routine: gasdmp.f (reference Fortran) and
 # gasdmp.nim (translated port) are fed the same cases and their raw dumps
-# are compared case by case (one dump is ~19 MB).
+# are compared case by case (one dump is ~19 MB). Gases rewritten in
+# nimboltz/gases only fill what Magboltz uses; dumpdiff -u compares that.
 #   ./run.sh [gas numbers...]     default: 1..61
 # Env: MAGBOLTZ_SRC, WORK (default /tmp/gasdump), JOBS.
 set -euo pipefail
@@ -44,9 +45,8 @@ check() {   # gas number -> one result line; details in $work/gas<g>.log
     if ! "$work/gasdmp-nim" $d/n.bin < $d/c.in > $d/n.out 2>$d/n.err; then
       nfail=$((nfail+1)); echo "case $i [$l]: nim failed: $(tail -1 $d/n.err)" >> $log; continue
     fi
-    if ! cmp -s $d/f.bin $d/n.bin; then
-      nfail=$((nfail+1)); echo "case $i [$l]:" >> $log
-      "$work/dumpdiff" $d/f.bin $d/n.bin 5 >> $log
+    if ! cmp -s $d/f.bin $d/n.bin && ! "$work/dumpdiff" -u $d/f.bin $d/n.bin 5 > $d/diff; then
+      nfail=$((nfail+1)); echo "case $i [$l]:" >> $log; cat $d/diff >> $log
     elif ! cmp -s $d/f.out $d/n.out; then
       nfail=$((nfail+1)); echo "case $i [$l]: stdout differs" >> $log
     fi
