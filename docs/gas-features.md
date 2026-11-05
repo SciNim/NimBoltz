@@ -25,6 +25,7 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 11 iC4H10 | linear | - | PQ1 / 1-EPS |
 | 12 CO2 | log-log | ground/bend-excited mix (APBEND); minus rotations | PQ1 / 1-EPS, isotropic < 10 eV |
 | 13 neo-C5H12 | log-log (momentum transfer only) | - | isotropic only |
+| 14 H2O | log-log (total, without rotation) | - | always anisotropic: 1-EPS (KEL=KIN=2 for any NANISO) |
 
 ## Ionisation
 
@@ -42,6 +43,7 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 11 iC4H10 | 3 | Born-Bethe; ch2 = dipole/(EN+EION+E3) | C-K (x4) | ch2, ch3 subtracted from ch1 |
 | 12 CO2 | 9 + 2 K | Born-Bethe x fraction | C-K, O-K (x2) | ch2, ch3 subtracted from ch1 |
 | 13 neo-C5H12 | 1 in Q(3), table only | - | - | - |
+| 14 H2O | 8 + O-K | counting ionisation (table, Born-Bethe > 5 keV) x fraction above each table | O-K | - (a channel below its table end skips the rest) |
 
 ## Attachment, inelastic, other
 
@@ -59,6 +61,7 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 11 iC4H10 | 1 | ladder of 10 torsion states + pairs | torsion (.009) | 2 triplets 1/E^3 + 13 Born x ASING | 3 EIN / 2 EIN | 10..24 |
 | 12 CO2 | 1 (1/E^3) | rotations J->J+-2 (Born quadrupole, 6/E > 6 eV) + (010) (020) (100) (030) (001) | (010), (001) | 9 polyad tables 1/E + 2 triplets 1/E^2 + 63 Born | 4 EIN rot, 3 EIN vib, 2 EIN diss | 82..NIN (0, 1, 1) |
 | 13 neo-C5H12 | 1 (table) | 3 pairs | - | 2 vib + 3 exc tables, no tail | - | - |
+| 14 H2O | 3 (log-log, 1e-21) | 105 rotation pairs (Born dipole, para/ortho populations, 0 > 2 keV) + (010) bend | - | vib tables 1/E, 1/E^1.5; 4 triplets log-log 1/E^1.5; 32 Born dipoles | rotations, vib, dipoles: dipole angular table (E/EIN), PEQEL > 500 EIN; triplets 2 EIN | 215..NIN (0, 1, 1), printed although 0 |
 
 All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
 gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
@@ -78,3 +81,4 @@ of using the grid, put the ionisation in Q(3) and ignore NANISO.
 - GAS8 CH4 level 33 EIN=20.5, description 20.25.
 - GAS9 C2H6 level 20 gated on EIN(21) instead of EIN(20).
 - GAS11 iC4H10 `IF(NANISO.EQ.2)PEQIN(2,I)=0.0` should be PEQION(2,I).
+- GAS14 H2O SUMTRP sums QIN(230) (a dipole) instead of QIN(241) (higher triplets); the sums are not used, no effect.

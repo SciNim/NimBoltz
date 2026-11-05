@@ -267,16 +267,17 @@ proc levels*(g: var GasXsec, inp: GasInput, l: openArray[(float32, string)]) =
     g.scrp[4 + g.nion + g.natt + j + 1] = text
 
 proc penning*(g: var GasXsec, inp: GasInput, levels: Slice[int],
-              fraction, length, time: float32, fmt: string) =
+              fraction, length, time: float32, fmt: string, all = false) =
   ## Penning transfer from levels: probability, absorption length (µm) and
-  ## decay time (ps); printed in Magboltz's format when asked for
+  ## decay time (ps); printed in Magboltz's format when asked for (only
+  ## levels with a transfer, or `all`)
   for j in levels:
     g.penfra[1, j] = fraction
     g.penfra[2, j] = length
     g.penfra[3, j] = time
   if inp.penning:
     for j in levels:
-      if g.penfra[1, j] != 0.0:
+      if all or g.penfra[1, j] != 0.0:
         fwrite(fmt, fstr(g.name, 25), g.ei[j], g.penfra[1, j], g.penfra[2, j],
                g.penfra[3, j])
 
