@@ -83,7 +83,8 @@ for line in stdin.lines:
   nin = 0; nion = 0; natt = 0; nnull = 0; virl = 0.0
   reset x
   let inp = GasInput(e: mix2.eg, naniso: inpt.naniso, kT: inpt.akt,
-                     efinal: inpt.efinal, penning: inpt.ipen != 0)
+                     efinal: inpt.efinal, estep: inpt.estep,
+                     penning: inpt.ipen != 0)
   if crossSections(ngs, inp, x):
     # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
     q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei

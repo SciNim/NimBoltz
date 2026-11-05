@@ -44,6 +44,8 @@ type
     kT*: float64        ## gas temperature (eV), for the populations of
                         ## excited states
     efinal*: float64    ## upper end of the grid (eV)
+    estep*: float64     ## bin width (eV); old gas routines step their own
+                        ## energies by it
     penning*: bool      ## print the Penning transfers
 
   Relativistic* = object
@@ -55,6 +57,14 @@ type
 
 iterator bins*(inp: GasInput): (int, float64) =
   for i in 1 .. nEnergyBins: yield (i, inp.e[i])
+
+iterator steps*(inp: GasInput): (int, float64) =
+  ## the bins with energies summed up bin by bin, as the older gas routines
+  ## do (EN = -ESTEP/2, EN = EN + ESTEP), rather than the grid's
+  var en = -inp.estep / 2.0
+  for i in 1 .. nEnergyBins:
+    en = en + inp.estep
+    yield (i, en)
 
 proc relativistic*(en: float64): Relativistic =
   ## γ² and β² of an electron of kinetic energy en (eV)

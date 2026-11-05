@@ -23,7 +23,8 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 8 CH4 | log-log | - | PQ1 / 1-EPS |
 | 9 C2H6, 10 C3H8 | linear < 10 eV, log-log above | - | PQ1 / 1-EPS |
 | 11 iC4H10 | linear | - | PQ1 / 1-EPS |
-| 12 CO2 | linear < 10 eV, log-log above | ground/bend-excited mix (APBEND) | PQ1 / 1-EPS |
+| 12 CO2 | log-log | ground/bend-excited mix (APBEND); minus rotations | PQ1 / 1-EPS, isotropic < 10 eV |
+| 13 neo-C5H12 | log-log (momentum transfer only) | - | isotropic only |
 
 ## Ionisation
 
@@ -40,6 +41,7 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 10 C3H8 | 23 fragments + K (x3) | Born-Bethe x fraction | C-K | (sum-K)/sum |
 | 11 iC4H10 | 3 | Born-Bethe; ch2 = dipole/(EN+EION+E3) | C-K (x4) | ch2, ch3 subtracted from ch1 |
 | 12 CO2 | 9 + 2 K | Born-Bethe x fraction | C-K, O-K (x2) | ch2, ch3 subtracted from ch1 |
+| 13 neo-C5H12 | 1 in Q(3), table only | - | - | - |
 
 ## Attachment, inelastic, other
 
@@ -55,10 +57,14 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 9 C2H6 | 2 | torsion + 6 modes | torsion (.0045) | 3 triplet tables + 45 Born | 3 EIN (<=34), 2 EIN | - |
 | 10 C3H8 | 2 | 8 modes | j1/2 (.00536) | 4 triplet tables + Born | 3 EIN (<=32, 62), 2 EIN | - |
 | 11 iC4H10 | 1 | ladder of 10 torsion states + pairs | torsion (.009) | 2 triplets 1/E^3 + 13 Born x ASING | 3 EIN / 2 EIN | 10..24 |
-| 12 CO2 | 1 | rotational ladder + V2/2V2/V1/3V2/V3 | x | polyads + Born | 3 EIN | 82..NIN |
+| 12 CO2 | 1 (1/E^3) | rotations J->J+-2 (Born quadrupole, 6/E > 6 eV) + (010) (020) (100) (030) (001) | (010), (001) | 9 polyad tables 1/E + 2 triplets 1/E^2 + 63 Born | 4 EIN rot, 3 EIN vib, 2 EIN diss | 82..NIN (0, 1, 1) |
+| 13 neo-C5H12 | 1 (table) | 3 pairs | - | 2 vib + 3 exc tables, no tail | - | - |
 
-All gases: EFINAL cuts NIN at the first level above EFINAL; bremsstrahlung
-levels above 1 keV where present (Ar, C2H6, ...).
+All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
+gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
+by Magboltz but lie beyond NIN, so they are never used; the port skips them.
+Older routines (GAS13, ...) step their own energies (EN = EN + ESTEP) instead
+of using the grid, put the ionisation in Q(3) and ignore NANISO.
 
 ## Upstream quirks kept bit for bit (to report as MB-44+)
 
