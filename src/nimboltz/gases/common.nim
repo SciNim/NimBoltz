@@ -165,8 +165,8 @@ func tab*[X, Y](x: openArray[X], y: openArray[Y], falloff: int, unit = 1e-18,
   tab(x, y, float64(falloff), unit, scale)
 
 func tab*[X, Y](x: openArray[X], y: openArray[Y], f: float32,
-                unit = 1e-18): Curve =
-  Curve(x: widen(x), y: widen(y), unit: unit, scale: 1.0, f: f)
+                unit = 1e-18, scale = 1.0): Curve =
+  Curve(x: widen(x), y: widen(y), unit: unit, scale: scale, f: f)
 
 func born*(f: float32): Curve = Curve(f: f)
 
