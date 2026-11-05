@@ -18,7 +18,8 @@ proc crossSections(): (EnergyGrid, seq[GasXsec], seq[float64]) =
   var gases = newSeq[GasXsec](inpt.ngas)
   let inp = GasInput(e: grid.e, naniso: inpt.naniso, kT: inpt.akt,
                      efinal: inpt.efinal, estep: inpt.estep,
-                     penning: inpt.ipen != 0)
+                     penning: inpt.ipen != 0, torr: inpt.torr,
+                     tempc: inpt.tempc)
   for k, g in gases.mpairs:
     if not crossSections(gasn.ngasn[k + 1], inp, g):
       gasmix(gasn.ngasn[k + 1], g.q, g.qin, g.nin, g.e, g.ei, g.name, 0.0, g.eb,

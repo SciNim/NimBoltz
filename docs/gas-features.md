@@ -26,6 +26,8 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 12 CO2 | log-log | ground/bend-excited mix (APBEND); minus rotations | PQ1 / 1-EPS, isotropic < 10 eV |
 | 13 neo-C5H12 | log-log (momentum transfer only) | - | isotropic only |
 | 14 H2O | log-log (total, without rotation) | - | always anisotropic: 1-EPS (KEL=KIN=2 for any NANISO) |
+| 15 O2 | linear (total, momentum transfer, eps) | - | PQ1 / 1-EPS |
+| 16 N2 | linear (total, momentum transfer, eps), rotations subtracted | - | PQ1 / 1-EPS |
 
 ## Ionisation
 
@@ -44,6 +46,8 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 12 CO2 | 9 + 2 K | Born-Bethe x fraction | C-K, O-K (x2) | ch2, ch3 subtracted from ch1 |
 | 13 neo-C5H12 | 1 in Q(3), table only | - | - | - |
 | 14 H2O | 8 + O-K | counting ionisation (table, Born-Bethe > 5 keV) x fraction above each table | O-K | - (a channel below its table end skips the rest) |
+| 15 O2 | 3 O2+ (one table, shifted) + 4 dissociative + K | Born-Bethe x .6475 x (.558/.308/.136), .2993/.0446/.0061/.0025 | O-K (x2) | O2+ X minus A, B and 2 K |
+| 16 N2 | 7 N2+ states + 4 dissociative + K | N2+ table, fractions by channels open; Born-Bethe x .7973/.197/.0338/.0057 | N-K (x2) | N2+ X minus 1.99 K; N+ minus excited dissociative |
 
 ## Attachment, inelastic, other
 
@@ -62,12 +66,17 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 12 CO2 | 1 (1/E^3) | rotations J->J+-2 (Born quadrupole, 6/E > 6 eV) + (010) (020) (100) (030) (001) | (010), (001) | 9 polyad tables 1/E + 2 triplets 1/E^2 + 63 Born | 4 EIN rot, 3 EIN vib, 2 EIN diss | 82..NIN (0, 1, 1) |
 | 13 neo-C5H12 | 1 (table) | 3 pairs | - | 2 vib + 3 exc tables, no tail | - | - |
 | 14 H2O | 3 (log-log, 1e-21) | 105 rotation pairs (Born dipole, para/ortho populations, 0 > 2 keV) + (010) bend | - | vib tables 1/E, 1/E^1.5; 4 triplets log-log 1/E^1.5; 32 Born dipoles | rotations, vib, dipoles: dipole angular table (E/EIN), PEQEL > 500 EIN; triplets 2 EIN | 215..NIN (0, 1, 1), printed although 0 |
+| 15 O2 | 2-body lin, 1/E^3 above; 3-body lin x 273.15 P/(760 (T+273.15)) | 24+24 rotation pairs (log-log per pair, Phelps resonance, x3/E > 3 eV, x0.75) + V1 | V1 (APOP2) | 20 V1 harmonics, a1/b1 (1/E^2), Herzberg, 4 triplet tables (1/E, 1/E^1.5), 69 Born | rotations, vib 3/6 eV; 59 3 EIN; Herzberg, dissoc 2 EIN | 76..NIN (0, 1, 1), printed although 0 |
+| 16 N2 | - (zero) | 38+38 rotations (Born quadrupole, para/ortho 6/3, resonance, x QMOM/8.9e-16 > 5 eV; subtracted from Q(2)) + V1 | V1 (APOPV1) | 14 V1 harmonics; 14 triplet + 15 singlet tables (1/E^2, 1/E^1.5 or Born above) with momentum ratio; 4 Born + 2 Born x (E+2EIN)/E above E(3) | 1..92: 3 EIN (NANISO>0); states: 1.5-ratio (1) / PEQEL (2) > 3 EIN; 122-127 copy 121 | 107..NIN (0, 1, 1), printed A15 |
 
 All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
 gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
 by Magboltz but lie beyond NIN, so they are never used; the port skips them.
 Older routines (GAS13, ...) step their own energies (EN = EN + ESTEP) instead
 of using the grid, put the ionisation in Q(3) and ignore NANISO.
+Some gases keep a minimum NIN after the EFINAL cut (O2 52, N2 77): the
+vibrational ground levels stay. Three-body attachment (O2) needs pressure and
+temperature, so GasInput carries TORR and TEMPC.
 
 ## Upstream quirks kept bit for bit (to report as MB-44+)
 
@@ -82,3 +91,10 @@ of using the grid, put the ionisation in Q(3) and ignore NANISO.
 - GAS9 C2H6 level 20 gated on EIN(21) instead of EIN(20).
 - GAS11 iC4H10 `IF(NANISO.EQ.2)PEQIN(2,I)=0.0` should be PEQION(2,I).
 - GAS14 H2O SUMTRP sums QIN(230) (a dipole) instead of QIN(241) (higher triplets); the sums are not used, no effect.
+- GAS15 O2 level 59 (b1Σg+) sets PEQIN(61,I) instead of PEQIN(59,I): level 59 stays
+  isotropic, level 61 gets level 59's distribution between 3 EIN(59) and 6 eV.
+- GAS15 O2 level 72 (V1 sum 21-30) takes its tail above the table from YVIB20, not YVIB21.
+- GAS16 N2 level 119 takes the ratio's energy above its table from XSNG12(NSNG13), not XSNG13
+  (both end at 100 eV, no effect).
+- GAS16 N2 QION(9), QION(10): at exactly EN = EION(10) both stay 0, and QION(10) at exactly
+  120 eV (`.LT.120` / `.GT.120`).

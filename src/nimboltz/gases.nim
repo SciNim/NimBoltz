@@ -1,7 +1,7 @@
 ## Cross sections of the gases Magboltz knows, by its gas number.
 
 import gases/common
-import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane, carbondioxide, neopentane, water]
+import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane, carbondioxide, neopentane, water, oxygen, nitrogen]
 export common
 
 proc crossSections*(gas: int, inp: GasInput, g: var GasXsec): bool =
@@ -22,5 +22,7 @@ proc crossSections*(gas: int, inp: GasInput, g: var GasXsec): bool =
   of 12: carbonDioxide(inp, g)
   of 13: neopentane(inp, g)
   of 14: water(inp, g)
+  of 15: oxygen(inp, g)
+  of 16: nitrogen(inp, g)
   else: return false
   true

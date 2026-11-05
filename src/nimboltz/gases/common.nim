@@ -47,6 +47,8 @@ type
     estep*: float64     ## bin width (eV); old gas routines step their own
                         ## energies by it
     penning*: bool      ## print the Penning transfers
+    torr*, tempc*: float64  ## gas pressure (Torr) and temperature (°C), for
+                            ## three-body attachment
 
   Relativistic* = object
     gamma2*, beta2*: float64
