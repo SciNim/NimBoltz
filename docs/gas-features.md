@@ -28,6 +28,11 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 14 H2O | log-log (total, without rotation) | - | always anisotropic: 1-EPS (KEL=KIN=2 for any NANISO) |
 | 15 O2 | linear (total, momentum transfer, eps) | - | PQ1 / 1-EPS |
 | 16 N2 | linear (total, momentum transfer, eps), rotations subtracted | - | PQ1 / 1-EPS |
+| 17 NO | linear (momentum transfer) | - | isotropic only |
+| 18 N2O | log-log (total, momentum transfer), eps linear | - | 1-EPS only (NANISO=1 becomes 2); KEL=KIN=2 for any NANISO |
+| 19 C2H4 | log-log | - | always 1-EPS (sets NANISO=2) |
+| 20 C2H2 | linear (momentum transfer) | - | isotropic only |
+| 21 H2 | log-log (total, momentum transfer), eps linear | constant below XELM(2) | PQ1 / 1-EPS |
 
 ## Ionisation
 
@@ -48,6 +53,11 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 14 H2O | 8 + O-K | counting ionisation (table, Born-Bethe > 5 keV) x fraction above each table | O-K | - (a channel below its table end skips the rest) |
 | 15 O2 | 3 O2+ (one table, shifted) + 4 dissociative + K | Born-Bethe x .6475 x (.558/.308/.136), .2993/.0446/.0061/.0025 | O-K (x2) | O2+ X minus A, B and 2 K |
 | 16 N2 | 7 N2+ states + 4 dissociative + K | N2+ table, fractions by channels open; Born-Bethe x .7973/.197/.0338/.0057 | N-K (x2) | N2+ X minus 1.99 K; N+ minus excited dissociative |
+| 17 NO | 1 in Q(3), table only | - | - | - |
+| 18 N2O | 9 fragments + N-K (x2) + O-K | Born-Bethe > 1 keV x .4692/.2088/.0623/.0135/.0498/.0201/.0399/.0932/.0432 | N-K, O-K | - (stops at the first channel below its table) |
+| 19 C2H4 | 12 fragments + C-K (x2) | counting ionisation (log-log table, Born-Bethe > 3 keV) x fraction above each table | C-K | (sum-K)/sum |
+| 20 C2H2 | 1 in Q(3), table only | - | - | - |
+| 21 H2 | autoionisation + 18 H2+ vibrational states + dissociative | tables to 3 keV; above, shares AMP of a total table (to 16 keV), then Born-Bethe | - | - (stops at the first closed channel) |
 
 ## Attachment, inelastic, other
 
@@ -68,15 +78,24 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 14 H2O | 3 (log-log, 1e-21) | 105 rotation pairs (Born dipole, para/ortho populations, 0 > 2 keV) + (010) bend | - | vib tables 1/E, 1/E^1.5; 4 triplets log-log 1/E^1.5; 32 Born dipoles | rotations, vib, dipoles: dipole angular table (E/EIN), PEQEL > 500 EIN; triplets 2 EIN | 215..NIN (0, 1, 1), printed although 0 |
 | 15 O2 | 2-body lin, 1/E^3 above; 3-body lin x 273.15 P/(760 (T+273.15)) | 24+24 rotation pairs (log-log per pair, Phelps resonance, x3/E > 3 eV, x0.75) + V1 | V1 (APOP2) | 20 V1 harmonics, a1/b1 (1/E^2), Herzberg, 4 triplet tables (1/E, 1/E^1.5), 69 Born | rotations, vib 3/6 eV; 59 3 EIN; Herzberg, dissoc 2 EIN | 76..NIN (0, 1, 1), printed although 0 |
 | 16 N2 | - (zero) | 38+38 rotations (Born quadrupole, para/ortho 6/3, resonance, x QMOM/8.9e-16 > 5 eV; subtracted from Q(2)) + V1 | V1 (APOPV1) | 14 V1 harmonics; 14 triplet + 15 singlet tables (1/E^2, 1/E^1.5 or Born above) with momentum ratio; 4 Born + 2 Born x (E+2EIN)/E above E(3) | 1..92: 3 EIN (NANISO>0); states: 1.5-ratio (1) / PEQEL (2) > 3 EIN; 122-127 copy 121 | 107..NIN (0, 1, 1), printed A15 |
+| 17 NO | 2-body lin (1e-18) + 3-body lin x 273.15 P/(760 (T+273.15)), in QATT only (Q(4)=0) | - | - | rot, 2 vib, 1 exc tables, no tail | - | - |
+| 18 N2O | 1 (lin x 0.67 x 0.1) | 60+60 rotations (Born dipole DBK, J populations, 0 > 500 eV, angular tables) + (010) (020) (100) | (010), (100), (001) + 2 resonances | 10 vib tables 1/E; 4 triplets log-log 1/E^1.5; 36 Born dipoles (EN+E3+EIN) | vib >= 6 eV; triplets 2 EIN; dipoles angular table, PEQEL > 500 EIN | 129..NIN (0, 1, 1), all printed |
+| 19 C2H4 | 1 (lin 1e-16) | V7, V3, V2 (APOP/(1+APOP)) | V7 V3 V2 V1 + 1.85 eV resonance (x amplitude per mode) | 4 resonance-only vib (log-log), 2V1 table; 2 triplets log-log + 2 lin (1/E^2 x amplitude); 36 Born dipoles | vib > 20 eV; triplets > 50/100 eV; dipoles 3 EIN, angular table 1..20 EIN | - |
+| 20 C2H2 | 1 (table, 1e-21) | V5 (half the detailed balance) | - | 2V5, V3, 3 exc tables, no tail | - | - |
+| 21 H2 | dissociative: exp. resonances from J = 0..7 (FROT-weighted) + table + 14 eV resonance | rotations J->J+2 (8 tables, ortho/para, ratio frozen at 3 below 273 K), de-excitation x (2J+1)/(2J+5) in single precision, 0 > 100 eV | - | 4 vib tables 1/E; B3Σ tables (3 cut at table end, 1 1/E^3); c3Π a3Σ (shares) e3Σ 1/E^3; EF table x .4/.6 then Born; 84 Born dipoles (x1.08, x1.20 groups) | rot/vib > 8 eV; then 2 EIN for 19..114 | none printed (PENFRA 0) |
 
 All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
 gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
 by Magboltz but lie beyond NIN, so they are never used; the port skips them.
 Older routines (GAS13, ...) step their own energies (EN = EN + ESTEP) instead
 of using the grid, put the ionisation in Q(3) and ignore NANISO.
-Some gases keep a minimum NIN after the EFINAL cut (O2 52, N2 77): the
+Some gases keep a minimum NIN after the EFINAL cut (O2 52, N2 77, C2H4 12,
+N2O 120); H2 sets NIN to 19, 23 or 114 by EFINAL (8 and 11 eV).: the
 vibrational ground levels stay. Three-body attachment (O2) needs pressure and
-temperature, so GasInput carries TORR and TEMPC.
+temperature, so GasInput carries TORR and TEMPC (also NO).
+Some routines overwrite NANISO in /INPT/ (C2H4 always 2, N2O 2 unless 0, and
+more in the legacy gases); SETUP already sets NANISO=2 for every run, so in
+Magboltz this only matters to direct calls. The modules override their own copy.
 
 ## Upstream quirks kept bit for bit (to report as MB-44+)
 
@@ -98,3 +117,10 @@ temperature, so GasInput carries TORR and TEMPC.
   (both end at 100 eV, no effect).
 - GAS16 N2 QION(9), QION(10): at exactly EN = EION(10) both stay 0, and QION(10) at exactly
   120 eV (`.LT.120` / `.GT.120`).
+- GAS18 N2O level 156 (high triplets) gates its angular distribution on 2 EIN(147), not 2 EIN(156).
+- GAS18 N2O level 134 (300) tests the table end XV101(NV300) instead of XV300(NV300)
+  (both 4.25 eV, no effect); `QELM=YELMT(1)` for QELMT below XEN(1) (1e-9 eV, never reached).
+- GAS19 C2H4 PEQEL(2)=0.0 for NANISO=0 (0.5 elsewhere); unreachable, the routine sets NANISO=2.
+  Description of the H+ channel says ELOSS=18.46, EION is 18.66.
+- GAS20 C2H2 cuts the last level with `EFINAL.LT.EIN(7)`, the others with `.LE.`.
+- GAS21 H2 level 98 (D band) starts at EIN(91), not EIN(98) (`727 IF(EN.LE.EIN(91))`).

@@ -83,12 +83,17 @@ proc ionisation*(b: BornBethe, r: Relativistic, fraction: float32 = 1.0): float6
   let x1 = x2 * ln(r.beta2 / (1.0 - r.beta2)) - 1.0
   bornConst * (b.am2 * x1 + b.c * x2) * fraction
 
-proc dipole*(f: float32, eloss: float64, r: Relativistic, en: float64): float64 =
+proc dipoleD*(f: float64, eloss: float64, r: Relativistic, en: float64): float64 =
   ## Born-Bethe cross section of an optically allowed excitation with
   ## oscillator strength f, times en; divide by (en + eloss + ionisation
   ## energy), in the order Magboltz adds them
   f / (eloss * r.beta2) * (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * eloss)) -
     r.beta2) * bbconst * en
+
+proc dipole*(f: float32, eloss: float64, r: Relativistic, en: float64): float64 {.inline.} =
+  ## the same, with the oscillator strength a single precision literal (as
+  ## nearly always in Magboltz)
+  dipoleD(float64(f), eloss, r, en)
 
 proc vibrationalDipole*(c: float64, eloss, en: float64): float64 =
   ## Born approximation of a dipole active vibration (excitation or, with
