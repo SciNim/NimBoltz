@@ -2,7 +2,7 @@
 ## Translated by f2nim; maintained by hand since (see docs/DESIGN.md).
 
 import ../frt, commons
-import gas28, gas29, gas30, gas31, gas32, gas33, gas34, gas35, gas36, gas37, gas38, gas39, gas40, gas41, gas42, gas43, gas44, gas45, gas46, gas47, gas48, gas49, gas50, gas51, gas52, gas53, gas54, gas55, gas56, gas57, gas58, gas59, gas60, gas61, gas62, gas63, gas64, gas65, gas66, gas67, gas68, gas69, gas70, gas71, gas72, gas73, gas74, gas75, gas76, gas77, gas78, gas79, gas80
+import gas31, gas36, gas37, gas38, gas39, gas40, gas41, gas42, gas43, gas44, gas45, gas46, gas47, gas48, gas49, gas50, gas51, gas52, gas53, gas54, gas55, gas56, gas57, gas58, gas59, gas60, gas61, gas62, gas63, gas64, gas65, gas66, gas67, gas68, gas69, gas70, gas71, gas72, gas73, gas74, gas75, gas76, gas77, gas78, gas79, gas80
 
 proc gasmix*(ngs: int, q: var Arr2[float64, 6, 4000], qin: var Arr2[float64, 250, 4000], nin: var int, ev: var array[1..6, float64], ei: var array[1..250, float64], name: var string, virl: float64, eb: var array[1..30, float64], peqel: var Arr2[float64, 6, 4000], peqin: var Arr2[float64, 250, 4000], penfra: var Arr2[float64, 3, 250], kel: var array[1..6, int], kin: var array[1..250, int], qion: var Arr2[float64, 30, 4000], peqion: var Arr2[float64, 30, 4000], eion: var array[1..30, float64], nion: var int, qatt: var Arr2[float64, 8, 4000], natt: var int, qnull: var Arr2[float64, 10, 4000], nnull: var int, scln: var array[1..10, float64], nc0: var array[1..30, int], ec0: var array[1..30, float64], wk: var array[1..30, float64], efl: var array[1..30, float64], ng1: var array[1..30, int], eg1: var array[1..30, float64], ng2: var array[1..30, int], eg2: var array[1..30, float64], scrpt: var array[1..300, string], scrptn: var array[1..10, string]) =
   var i, j: int
@@ -43,14 +43,7 @@ proc gasmix*(ngs: int, q: var Arr2[float64, 6, 4000], qin: var Arr2[float64, 250
   fdo j, 1, 10:
     scln[j] = 0.0
   case ngs
-  of 28: gas28(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 29: gas29(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 30: gas30(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
   of 31: gas31(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 32: gas32(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 33: gas33(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 34: gas34(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
-  of 35: gas35(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
   of 36: gas36(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
   of 37: gas37(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
   of 38: gas38(q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel, kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0, ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)

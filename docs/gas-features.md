@@ -39,6 +39,13 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 25 DME | log-log, eps linear | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
 | 26 Reid step | constant 1e-16 | - | isotropic only |
 | 27 Maxwell | 6e-16/sqrt(E) | - | isotropic only |
+| 28 Reid ramp | constant 6e-16 | - | isotropic only |
+| 29 C2F6 | log-log, eps linear | constant below XEN(1) | always 1-EPS (forces NANISO=2) |
+| 30 SF6 | log-log (total, MT, 1-eps) | 1434e-16, eps 0 below XEN(2) | .5+(QEL-QMT)/QEL / 1-EPS |
+| 32 propene | linear (momentum transfer) | - | isotropic only |
+| 33 cyclopropane | linear (momentum transfer) | - | isotropic only |
+| 34 methanol | log-log, eps linear | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
+| 35 ethanol | as methanol, x ANORM (1.0) | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
 
 ## Ionisation
 
@@ -70,6 +77,13 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 25 DME | 25 fragments (log-log tables to 1 keV) | shares of counting ionisation, Born-Bethe > 1 keV | C K (x 2e-16), O K | - |
 | 26 Reid step | none (E(3)=15.9 unused) | - | - | - |
 | 27 Maxwell | none | - | - | - |
+| 28 Reid ramp | none | - | - | - |
+| 29 C2F6 | 10 fragments (log-log tables to 900 eV) | shares of counting ionisation to 3 keV, Born-Bethe above | C K (x 2), F K (x 6), linear | channels 1-10 x (tot-K)/tot |
+| 30 SF6 | 7 outer (linear tables to XION(N)) | shares of Born-Bethe | S L3, L2, L1, K, F K (x 6) | outer x (tot-inner)/tot |
+| 32 propene | 1 in Q(3), table only | - | - | - |
+| 33 cyclopropane | 1 in Q(3), table only | - | - | - |
+| 34 methanol | 15 fragments (log-log tables) | shares of counting ionisation, Born-Bethe > 1 keV | C K, O K | - |
+| 35 ethanol | 25 fragments (log-log tables) | shares of counting ionisation, Born-Bethe > 1 keV | C K (x 2e-16), O K | - |
 
 ## Attachment, inelastic, other
 
@@ -101,6 +115,13 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 25 DME | 1 (table 1e-20, open interval) | rot J->J+1 Born dipole (tabulated ang. dist.) x AMPROT .105 < 1 keV; 3 vib superelastic | 4 Born vib + resonance table | 6 triplets log-log 1/E^2; 44 Born dipoles (own A0) with ang. dist. to 500 EIN | vib >= 2 eV; triplets 2 EIN; dipoles always | 61..NIN all printed (0, 1, 1) |
 | 26 Reid step | - | - | - | one level 0.2 eV, 1e-15, PEQIN .5+.3, 70 % in Q(1) | - | - |
 | 27 Maxwell | - | - | - | none | - | - |
+| 28 Reid ramp | - | - | - | one level 0.2 eV, (E-0.2) x 1e-15 | - | - |
+| 29 C2F6 | F-, CF3- (one log-log table x .574, split .77/.23) | V6, V5, V7 Born, populations of 5 quanta | V6, V5, V7 Born + resonance table (log-log) | 2V7, VHIGH resonance only; 4 triplets linear 1/E^2; 6 Born dipoles | vib Okhrimovskyy (super ENRTS, inel ENROT), resonances 1-EPSRES; exc 3 EIN | none |
+| 30 SF6 | 7 ions (SF6- log-log, rest linear), Q(4)=0 | V4, V1, V3 (deg 3, 1, 3) | V4 Born; V3 Born + table; PEQIN .5+(Q-XMT)/Q | V1 harmonics tables 1/E^2; 3 triplets; 22 Born dipoles x 1.013-1.025 | harmonics always; exc 3 EIN | none |
+| 32 propene | 1 linear 1e-21 | V20 Born, V13 and V Born + table | same | harmonics, 3 exc tables | - | - |
+| 33 cyclopropane | 1 linear 1e-21 | V11 and V Born + table | same | 2V3, harmonics, 2 exc tables | - | - |
+| 34 methanol | 3 (H-, O-/OH-, CH3O-) linear 1e-20 | rot J->J+1 Born dipole (tabulated ang. dist.) x AMPROT .1 < 1 keV; V1 | V1, V2, V3 Born + resonance table | 6 triplets log-log 1/E^2; 22 Born dipoles (own A0) with ang. dist. to 500 EIN | vib always; triplets, ions 1.5 EIN | 57..NIN all printed (0, 1, 1) |
+| 35 ethanol | 3 (H-, O-/OH-, C2H5O-) x AMPATT 1.0 | as methanol | as methanol | 6 triplets; 31 Born dipoles (own A0) | vib >= 4 eV; triplets, ions 2 EIN | 57..NIN all printed (0, 1, 1) |
 
 All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
 gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
@@ -111,10 +132,10 @@ Some gases keep a minimum NIN after the EFINAL cut (O2 52, N2 77, C2H4 12,
 N2O 120, CO 113); H2 and D2 set NIN to 19, 23 or 114/142 by EFINAL (8 and 11 eV).: the
 vibrational ground levels stay. Three-body attachment (O2) needs pressure and
 temperature, so GasInput carries TORR and TEMPC (also NO).
-Some routines overwrite NANISO in /INPT/ (C2H4, CO, DME always 2, N2O 2 unless 0, and
+Some routines overwrite NANISO in /INPT/ (C2H4, CO, DME, C2F6, methanol, ethanol always 2, N2O 2 unless 0, and
 more in the legacy gases); SETUP already sets NANISO=2 for every run, so in
 Magboltz this only matters to direct calls. The modules override their own copy.
-CO and DME use A0=0.5291772083e-8 (others 0.52917720859e-8) before computing
+CO, DME, methanol and ethanol use A0=0.5291772083e-8 (others 0.52917720859e-8) before computing
 BBCONST, so their Born dipoles pass their own constant (`dipole(..., bb)`).
 
 ## Upstream quirks kept bit for bit (to report as MB-44+)
@@ -156,3 +177,15 @@ BBCONST, so their Born dipoles pass their own constant (`dipole(..., bb)`).
 - GAS25 DME rotational populations weight (2J-1), CO (2J+1).
 - GAS25 DME total Q(1) leaves out the excitations 61..110 (SUMINEL has rot, vib, att, ion only).
 - GAS25 DME level 58 gate `EN.LT.EIN(58)`, the others `.LE.`.
+- GAS29 C2F6 carbon K-shell: `IF(EN.LE.XION11(J)) GO TO 151` jumps to the loop's own
+  CONTINUE (152 meant), so QION(11) always extrapolates the table's last interval.
+- GAS29 C2F6 QION(5) (C2F4+) share of QIONC is .0045 to 3 keV, .00045 in the Born-Bethe branch.
+- GAS29 C2F6 `DO 395 L=4,6` sets PEQIN(L) where PEQIN(2L-1) is meant: the inelastic V6/V5/V7
+  (7, 9, 11) stay isotropic, levels 4, 5, 6 get their values; the gate tests EIN(2L).
+- GAS29 C2F6 level 8 opens with EIN(7) (same energy); PEQIN = PEQEL above 20 eV only inside the
+  VHIGH branch, which ends at XVIBR(NVIBR) = 12.5 eV: dead code. Q(1) is never set.
+- GAS30 SF6 level 23 text says F=0.1211, the code DIP(0.01211, ...).
+- GAS30 SF6 Q(4)=0 after the attachment (QATT only); PEQION opens at 2 EION inclusive for
+  channels 6, 7 (`.LT.`), above it for the others; F K-shell gated `.LE.EION`, others `.LT.`.
+- GAS30 SF6 APOPGS is normalised and then reset to 1.0 (excited states normalised, ground not).
+- GAS35 ethanol: the sums are commented out, Q(1) is not set.
