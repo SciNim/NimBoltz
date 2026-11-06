@@ -83,17 +83,20 @@ proc ionisation*(b: BornBethe, r: Relativistic, fraction: float32 = 1.0): float6
   let x1 = x2 * ln(r.beta2 / (1.0 - r.beta2)) - 1.0
   bornConst * (b.am2 * x1 + b.c * x2) * fraction
 
-proc dipoleD*(f: float64, eloss: float64, r: Relativistic, en: float64): float64 =
+proc dipoleD*(f: float64, eloss: float64, r: Relativistic, en: float64,
+              bb = bbconst): float64 =
   ## Born-Bethe cross section of an optically allowed excitation with
   ## oscillator strength f, times en; divide by (en + eloss + ionisation
-  ## energy), in the order Magboltz adds them
+  ## energy), in the order Magboltz adds them (`bb`: a routine's own
+  ## 16 π a₀² Ry² / (2 m c²))
   f / (eloss * r.beta2) * (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * eloss)) -
-    r.beta2) * bbconst * en
+    r.beta2) * bb * en
 
-proc dipole*(f: float32, eloss: float64, r: Relativistic, en: float64): float64 {.inline.} =
+proc dipole*(f: float32, eloss: float64, r: Relativistic, en: float64,
+             bb = bbconst): float64 {.inline.} =
   ## the same, with the oscillator strength a single precision literal (as
   ## nearly always in Magboltz)
-  dipoleD(float64(f), eloss, r, en)
+  dipoleD(float64(f), eloss, r, en, bb)
 
 proc vibrationalDipole*(c: float64, eloss, en: float64): float64 =
   ## Born approximation of a dipole active vibration (excitation or, with
@@ -188,6 +191,8 @@ func tab*[X, Y](x: openArray[X], y: openArray[Y], f: float32,
 func born*(f: float32): Curve = Curve(f: f)
 
 func lin*(c: Curve, en: float64): float64 {.inline.} = lin(c.x, c.y, en)
+
+func logLog*(c: Curve, en: float64): float64 {.inline.} = logLog(c.x, c.y, en)
 
 type
   Negative* = enum
