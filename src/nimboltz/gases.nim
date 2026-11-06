@@ -1,12 +1,11 @@
 ## Cross sections of the gases Magboltz knows, by its gas number.
 
 import gases/common
-import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane, carbondioxide, neopentane, water, oxygen, nitrogen, nitricoxide, nitrousoxide, ethylene, acetylene, hydrogen, deuterium, c3h6, hexafluoroethane, sulphurhexafluoride, methanol, ethanol, methylal, models, carbonmonoxide, dimethylether]
+import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane, carbondioxide, neopentane, water, oxygen, nitrogen, nitricoxide, nitrousoxide, ethylene, acetylene, hydrogen, deuterium, c3h6, hexafluoroethane, sulphurhexafluoride, methanol, ethanol, isopropanol, cesium, fluorine, carbondisulphide, carbonylsulphide, deuteratedmethane, borontrifluoride, fluoroform, bromotrifluoromethane, ozone, mercurydimer, hydrogensulphide, nbutane, npentane, germane, npropanol, nitrogenphelps, c2h2f4, trimethylamine, c3f4h2, c4f7n, perfluoropropane, silane, carbontetrachloride, ammonia, methylal, models, carbonmonoxide, dimethylether]
 export common
 
-proc crossSections*(gas: int, inp: GasInput, g: var GasXsec): bool =
-  ## fills g (zeroed) with the cross sections of gas number `gas`; false
-  ## for a gas that is still in legacy/
+proc crossSections*(gas: int, inp: GasInput, g: var GasXsec) =
+  ## fills g (zeroed) with the cross sections of gas number `gas` (1..80)
   case gas
   of 1: cf4(inp, g)
   of 2: argon(inp, g)
@@ -38,9 +37,36 @@ proc crossSections*(gas: int, inp: GasInput, g: var GasXsec): bool =
   of 28: reidRamp(inp, g)
   of 29: hexafluoroethane(inp, g)
   of 30: sulphurHexafluoride(inp, g)
+  of 31: ammonia(inp, g)
   of 32: propene(inp, g)
   of 33: cyclopropane(inp, g)
   of 34: methanol(inp, g)
   of 35: ethanol(inp, g)
-  else: return false
-  true
+  of 36: isopropanol(inp, g)
+  of 37: cesium(inp, g)
+  of 38: fluorine(inp, g)
+  of 39: carbonDisulphide(inp, g)
+  of 40: carbonylSulphide(inp, g)
+  of 41: deuteratedMethane(inp, g)
+  of 42: boronTrifluoride(inp, g)
+  of 43: c2h2f4(inp, g)
+  of 44: trimethylamine(inp, g)
+  of 45: c3f4h2(inp, g)
+  of 46: nPropanol(inp, g)
+  of 47: paraHydrogen(inp, g)
+  of 48: orthoDeuterium(inp, g)
+  of 49: c4f7n(inp, g)
+  of 50: fluoroform(inp, g)
+  of 51: bromotrifluoromethane(inp, g)
+  of 52: perfluoropropane(inp, g)
+  of 53: ozone(inp, g)
+  of 54: mercuryDimer(inp, g)
+  of 55: hydrogenSulphide(inp, g)
+  of 56: nButane(inp, g)
+  of 57: nPentane(inp, g)
+  of 58: nitrogenPhelps(inp, g)
+  of 59: germane(inp, g)
+  of 60: silane(inp, g)
+  of 61: carbonTetrachloride(inp, g)
+  of 62 .. 80: dummy(inp, g)
+  else: raise newException(ValueError, "no gas number " & $gas)

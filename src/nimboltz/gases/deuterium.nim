@@ -1,4 +1,6 @@
-## Deuterium: GAS22 of Magboltz 11.21 ("D2 2019").
+## Deuterium: GAS22 of Magboltz 11.21 ("D2 2019"), and ortho-deuterium,
+## GAS48 ("D2(ORTHO) 2019"), the same with only the ortho (even J) states
+## populated.
 ##
 ## The hydrogen model (GAS21) with deuterium data: elastic (log-log scaled
 ## by 0.988, anisotropic by 1 - ε), autoionisation plus ionisation to the
@@ -720,11 +722,17 @@ let nionn: array[28, int] = [
 const penningFormat = "(' GAS = ',A15,' ENERGY LEVEL = ',F7.4,' EV.',/," &
   "' PENNING PROBABILITY =',F5.3,' ABS.LENGTH =',F7.2,' DECAY TIME =',F7.1,/)"
 
-proc deuterium*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, " D2 ISOTROPIC      2019", " D2 ANISOTROPIC    2019",
-             mass = 4.028204)
-  g.scrp[2] = if inp.naniso == 0: " ELASTIC      ISOTROPIC            DEUTERIUM"
-              else: " ELASTIC    ANISOTROPIC            DEUTERIUM"
+proc deuteriumModel(inp: GasInput, g: var GasXsec, ortho: bool) =
+  if ortho:
+    g.describe(inp, " D2(ORTHO) ISOTROPIC 2019", " D2(ORTHO) ANISO     2019",
+               mass = 4.028204)
+    g.scrp[2] = if inp.naniso == 0: " ELASTIC      ISOTROPIC      ORTHO-DEUTERIUM"
+                else: " ELASTIC    ANISOTROPIC      ORTHO-DEUTERIUM"
+  else:
+    g.describe(inp, " D2 ISOTROPIC      2019", " D2 ANISOTROPIC    2019",
+               mass = 4.028204)
+    g.scrp[2] = if inp.naniso == 0: " ELASTIC      ISOTROPIC            DEUTERIUM"
+                else: " ELASTIC    ANISOTROPIC            DEUTERIUM"
   g.e[3] = 15.46269'f32
   g.shells [
     (15.46269'f32, 0.0'f32, 0, 0.0'f32, " AUTO IONISATION                   ELOSS= 15.46269"),
@@ -913,13 +921,15 @@ proc deuterium*(inp: GasInput, g: var GasXsec) =
   erlvl[6] = g.ei[8] + g.ei[10] + g.ei[12]
   erlvl[7] = 0.00741194'f32 + g.ei[9] + g.ei[11] + g.ei[13]
   erlvl[8] = g.ei[8] + g.ei[10] + g.ei[12] + g.ei[14]
-  # populations (para J odd, nuclear spin weight 3; ortho J even, 6);
-  # below 273 K the ortho/para ratio stays at its room temperature value 2
+  # populations (para J odd, nuclear spin weight 3, none in
+  # ortho-deuterium; ortho J even, 6); below 273 K the ortho/para ratio stays
+  # at its room temperature value 2
   var pj: array[1 .. 8, float64]
-  for k in countup(1, 7, 2): pj[k] = float64(3 * (2 * k + 1)) * exp(-erlvl[k] / inp.kT)
+  for k in countup(1, 7, 2):
+    pj[k] = if ortho: 0.0 else: float64(3 * (2 * k + 1)) * exp(-erlvl[k] / inp.kT)
   for k in countup(2, 8, 2): pj[k] = float64(6 * (2 * k + 1)) * exp(-erlvl[k] / inp.kT)
   var frot: array[0 .. 8, float64]
-  if inp.kT >= 0.0235'f32:
+  if ortho or inp.kT >= 0.0235'f32:
     var sum = 6.0
     for k in 1 .. 8: sum = sum + pj[k]
     frot[0] = 6.0 / sum
@@ -1184,3 +1194,8 @@ proc deuterium*(inp: GasInput, g: var GasXsec) =
   g.nin = if inp.efinal > 11.0: 142
           elif inp.efinal > 8.0: 23
           else: 19
+
+proc deuterium*(inp: GasInput, g: var GasXsec) = deuteriumModel(inp, g, ortho = false)
+
+proc orthoDeuterium*(inp: GasInput, g: var GasXsec) =
+  deuteriumModel(inp, g, ortho = true)

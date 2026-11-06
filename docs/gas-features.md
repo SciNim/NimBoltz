@@ -4,9 +4,9 @@ Every gas routine (GAS1..GAS80 of Magboltz 11.21) computes the same things on th
 energy grid: elastic (total, momentum transfer, angular parameter), ionisation
 channels, attachment, inelastic levels, null collisions. The physics is shared
 (`gases/common.nim`); the gases differ in which of the variants below they use.
-The per-gas modules in `gases/` reproduce Fortran bit for bit. Once all gases
-are ported, these columns become the fields of one compile-time configuration
-and a single generic routine replaces the modules.
+The per-gas modules in `gases/` (all 80 routines; 62-80 are one `dummy`)
+reproduce Fortran bit for bit. Next, these columns become the fields of one
+compile-time configuration and a single generic routine replaces the modules.
 
 Legend: `x` used, `-` not used, numbers are counts or factors.
 
@@ -42,10 +42,38 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 28 Reid ramp | constant 6e-16 | - | isotropic only |
 | 29 C2F6 | log-log, eps linear | constant below XEN(1) | always 1-EPS (forces NANISO=2) |
 | 30 SF6 | log-log (total, MT, 1-eps) | 1434e-16, eps 0 below XEN(2) | .5+(QEL-QMT)/QEL / 1-EPS |
+| 31 NH3 | log-log, eps linear | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
 | 32 propene | linear (momentum transfer) | - | isotropic only |
 | 33 cyclopropane | linear (momentum transfer) | - | isotropic only |
 | 34 methanol | log-log, eps linear | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
 | 35 ethanol | as methanol, x ANORM (1.0) | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
+| 36 iso-propanol | as ethanol | constant below XEL(1) | always 1-EPS (forces NANISO=2) |
+| 37 Cs | linear | - | isotropic (KEL 0) |
+| 38 F2 | linear | - | isotropic |
+| 39 CS2 | linear | - | isotropic |
+| 40 COS | log-log | 19e-16 at 0 | isotropic |
+| 41 CD4 | log-log | constant below XEN(2) | PQ1 |
+| 42 BF3 | linear | - | isotropic |
+| 43 C2H2F4 | log-log, eps | - | always 1-EPS (forces NANISO=2) |
+| 44 TMA | log-log, eps linear | - | PQ1 / 1-EPS |
+| 45 C3F4H2 | log-log, eps linear | - | 1-EPS (forces NANISO=2) |
+| 46 n-propanol | as iso-propanol | constant below XEL(1) | always 1-EPS |
+| 47 para-H2 | as H2 | | |
+| 48 ortho-D2 | as D2 | | |
+| 49 C4F7N | as C3F4H2 | - | 1-EPS (forces NANISO=2) |
+| 50 CHF3 | log-log | 16300e-16 at 0 | isotropic |
+| 51 CF3Br | log-log | 2800e-16 at 0 | isotropic |
+| 52 C3F8 | log-log, eps | - | 1-EPS (forces NANISO=2) |
+| 53 O3 | log-log | 3000e-16 at 0 | isotropic |
+| 54 Hg2 | log-log (MT; total unused) | - | isotropic |
+| 55 H2S | log-log from XEL(2) | YEL(2) below | isotropic; rotations R1/R2 subtracted from Q(2) |
+| 56 n-butane | linear | - | isotropic |
+| 57 n-pentane | log-log | constant below XEN(2) | isotropic |
+| 58 N2 (Phelps) | linear | - | PQ1 |
+| 59 GeH4 | log-log | - | PEQEL 0.5 |
+| 60 SiH4 | log-log (total, MT, eps) | - | always 1-EPS (forces NANISO=2) |
+| 61 CCl4 | log-log (total, MT, eps) | constant below XEN(1), eps 0 | always 1-EPS (forces NANISO=2) |
+| 62-80 dummy | zero | - | - |
 
 ## Ionisation
 
@@ -80,10 +108,38 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 28 Reid ramp | none | - | - | - |
 | 29 C2F6 | 10 fragments (log-log tables to 900 eV) | shares of counting ionisation to 3 keV, Born-Bethe above | C K (x 2), F K (x 6), linear | channels 1-10 x (tot-K)/tot |
 | 30 SF6 | 7 outer (linear tables to XION(N)) | shares of Born-Bethe | S L3, L2, L1, K, F K (x 6) | outer x (tot-inner)/tot |
+| 31 NH3 | 9 (linear tables) | shares of counting ionisation (linear to 1 keV, log-log to 40 keV), Born-Bethe above | N K | - |
 | 32 propene | 1 in Q(3), table only | - | - | - |
 | 33 cyclopropane | 1 in Q(3), table only | - | - | - |
 | 34 methanol | 15 fragments (log-log tables) | shares of counting ionisation, Born-Bethe > 1 keV | C K, O K | - |
 | 35 ethanol | 25 fragments (log-log tables) | shares of counting ionisation, Born-Bethe > 1 keV | C K (x 2e-16), O K | - |
+| 36 iso-propanol | 27 fragments (log-log tables) | shares of counting ionisation, Born-Bethe > 1 keV | C K, O K | - |
+| 37 Cs | 1 linear | - | - | - |
+| 38 F2 | 1 linear | - | - | - |
+| 39 CS2 | 1 linear | - | - | - |
+| 40 COS | 1 linear | - | - | - |
+| 41 CD4 | 1 linear | - | - | - |
+| 42 BF3 | 1 linear | - | - | - |
+| 43 C2H2F4 | 1 log-log (counting x AMPION) | Born-Bethe x 1.0518 > 3 keV | C K, F K | CRFAC on 1 |
+| 44 TMA | 1 log-log | Born-Bethe | C K, N K | AUGK subtraction (inside the 2 EION branch) |
+| 45 C3F4H2 | 2 log-log x 1.2 | Born-Bethe split .9484/.0516 > 3 keV | C K x3, F K x4 (linear) | CRFAC on 1, 2 |
+| 46 n-propanol | 28 fragments | as iso-propanol | C K, O K | - |
+| 47 para-H2 | as H2 | | | |
+| 48 ortho-D2 | as D2 | | | |
+| 49 C4F7N | 2 log-log | Born-Bethe x 1.0486 split .9484/.0516 | C K x3, F K x4, N K (unused) | CRFAC on 1, 2 |
+| 50 CHF3 | 1 linear | - | - | - |
+| 51 CF3Br | 1 | - | - | - |
+| 52 C3F8 | 7 log-log (shares of QIONC) | Born-Bethe x 1.052 | C K, F K (linear, not subtracted) | - |
+| 53 O3 | 1 linear | - | - | - |
+| 54 Hg2 | 1 linear | - | - | - |
+| 55 H2S | 1 | - | - | - |
+| 56 n-butane | 1 linear | - | - | - |
+| 57 n-pentane | 1 linear | - | - | - |
+| 58 N2 (Phelps) | 1 linear | - | - | - |
+| 59 GeH4 | 1 | - | - | - |
+| 60 SiH4 | 6 linear tables to 100 eV | shares of counting ionisation (log-log), Born-Bethe > 1 keV | Si K | - |
+| 61 CCl4 | 9 log-log tables to 1 keV | shares of Born-Bethe > 1 keV | C K, Cl K (x4) | CRFAC on 1..9 |
+| 62-80 dummy | 1, zero | - | - | - |
 
 ## Attachment, inelastic, other
 
@@ -118,10 +174,38 @@ Legend: `x` used, `-` not used, numbers are counts or factors.
 | 28 Reid ramp | - | - | - | one level 0.2 eV, (E-0.2) x 1e-15 | - | - |
 | 29 C2F6 | F-, CF3- (one log-log table x .574, split .77/.23) | V6, V5, V7 Born, populations of 5 quanta | V6, V5, V7 Born + resonance table (log-log) | 2V7, VHIGH resonance only; 4 triplets linear 1/E^2; 6 Born dipoles | vib Okhrimovskyy (super ENRTS, inel ENROT), resonances 1-EPSRES; exc 3 EIN | none |
 | 30 SF6 | 7 ions (SF6- log-log, rest linear), Q(4)=0 | V4, V1, V3 (deg 3, 1, 3) | V4 Born; V3 Born + table; PEQIN .5+(Q-XMT)/Q | V1 harmonics tables 1/E^2; 3 triplets; 22 Born dipoles x 1.013-1.025 | harmonics always; exc 3 EIN | none |
+| 31 NH3 | 2 linear (H-, NH2-) | V2 (APOP/(1+APOP)) Born + resonance | V2, V4, V1+V3 Born + resonance; harmonics resonance only | 28 rotations J->J±1 of the symmetric top (Born dipole, K sums with Boltzmann populations, ang. dist., <= 1 keV); 6 triplets log-log 1/E^2; 64 Born dipoles, ang. dist. to 500 EIN | 2 EIN | 38..NIN all printed (0, 1, 1) |
 | 32 propene | 1 linear 1e-21 | V20 Born, V13 and V Born + table | same | harmonics, 3 exc tables | - | - |
 | 33 cyclopropane | 1 linear 1e-21 | V11 and V Born + table | same | 2V3, harmonics, 2 exc tables | - | - |
 | 34 methanol | 3 (H-, O-/OH-, CH3O-) linear 1e-20 | rot J->J+1 Born dipole (tabulated ang. dist.) x AMPROT .1 < 1 keV; V1 | V1, V2, V3 Born + resonance table | 6 triplets log-log 1/E^2; 22 Born dipoles (own A0) with ang. dist. to 500 EIN | vib always; triplets, ions 1.5 EIN | 57..NIN all printed (0, 1, 1) |
 | 35 ethanol | 3 (H-, O-/OH-, C2H5O-) x AMPATT 1.0 | as methanol | as methanol | 6 triplets; 31 Born dipoles (own A0) | vib >= 4 eV; triplets, ions 2 EIN | 57..NIN all printed (0, 1, 1) |
+| 36 iso-propanol | 3 | as ethanol | as ethanol | 6 triplets; Born dipoles; bremsstrahlung (EFINAL gate) | 2 EIN | as ethanol |
+| 37 Cs | 1 | - | - | 5 linear tables | - | - |
+| 38 F2 | 1 | rotation/vib APOP | vib tables | 4 linear tables | - | - |
+| 39 CS2 | 3-body (x1.3, fixed) + 2-body | V2, V1 (APOP) | - | tables | - | - |
+| 40 COS | 1 x 1e-16 | V2, V1, 2V2 (APOP) | dipole V3 | 1 exc | - | - |
+| 41 CD4 | - | - | V2+V4, V1+V3 dipole + table | 4 dissociation tables | 2 E(3) | - |
+| 42 BF3 | 1 | - | - | 9 levels linear | - | - |
+| 43 C2H2F4 | 3-body (density) + 2-body log-log | 4 (APOP, dipole + resonance) | x | 4 triplets 1/E^2, 6 Born dipoles; 3 bremsstrahlung levels > 1 keV | 2 EIN | - |
+| 44 TMA | 1 | torsion, V1 (APOP) | x | 3 triplets, 25 Born dipoles (per-level factors) | 3/4/5 EIN | - |
+| 45 C3F4H2 | 5 (thermal dimers, 3 x 2-body, 3-body density) | 6 (APOP) Born + L/H resonances | x | 4 triplets, 10 Born dipoles, 2 B3PI; 3 bremsstrahlung > 1 keV; debug print 9011 | 2/3 EIN | - |
+| 46 n-propanol | 3 | as iso-propanol | | | | |
+| 47 para-H2 | as H2, odd-J population 0 | | | | | |
+| 48 ortho-D2 | as D2, odd-J population 0 | | | | | |
+| 49 C4F7N | 2 (resonance, 2-body) | as C3F4H2 | x | 5 triplets, 8 Born dipoles; bremsstrahlung N/C/F > 1 keV | 2/3 EIN, 50 eV | - |
+| 50 CHF3 | 1 x 1e-19 | rotation/V6, V3/V1 (APOP) | x | vib tables, exc/dissociation | - | - |
+| 51 CF3Br | 1 | APOP | x | tables | - | - |
+| 52 C3F8 | resonance + 3-body (1/(31/TORR+1)) | 3 (APOP) Born + resonances | x | 4 triplets linear 1/E^2, Born dissociation | 2 EIN | - |
+| 53 O3 | 2-body | rotation/V (APOP) dipoles | x | 3 exc linear | - | - |
+| 54 Hg2 | 2 x density (GFRAC, T, TORR) | - | - | vib .04 + excitations linear | - | - |
+| 55 H2S | 1 | rotations R1, R2 | V2, V13 dipole | tables | - | - |
+| 56 n-butane | 1 x 1e-21 | 2 pairs (APOP) | - | 3 vib, 3 exc linear | - | - |
+| 57 n-pentane | 1 x 1e-21 | 3 pairs (APOP) | - | 2 vib, 3 exc | - | - |
+| 58 N2 (Phelps) | - | rotations J±2 (ortho/para Boltzmann) | - | 8 vib, 7 exc tables | 2 E(3) | - |
+| 59 GeH4 | 1 x 1e-19 | V2+V4, V1+V3 (APOP) dipole + log-log resonance | x | 1 dissociation | - | - |
+| 60 SiH4 | 4 linear 1e-18 | V4, V2 (APOP/DEG) Born + resonance | V13, harmonics | 3 triplets, 38 Born dipoles (ang. dist. 1-20 EIN); 2 bremsstrahlung beyond NIN | 3 EIN | - |
+| 61 CCl4 | 3 log-log | V2, V4, V1, V3 (APOP/DEG) tables, V4/V3 + Born dipole | x | harmonics, 3 triplets linear 1/E^2 x 6.12, 54 Born dipoles; 2 bremsstrahlung levels (NIN 68 if EFINAL > 1 keV) | 2 EIN | - |
+| 62-80 dummy | 1, zero | - | - | - | - | - |
 
 All gases: EFINAL cuts NIN at the first level above EFINAL (searched from a
 gas-specific first level). Bremsstrahlung levels (C2H6, CO2, ...) are computed
@@ -189,3 +273,18 @@ BBCONST, so their Born dipoles pass their own constant (`dipole(..., bb)`).
   channels 6, 7 (`.LT.`), above it for the others; F K-shell gated `.LE.EION`, others `.LT.`.
 - GAS30 SF6 APOPGS is normalised and then reset to 1.0 (excited states normalised, ground not).
 - GAS35 ethanol: the sums are commented out, Q(1) is not set.
+- GAS31 NH3 (MB-44 candidates, rotational populations): level 2 (J 0->1) weights PJ(2) (population of J=1) where the ground state PJ(1) is meant; level 3 (2->1) has PJ(5)*(AJG2+1.0) for K=1 (should be AJG2-1.0, cf. all other levels); level 4 (1->2) keeps AJ=2.0 from level 3 (AJG set twice, AJ not reset -> (2AJ+1)=5 not 3); PEQIN(32,I)=PEQIN(32,I-IOFFN(32)) copies PEQIN (always 0), not PEQEL; harmonics level 33 not gated by EIN(33) (resonance 4.5-10.5 eV only); rotations and their angular distributions skipped above 1 keV; Q(1) not set.
+- GAS38 F2: SCRPT(2) ' ELASTIC       FLOURINE' (spelling, cosmetic).
+- GAS39 CS2: QATT(1) is a three-body attachment "AT 40TORR" scaled by a fixed 1.3, not by the actual pressure (O2/NO scale with TORR/TEMPC).
+- GAS41 CD4: EOBY(1)=7.3 while E(3)=EION=12.99 (Opal-Beaty split 0.56·EION; maybe intended).
+- GAS43 C2H2F4: EFINAL>1000 adds 3 bremsstrahlung levels (NIN+3) whose EIN stay 0 and KIN unset (loop ran to the old NIN); Q(1) never set; K-shell C uses GO TO 151 quirk (last interval extrapolated) as GAS29; penning block commented out; FAC=(273.15+20.0)·TORR/((TEMPC+273.15)·760) (3-body).
+- GAS44 TMA: AUGKC/AUGKN K-shell subtraction from QION(1) sits inside the `EN > 2*EION(3)` angular branch, so between 285 eV (C-K) / 401.6 eV (N-K) and 803 eV the K-shells are double counted; NAME not set for NANISO=1; Bethe uses DEN(1) not DEN(I) (DEN=0 anyway); bremsstrahlung QIN(38..40) computed but NIN never reaches them.
+- GAS45 C3F4H2: active debug WRITE(6,9011) inside the energy loop prints 4000 CSV lines (EN,QELA,QMMT,QSUP,...) every call — still in fork44 (candidate MB-44: comment out). Penning loop DO 61 K=61,NIN never runs (NIN=29). QIONC/QIONG computed, unused; Q(1) never set; brems levels 30-32 EIN=0 when EFINAL>1000; QIN(1..12) zeroed above 1 keV.
+- GAS46 n-propanol: SCRPT(111) 'ELOSS= 13.25' but EIN(75)=13.35 (and comment 13.35); XTRP4(4) 18.8 vs isopropanol 17.8.
+- GAS49 C4F7N: NVIBL=NVIBH=19 while XVIBL/YVIBL have 21 and XVIBH/YVIBH 20 points (tails unused); mass E(2) uses 114.0416 (C3F4H2, copied; C4F7N is 195.04); N K-shell QION(5)/EION(5) beyond NION=4 (never used, not subtracted by CRFAC, only set above the F K-edge 685.4 eV, otherwise stale); SCRPT(4) says ELOSS=35.0 but EION(2)=38.0; debug WRITE 9011 per bin + two WRITE(6,*) headers AFTER the table (candidate MB-44 with GAS45).
+- GAS52 C3F8: K-shells (C, F) not subtracted from the other channels (no CRFAC, unlike C2F6/C2H2F4) and C not ×3 / F not ×8; same DO 395 PEQIN(L) for PEQIN(2L-1) quirk as GAS29; SCRPT(2) says CARBON HEXAFLUORIDE (C3F8 is octafluoropropane).
+- GAS53 OZONE: Q(4,I)=0.0 after the attachment block, so QATT(1..2) (O-, O2-) are neither in Q(4) nor in the total Q(1). MIXER reads QATT, so transport is fine; only Q(1)/printout of the total is low.
+- GAS54 Hg dimer: NIN cut uses EFINAL.LT.EIN (others .LE.); QELA (XEL/YEL table) computed every bin and never used; GFRAC from the LAST slot with NGASN=54 (two slots of Hg = only one counted).
+- GAS55 H2S: SCRPT(9) 'ROT R2 EL0SS' (zero for O); below XEL(2) elastic is YEL(2), not YEL(1); rotations R1/R2 (QIN1-4) subtracted from Q(2) (elastic was total incl. rotations — intended?).
+- GAS60 SiH4: QIN(25) gated on EN>EIN(26) and QIN(27) on EIN(28) (next level's threshold); PEQIN(24)=PEQEL(2,I-IOFFN(25)) uses level 25's offset; brems QIN(50/51) beyond NIN.
+- GAS61 CCl4 (MB-44 candidate, real effect): QIN(7,I)=QIN(7,1)*APOPV3/DEGV3*1.D-16 (index 1 for I) -> V3 superelastic = first-bin value *1e-16 again (~1e-33 cm2), detailed balance with V3 lost; V3 super tail uses (EN-EIN(8)) not (EN+EIN(8)); QIN(19) gated EN>EIN(18); active debug WRITE(6,392) ATRP every call; SCRPT(3) CCL3+ says ELOSS=13.35 but EION(1)=11.35; ion gates mix .LE./.LT.; Q(3) zero; brems levels 67/68 KIN unset.

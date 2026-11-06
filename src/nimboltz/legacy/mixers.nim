@@ -1,7 +1,7 @@
 ## MIXER and MIXERT of magboltz-11.21.f: bridge from the COMMON blocks to
 ## nimboltz/mixture.
 
-import ../frt, commons, gasmix
+import ../frt, commons
 import ../mixture, ../gases
 
 const
@@ -19,13 +19,10 @@ proc crossSections(): (EnergyGrid, seq[GasXsec], seq[float64]) =
   let inp = GasInput(e: grid.e, naniso: inpt.naniso, kT: inpt.akt,
                      efinal: inpt.efinal, estep: inpt.estep,
                      penning: inpt.ipen != 0, torr: inpt.torr,
-                     tempc: inpt.tempc)
+                     tempc: inpt.tempc,
+                     mixture: mixtureOf(gasn.ngasn, ratio.frac))
   for k, g in gases.mpairs:
-    if not crossSections(gasn.ngasn[k + 1], inp, g):
-      gasmix(gasn.ngasn[k + 1], g.q, g.qin, g.nin, g.e, g.ei, g.name, 0.0, g.eb,
-             g.peqel, g.peqin, g.penfra, g.kel, g.kin, g.qion, g.peqion, g.eion,
-             g.nion, g.qatt, g.natt, g.qnul, g.nul, g.scln, g.nc0, g.ec0, g.wk,
-             g.efl, g.ng1, g.eg1, g.ng2, g.eg2, g.scrp, g.scrpn)
+    crossSections(gasn.ngasn[k + 1], inp, g)
   let van = [mratio.van1, mratio.van2, mratio.van3, mratio.van4, mratio.van5,
              mratio.van6]
   (grid, gases, van[0 ..< inpt.ngas])

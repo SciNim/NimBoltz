@@ -2,7 +2,7 @@
 ## Build: nim c -d:release --path:../../port gasdmp.nim
 
 import std/[os, strutils]
-import nimboltz/frt, nimboltz/legacy/[commons, setupt, gasmix]
+import nimboltz/frt, nimboltz/legacy/[commons, setupt]
 import nimboltz/gases
 
 var
@@ -85,19 +85,16 @@ for line in stdin.lines:
   let inp = GasInput(e: mix2.eg, naniso: inpt.naniso, kT: inpt.akt,
                      efinal: inpt.efinal, estep: inpt.estep,
                      penning: inpt.ipen != 0, torr: inpt.torr,
-                     tempc: inpt.tempc)
-  if crossSections(ngs, inp, x):
-    # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
-    q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei
-    name = fstr(x.name, 25); eb = x.eb; peqel = x.peqel; peqin = x.peqin
-    penfra = x.penfra; kel = x.kel; kin = x.kin; qion = x.qion
-    peqion = x.peqion; eion = x.eion; nion = x.nion; qatt = x.qatt
-    natt = x.natt; nc0 = x.nc0; ec0 = x.ec0
-    for k in 1 .. 300: scrpt[k] = fstr(x.scrp[k], 50)
-  else:
-    gasmix(ngs, q, qin, nin, ev, ei, name, virl, eb, peqel, peqin, penfra, kel,
-           kin, qion, peqion, eion, nion, qatt, natt, qnull, nnull, scln, nc0,
-           ec0, wk, efl, ng1, eg1, ng2, eg2, scrpt, scrptn)
+                     tempc: inpt.tempc,
+                     mixture: mixtureOf(gasn.ngasn, ratio.frac))
+  crossSections(ngs, inp, x)
+  # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
+  q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei
+  name = fstr(x.name, 25); eb = x.eb; peqel = x.peqel; peqin = x.peqin
+  penfra = x.penfra; kel = x.kel; kin = x.kin; qion = x.qion
+  peqion = x.peqion; eion = x.eion; nion = x.nion; qatt = x.qatt
+  natt = x.natt; nc0 = x.nc0; ec0 = x.ec0
+  for k in 1 .. 300: scrpt[k] = fstr(x.scrp[k], 50)
   f.put q; f.put qin; f.put nin; f.put ev; f.put ei; f.putStr(name, 25)
   f.put virl; f.put eb; f.put peqel; f.put peqin; f.put penfra; f.put kel
   f.put kin; f.put qion; f.put peqion; f.put eion; f.put nion; f.put qatt

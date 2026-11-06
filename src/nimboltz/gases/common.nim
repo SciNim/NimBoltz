@@ -49,6 +49,9 @@ type
     penning*: bool      ## print the Penning transfers
     torr*, tempc*: float64  ## gas pressure (Torr) and temperature (°C), for
                             ## three-body attachment
+    mixture*: array[1..6, tuple[gas: int, percent: float64]]
+                        ## the gases of the mixture and their shares, for
+                        ## gases that scale with their own density
 
   Relativistic* = object
     gamma2*, beta2*: float64
@@ -56,6 +59,16 @@ type
   BornBethe* = object
     ## parameters of the Bethe formula of the ionisation cross section
     am2*, c*: float64
+
+func mixtureOf*(gas: array[1..6, int], percent: array[1..6, float64]):
+    array[1..6, tuple[gas: int, percent: float64]] =
+  for k in 1 .. 6: result[k] = (gas[k], percent[k])
+
+func percent*(inp: GasInput, gas: int): float64 =
+  ## share of a gas in the mixture (%; the last slot holding it, as Magboltz
+  ## looks it up)
+  for m in inp.mixture:
+    if m.gas == gas: result = m.percent
 
 iterator bins*(inp: GasInput): (int, float64) =
   for i in 1 .. nEnergyBins: yield (i, inp.e[i])
@@ -157,6 +170,15 @@ func logLog*[X, Y](x: openArray[X], y: openArray[Y], en: float64): float64 =
   let a = (yj - yj1) / (xj - xj1)
   let b = (xj1 * yj - xj * yj1) / (xj1 - xj)
   exp(a * ln(en) + b)
+
+func logLin*[X, Y](x: openArray[X], y: openArray[Y], en: float64): float64 =
+  ## interpolation linear in log y over x (bremsstrahlung tables)
+  let j = segment(x, en)
+  let (x0, x1) = (float64(x[j - 1]), float64(x[j]))
+  let (y0, y1) = (ln(float64(y[j - 1])), ln(float64(y[j])))
+  let a = (y1 - y0) / (x1 - x0)
+  let b = (y1 * x0 - y0 * x1) / (x0 - x1)
+  exp(a * en + b)
 
 type
   Curve* = object

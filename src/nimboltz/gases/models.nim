@@ -76,3 +76,19 @@ proc reidRamp*(inp: GasInput, g: var GasXsec) =
       g.qin[1, i] = (en - g.ei[1]) * slope
     g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i] + g.qin[1, i]
   g.dropLevelsAbove(inp.efinal)
+
+proc dummy*(inp: GasInput, g: var GasXsec) =
+  ## GAS62 .. GAS80 of Magboltz 11.21 ("DUMMY"): placeholders with no cross
+  ## sections; one ionisation and one attachment channel, both zero
+  g.name = " DUMMY"
+  for k in 1 .. 6: g.kel[k] = 0
+  g.scrp[2] = " ELASTIC       DUMMY"
+  g.shells [(0.0'f32, 0.0'f32, 0, 0.0'f32, " IONISATION    ELOSS=")]
+  g.attachment [" ATTACHMENT"]
+  g.nin = 0
+  for i, en in inp.steps:
+    g.q[2, i] = 0.0
+    g.q[3, i] = 0.0
+    g.q[4, i] = 0.0
+    g.qatt[1, i] = g.q[4, i]
+    g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i]

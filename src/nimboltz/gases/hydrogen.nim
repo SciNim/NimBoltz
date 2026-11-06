@@ -1,4 +1,5 @@
-## Hydrogen: GAS21 of Magboltz 11.21 ("H2 2019").
+## Hydrogen: GAS21 of Magboltz 11.21 ("H2 2019"), and para-hydrogen, GAS47
+## ("H2(PARA) 2019"), the same with only the para (even J) states populated.
 ##
 ## Elastic (log-log, anisotropic by 1 - ε), autoionisation plus ionisation
 ## to the vibrational states v = 0..17 of H2+ and dissociative ionisation
@@ -599,11 +600,17 @@ let amp: array[20, float32] = [
 const penningFormat = "(' GAS = ',A15,' ENERGY LEVEL = ',F7.4,' EV.',/," &
   "' PENNING PROBABILITY =',F5.3,' ABS.LENGTH =',F7.2,' DECAY TIME =',F7.1,/)"
 
-proc hydrogen*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, " H2  ISOTROPIC      2019", " H2  ANISOTROPIC    2019",
-             mass = 2.015650)
-  g.scrp[2] = if inp.naniso == 0: " ELASTIC    ISOTROPIC        HYDROGEN"
-              else: " ELASTIC  ANISOTROPIC        HYDROGEN"
+proc hydrogenModel(inp: GasInput, g: var GasXsec, para: bool) =
+  if para:
+    g.describe(inp, " H2(PARA) ISOTROPIC 2019", " H2(PARA) ANISO     2019",
+               mass = 2.015650)
+    g.scrp[2] = if inp.naniso == 0: " ELASTIC    ISOTROPIC   PARA-HYDROGEN"
+                else: " ELASTIC  ANISOTROPIC   PARA-HYDROGEN"
+  else:
+    g.describe(inp, " H2  ISOTROPIC      2019", " H2  ANISOTROPIC    2019",
+               mass = 2.015650)
+    g.scrp[2] = if inp.naniso == 0: " ELASTIC    ISOTROPIC        HYDROGEN"
+                else: " ELASTIC  ANISOTROPIC        HYDROGEN"
   g.e[3] = 15.41833'f32
   g.shells [
     (15.41833'f32, 0.0'f32, 0, 0.0'f32, " AUTOION OF SINGLETS+TRIPLETS     ELOSS= 15.41833"),
@@ -756,13 +763,14 @@ proc hydrogen*(inp: GasInput, g: var GasXsec) =
   erlvl[6] = g.ei[8] + g.ei[10] + g.ei[12]
   erlvl[7] = 0.01469049'f32 + g.ei[9] + g.ei[11] + g.ei[13]
   erlvl[8] = g.ei[8] + g.ei[10] + g.ei[12] + g.ei[14]
-  # populations (ortho J odd, nuclear spin weight 3); below 273 K the
-  # ortho/para ratio stays at its room temperature value 3
+  # populations (ortho J odd, nuclear spin weight 3; none in para-hydrogen);
+  # below 273 K the ortho/para ratio stays at its room temperature value 3
   var pj: array[1 .. 8, float64]
-  for k in countup(1, 7, 2): pj[k] = float64(3 * (2 * k + 1)) * exp(-erlvl[k] / inp.kT)
+  for k in countup(1, 7, 2):
+    pj[k] = if para: 0.0 else: float64(3 * (2 * k + 1)) * exp(-erlvl[k] / inp.kT)
   for k in countup(2, 8, 2): pj[k] = float64(2 * k + 1) * exp(-erlvl[k] / inp.kT)
   var frot: array[0 .. 8, float64]
-  if inp.kT >= 0.0235'f32:
+  if para or inp.kT >= 0.0235'f32:
     var sum = 1.0
     for k in 1 .. 8: sum = sum + pj[k]
     frot[0] = 1.0 / sum
@@ -1009,3 +1017,7 @@ proc hydrogen*(inp: GasInput, g: var GasXsec) =
   g.nin = if inp.efinal > 11.0: 114
           elif inp.efinal > 8.0: 23
           else: 19
+
+proc hydrogen*(inp: GasInput, g: var GasXsec) = hydrogenModel(inp, g, para = false)
+
+proc paraHydrogen*(inp: GasInput, g: var GasXsec) = hydrogenModel(inp, g, para = true)
