@@ -57,11 +57,16 @@ type
     fd*: float64           ## `born`: if not 0, the strength in double precision
     tailScale*: float32 = 1.0  ## `born`, `bethe`: factor of the continuation
     fraction*: float32     ## `bethe`: share of the total
+    betheFraction*: float32
+      ## `countingShare`: if not 0, the share while the counting ionisation
+      ## is Born-Bethe (above its table)
     clamp*: bool           ## table values below 0 are taken as 0
     upTo*: float64         ## > 0: the table only up to this energy (eV)
     bornForm*: BornForm    ## `born`: its energy factor
     zeroBelow*: bool       ## nothing at or below the table's first energy
     zeroUnder*: bool       ## nothing below the table's first energy
+    zeroAbove*: bool       ## nothing above the table (the level stays open)
+    logZeros*: bool        ## `logLog`: nothing in intervals with a zero end
 
   LowEnergy* = enum
     lowNone
@@ -141,6 +146,7 @@ type
     terms*: seq[IonTerm]
     shell*: bool            ## inner shell (not renormalised, subtracted)
     openInclusive*: bool    ## open from eion on (not above)
+    gateInclusive*: bool    ## anisotropic from gate × eion on (not above)
     gate*: float64 = 2.0    ## anisotropic above gate × eion
 
   IonScheme* = enum
@@ -164,6 +170,8 @@ type
     gateInclusive*: bool     ## anisotropic from gate × eion on (not above)
     split*: Split            ## channels 1 .. sharing one cross section
     subtract*: seq[Subtraction]  ## after the renormalisation, in order
+    fromTables*: bool        ## channels open above their table's first
+                             ## energy (not their ionisation energy)
     peqZero*: bool           ## anisotropy parameter 0 (not isotropic)
                              ## below the gates
     counting*: Sigma         ## counting (or, for helium, gross) cross section
@@ -241,6 +249,7 @@ type
                   ## the table's energies, falling as 1/E above), model 2:
                   ## the elastic scattering's at the energy after the loss
     peqSameAs     ## that of level `Level.level` (if open)
+    peqFixed      ## `Level.peqValue`
     peqDipole     ## Born dipole scattering: 1 - eps from
                   ## `GasModel.dipoleAngles` at E / |ein| (up to
                   ## `dipoleUpTo`; above, the elastic scattering's at the
@@ -286,6 +295,7 @@ type
     weight*: float64 = 1.0
     closedAbove*: float64 = Inf  ## eV
     ratio*: seq[float64]    ## `peqMomentumRatio`
+    peqValue*: float64      ## `peqFixed`
     dipoleUpTo*: float64 = Inf  ## `peqDipole`
     eloss*: float64         ## != 0: energy loss in double precision
     j*: int                 ## `rotation`, `dipoleRotation`: initial J
@@ -344,6 +354,8 @@ type
     threeBody*: bool        ## table for 760 Torr, 20 °C: times the density
     openBelow*: bool        ## not closed below the table (extrapolated)
     formula*: AttachFormula
+    saturation*: float64    ## > 0: times 1 / (saturation / TORR + 1) (three-
+                            ## body attachment saturating with the pressure)
     factors*: seq[float32]  ## further factors, in order (single precision)
     isoPeq*: bool           ## sets the attachment's (unused) anisotropy
                             ## parameter to the isotropic value

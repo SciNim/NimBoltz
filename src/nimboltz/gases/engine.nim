@@ -22,8 +22,10 @@ type
     eion: eV             ## ionisation energy, E(3)
     negative: Negative
     qcount: cm²          ## counting ionisation (`countingShare`)
+    countingBethe: bool  ## qcount is Born-Bethe (above its table)
     density: float64     ## gas density relative to 760 Torr and 0 °C
     bb: cm²•eV           ## Born-Bethe constant
+    torr: float64
 
 proc betheIonisation(c: Context, fraction = 1.0'f32): cm² =
   ## Bethe's ionisation cross section times a share of it
@@ -58,6 +60,14 @@ proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
   let x = en.float
   if s.zeroBelow and x <= s.x[0]: return 0.0.cm²
   if s.zeroUnder and x < s.x[0]: return 0.0.cm²
+  if s.zeroAbove and x > s.x[^1]: return 0.0.cm²
+  if s.logZeros:
+    var j = s.x.high
+    for k in 1 .. s.x.high:
+      if x <= s.x[k]:
+        j = k
+        break
+    if s.y[j] == 0.0 or s.y[j - 1] == 0.0: return 0.0.cm²
   let tableEnd = if s.upTo > 0.0: s.upTo elif s.x.len > 0: s.x[^1] else: 0.0
   if s.x.len > 0 and (s.beyond in {extrapolate, power} or x <= tableEnd):
     var v = if s.beyond == power and x > s.x[^1]:
@@ -70,7 +80,9 @@ proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
     c.bornExcitation(if s.fd != 0.0: s.fd else: float64(s.f), ein, en, s.bornForm) *
       float64(s.tailScale)
   of bethe: c.betheIonisation(s.fraction) * float64(s.tailScale)
-  of countingShare: c.qcount * float64(s.fraction) * float64(s.tailScale)
+  of countingShare:
+    let f = if c.countingBethe and s.betheFraction != 0.0: s.betheFraction else: s.fraction
+    c.qcount * float64(f) * float64(s.tailScale)
   of extrapolate, power, zero: 0.0.cm²
 
 # ------------------------------------------------------------ elastic
@@ -239,7 +251,10 @@ proc ionisation(m: static Ionisation, g: var GasXsec, i: int, en: eV,
       g.qion[k1, i] = 0.0
       g.peqion[k1, i] = when m.peqZero: 0.0 else: iso
       let eion = ch.eion.float64.eV
-      if (if ch.openInclusive: en < eion else: en <= eion): continue
+      when m.fromTables:
+        if en.float <= ch.terms[0].sigma.x[0]: continue
+      else:
+        if (if ch.openInclusive: en < eion else: en <= eion): continue
       var q = 0.0.cm²
       for n, t in ch.terms:
         if n == 1: firstTerm[k] = q.float
@@ -264,7 +279,8 @@ proc ionisation(m: static Ionisation, g: var GasXsec, i: int, en: eV,
           q = q + t.sigma.at(en, eion, c)
       if ch.terms.len == 1: firstTerm[k] = q.float
       g.qion[k1, i] = q.float
-      if (when m.gateInclusive: en >= ch.gate * eion else: en > ch.gate * eion):
+      if (if m.gateInclusive or ch.gateInclusive: en >= ch.gate * eion
+          else: en > ch.gate * eion):
         g.peqion[k1, i] = g.peqel[2, i - ioffion[k]]
     when m.split.fractions.len > 0:
       let q = if en > g.eion[1].eV: float(m.split.sigma.at(en, g.eion[1].eV, c))
@@ -567,6 +583,7 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
         g.peqin[j, i] = 1.5 - ratio
       elif b.naniso == 2: g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
   of peqSameAs: g.peqin[j, i] = g.peqin[lv.level, i]
+  of peqFixed: g.peqin[j, i] = lv.peqValue
   of peqHalf: discard
   of peqBorn:
     let xmt = momentumFactor(en.float, ein.float) * dip +
@@ -617,6 +634,7 @@ proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context,
            (a.openBelow or (if a.fromStart: x >= s.x[0] else: x > s.x[0])) and
            (s.beyond != zero or (if a.beforeEnd: x < s.x[^1] else: x <= s.x[^1])):
           var v = float(s.at(en, 0.0.eV, c)) * (if a.threeBody: c.density else: 1.0)
+          if a.saturation > 0.0: v = v * (1.0 / (a.saturation / c.torr + 1.0))
           for f in a.factors: v = v * float64(f)
           v
         else: 0.0
@@ -650,6 +668,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     b.dimer = inp.percent(m.dimer.gas) / 100.0 *
       (float64(m.dimer.temperature) / (273.1499938964844 + inp.tempc)) * inp.torr / 760.0
     b.dimer = b.dimer * float64(m.dimer.fraction)
+  b.c.torr = inp.torr
   # (273.15 single precision in Magboltz)
   b.c.density = 273.1499938964844 * inp.torr / ((inp.tempc + 273.1499938964844) * 760.0)
   iterator energies(inp: GasInput): (int, float64) =
@@ -688,6 +707,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     b.qmom = qmom.float
     when m.ionisation.counting.x.len > 0:
       b.c.qcount = m.ionisation.counting.at(b.en, 0.0.eV, b.c)
+      b.c.countingBethe = e > m.ionisation.counting.x[^1]
     ionisation(m.ionisation, g, i, b.en, b.c, b.iso, ioffion)
     when m.fixedModel1:
       g.peqel[3, i] = 0.5
