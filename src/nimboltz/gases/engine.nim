@@ -53,7 +53,8 @@ func interpolate(s: Sigma, en: eV): float64 {.inline.} =
   case s.interp
   of linear: lin(s.x, s.y, en.float)
   of logLog: logLog(s.x, s.y, en.float)
-  of linLog: raiseAssert "linLog only for elastic tables"
+  of linLog:
+    if en.float <= s.switchAt: lin(s.x, s.y, en.float) else: logLog(s.x, s.y, en.float)
 
 proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
   ## the cross section at energy en (ein: energy loss for `born`)
@@ -252,7 +253,9 @@ proc ionisation(m: static Ionisation, g: var GasXsec, i: int, en: eV,
       g.peqion[k1, i] = when m.peqZero: 0.0 else: iso
       let eion = ch.eion.float64.eV
       when m.fromTables:
-        if en.float <= ch.terms[0].sigma.x[0]: continue
+        if en.float <= ch.terms[0].sigma.x[0]:
+          when m.stopAtClosed: break
+          else: continue
       else:
         if (if ch.openInclusive: en < eion else: en <= eion): continue
       var q = 0.0.cm²
@@ -409,7 +412,7 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
                     else: 0.5
   if (if lv.openAbove > 0.0: en.float <= lv.openAbove else: en <= ein) or
      (lv.sigma.beyond == zero and en.float > lv.sigma.x[^1]) or
-     (lv.kind == dipoleRotation and en.float > m.rotor.dipoleCutoff) or
+     (lv.kind in {dipoleRotation, symmetricTop} and en.float > m.rotor.dipoleCutoff) or
      en.float > lv.closedAbove or
      (lv.kind == tabulatedRotation and lv.up and en.float < lv.sigma.x[0]):
     g.qin[j, i] = 0.0    # (closed)
@@ -511,6 +514,18 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
     let num = if lv.strength != 0.0: r.dipole.cm²•eV * strength * p * lg
               else: p * r.dipole.cm²•eV * lg * strength
     q = num / ((2.0 * aj + 1.0) * en) * float64(r.dipoleScale)
+  of symmetricTop:
+    let r = m.rotor
+    let enrt = sqrt(en.float)
+    let s = sqrt(float(en - ein))
+    let lg = if ein.float < 0.0: ln((enrt + s) / (s - enrt)) else: ln((enrt + s) / (enrt - s))
+    let ajg2 = lv.ajg * lv.ajg
+    let den = lv.ajg * (2.0 * lv.aj + 1.0) * en.float
+    q = if lv.bracket:
+          var w = 0.0
+          for (p, k2) in lv.top: w = w + pops.rotation[p - 1] * (ajg2 - k2)
+          (r.dipole * lg * w / den).cm²
+        else: (r.dipole * lg * pops.rotation[lv.top[0].state - 1] * ajg2 / den).cm²
   of tabulatedRotation:
     let r = m.rotor
     let s = lv.sigma

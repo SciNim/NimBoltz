@@ -28,7 +28,7 @@ type
   Interp* = enum
     linear       ## linear in y over x
     logLog       ## linear in log y over log x
-    linLog       ## linear up to `Elastic.switchAt`, log-log above
+    linLog       ## linear up to `switchAt` (Elastic, Sigma), log-log above
 
   Beyond* = enum
     ## what a cross section does above the end of its table
@@ -63,6 +63,7 @@ type
     clamp*: bool           ## table values below 0 are taken as 0
     upTo*: float64         ## > 0: the table only up to this energy (eV)
     bornForm*: BornForm    ## `born`: its energy factor
+    switchAt*: float64     ## `linLog`: eV
     zeroBelow*: bool       ## nothing at or below the table's first energy
     zeroUnder*: bool       ## nothing below the table's first energy
     zeroAbove*: bool       ## nothing above the table (the level stays open)
@@ -172,6 +173,8 @@ type
     subtract*: seq[Subtraction]  ## after the renormalisation, in order
     fromTables*: bool        ## channels open above their table's first
                              ## energy (not their ionisation energy)
+    stopAtClosed*: bool      ## `fromTables`: and the first one closed
+                             ## closes the following ones
     peqZero*: bool           ## anisotropy parameter 0 (not isotropic)
                              ## below the gates
     counting*: Sigma         ## counting (or, for helium, gross) cross section
@@ -208,6 +211,11 @@ type
     dipoleRotation  ## a rotational transition, Born dipole: from state
                     ## `state` (or J = `j`) with line strength `strength`
                     ## (or J + 1, J); `GasModel.rotor`
+    symmetricTop
+      ## J -> J ± 1 of a symmetric top, Born dipole summed over K: Σ pop
+      ## (J'² - K²) over the states `top` (or pop J'² of the one state if not
+      ## `bracket`), over J' (2 aj + 1) E (`ajg` = J'); `Rotor.states`,
+      ## `Rotor.dipole` (NH3)
     tabulatedRotation
       ## J <-> J + 2 (`j` the lower J) from a table of the excitation
       ## (`sigma`), plus `Rotor.resonance`; the de-excitation by detailed
@@ -303,6 +311,9 @@ type
     state*: int             ## `dipoleRotation`: initial state (1-based) of
                             ## `Rotor.states` (0: by J)
     strength*: float64      ## `dipoleRotation`: line strength (0: J + 1, J)
+    top*: seq[tuple[state: int, k2: float64]]  ## `symmetricTop` (1-based)
+    ajg*: float64           ## `symmetricTop`
+    bracket*: bool          ## `symmetricTop`
     aj*: float64            ## `dipoleRotation` from a state: the J of the
                             ## 2J + 1 of the cross section (Magboltz's AJIN;
                             ## not always the state's)
