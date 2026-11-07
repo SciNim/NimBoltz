@@ -5,93 +5,86 @@
 ## Elastic (momentum transfer, linear), three vibrations and two
 ## excitations from tables, no attachment.
 
-import common
+import engine
 
-let xen: array[33, float32] = [
+const xen: array[33, float32] = [
   0.0, 0.001, 0.003, 0.007, 0.01, 0.014, 0.02, 0.03, 0.05, 0.07, 0.1, 0.14,
   0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0, 5.0, 6.0, 8.0, 10.0, 14.0,
   20.0, 40.0, 70.0, 100.0, 140.0, 200.0, 1000.0]
-let yxsec: array[33, float32] = [
+const yxsec: array[33, float32] = [
   165.0, 145.0, 135.0, 122.0, 108.0, 98.0, 92.0, 83.0, 71.0, 62.0, 50.0, 43.0,
   36.0, 28.5, 24.0, 15.8, 11.5, 9.3, 8.5, 9.2, 12.5, 22.0, 26.0, 38.0, 40.0,
   30.0, 20.0, 10.0, 6.0, 4.0, 2.8, 2.0, 0.4]
-let xvib1: array[29, float32] = [
+const xvib1: array[29, float32] = [
   0.0, 0.12, 0.121, 0.13, 0.14, 0.17, 0.22, 0.26, 0.36, 0.46, 0.56, 0.66,
   0.76, 0.96, 1.36, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 14.0, 20.0,
   40.0, 100.0, 1000.0]
-let yvib1: array[29, float32] = [
+const yvib1: array[29, float32] = [
   0.0, 0.0, 0.052, 0.42, 0.75, 1.03, 1.21, 1.26, 1.14, 0.98, 0.84, 0.74, 0.66,
   0.58, 0.49, 0.56, 0.77, 1.23, 1.75, 2.27, 2.36, 2.27, 1.92, 1.4, 0.59, 0.28,
   0.07, 0.02, 0.0]
-let xvib2: array[29, float32] = [
+const xvib2: array[29, float32] = [
   0.0, 0.16, 0.161, 0.17, 0.18, 0.21, 0.26, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0,
   1.4, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 14.0, 20.0, 40.0, 100.0,
   1000.0]
-let yvib2: array[29, float32] = [
+const yvib2: array[29, float32] = [
   0.0, 0.0, 0.052, 0.42, 0.75, 1.03, 1.21, 1.26, 1.14, 0.98, 0.84, 0.74, 0.66,
   0.58, 0.49, 0.56, 0.77, 1.23, 1.75, 2.27, 2.36, 2.27, 1.92, 1.4, 0.59, 0.28,
   0.07, 0.02, 0.0]
-let xvib3: array[28, float32] = [
+const xvib3: array[28, float32] = [
   0.0, 0.36, 0.362, 0.38, 0.4, 0.42, 0.47, 0.51, 0.55, 0.6, 0.7, 0.8, 1.0,
   1.4, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 14.0, 20.0, 40.0, 100.0,
   1000.0]
-let yvib3: array[28, float32] = [
+const yvib3: array[28, float32] = [
   0.0, 0.0, 0.053, 0.105, 0.21, 0.28, 0.42, 0.53, 0.61, 0.66, 0.75, 0.75,
   0.73, 0.66, 0.72, 0.88, 1.28, 1.75, 2.1, 2.36, 2.36, 1.92, 1.4, 0.54, 0.23,
   0.07, 0.02, 0.0]
-let xion: array[25, float32] = [
+const xion: array[25, float32] = [
   10.0, 10.8, 13.3, 18.3, 19.3, 20.3, 23.3, 28.3, 33.3, 38.3, 43.3, 48.3,
   53.3, 58.3, 68.3, 78.3, 88.3, 98.3, 120.0, 140.0, 200.0, 300.0, 500.0,
   700.0, 1000.0]
-let yion: array[25, float32] = [
+const yion: array[25, float32] = [
   0.0, 0.251, 2.28, 5.93, 6.84, 7.52, 9.01, 11.1, 12.6, 13.6, 14.5, 15.0,
   15.2, 15.6, 16.0, 16.1, 16.0, 15.7, 15.2, 14.6, 12.5, 9.67, 6.74, 5.04,
   4.01]
-let xexc: array[26, float32] = [
+const xexc: array[26, float32] = [
   6.3, 6.7, 7.3, 7.8, 8.3, 8.8, 9.3, 10.3, 11.3, 13.3, 15.3, 19.3, 24.3, 29.3,
   39.3, 49.3, 59.3, 69.3, 79.3, 100.0, 150.0, 200.0, 300.0, 400.0, 600.0,
   1000.0]
-let yexc: array[26, float32] = [
+const yexc: array[26, float32] = [
   0.0, 0.35, 0.65, 1.0, 1.31, 1.55, 1.75, 2.16, 2.45, 3.02, 3.49, 4.08, 4.43,
   4.51, 4.31, 3.9, 3.55, 3.23, 2.94, 2.47, 1.78, 1.4, 0.98, 0.73, 0.47, 0.33]
-let xexc1: array[31, float32] = [
+const xexc1: array[31, float32] = [
   8.3, 8.5, 9.1, 9.6, 10.1, 10.6, 11.1, 12.1, 13.1, 14.1, 15.1, 17.1, 19.1,
   21.1, 25.1, 29.1, 34.1, 39.1, 44.1, 49.1, 59.1, 69.1, 79.1, 100.0, 150.0,
   200.0, 300.0, 400.0, 500.0, 600.0, 1000.0]
-let yexc1: array[31, float32] = [
+const yexc1: array[31, float32] = [
   0.0, 0.12, 0.26, 0.38, 0.47, 0.58, 0.7, 1.06, 1.6, 2.36, 3.29, 4.81, 5.94,
   6.53, 7.16, 7.24, 7.06, 6.61, 6.1, 5.54, 4.61, 3.96, 3.47, 2.8, 2.04, 1.67,
   1.22, 0.96, 0.79, 0.67, 0.49]
 
-proc methylal*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, "METHYLAL  HOT", "METHYLAL  HOT", mass = 76.09532)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.scrp[2] = " ELASTIC       METHYLAL"
-  g.e[3] = 10.0'f32
-  g.shells [(0.0'f32, 10.0'f32, 0, 0.0'f32, " IONISATION    ELOSS= 10.0")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (0.12'f32, " VIB           ELOSS=  0.12"),
-    (0.16, " VIB           ELOSS=  0.16"),
-    (0.36, " VIB           ELOSS=  0.36"),
-    (6.3, " EXC           ELOSS=  6.3"),
-    (8.3, " EXC           ELOSS=  8.3")])
-  for j in 1 .. g.nin: g.kin[j] = 0
 
-  let levels = [curve(xvib1, yvib1), curve(xvib2, yvib2), curve(xvib3, yvib3),
-                curve(xexc, yexc), curve(xexc1, yexc1)]
-  for i, en in inp.steps:
-    g.q[2, i] = lin(xen, yxsec, en) * 1e-16
-    g.q[3, i] = if en < g.e[3]: 0.0 else: lin(xion, yion, en) * 1e-16
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = 0.0
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    for k, c in levels:
-      let j = k + 1
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]: g.qin[j, i] = lin(c, en) * 1e-16
-    var q = g.q[2, i] + g.q[3, i]
-    for j in 1 .. 5: q = q + g.qin[j, i]
-    g.q[1, i] = q
-  g.dropLevelsAbove(inp.efinal)
+const methylalModel* = GasModel(
+  name: ("METHYLAL  HOT", "METHYLAL  HOT"),
+  elasticText: (" ELASTIC       METHYLAL", " ELASTIC       METHYLAL"),
+  mass: 76.09532, e3: 10.0,
+  elastic: Elastic(interp: linear, xMomentum: widen(xen), momentum: widen(yxsec)),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 10.0,
+    channels: @[IonChannel(eoby: 10.0, text: " IONISATION    ELOSS= 10.0")]),
+  attachment: @[
+    attach(" ATTACHMENT")],
+  levels: @[
+    Level(ein: 0.12, text: " VIB           ELOSS=  0.12",
+          sigma: table(xvib1, yvib1)),
+    Level(ein: 0.16, text: " VIB           ELOSS=  0.16",
+          sigma: table(xvib2, yvib2)),
+    Level(ein: 0.36, text: " VIB           ELOSS=  0.36",
+          sigma: table(xvib3, yvib3)),
+    Level(ein: 6.3, text: " EXC           ELOSS=  6.3",
+          sigma: table(xexc, yexc)),
+    Level(ein: 8.3, text: " EXC           ELOSS=  8.3",
+          sigma: table(xexc1, yexc1))],
+  isotropic: true, stepped: true)
+
+proc methylal*(inp: GasInput, g: var GasXsec) = fill(methylalModel, inp, g)

@@ -165,6 +165,7 @@ type
                              ## below the gates
     counting*: Sigma         ## counting (or, for helium, gross) cross section
     countingFrom*: float32   ## zero up to this energy (eV)
+    countingExclusive*: bool ## and at it
     gross*: Sigma            ## helium: gross ionisation
     grossBethe*: float32     ## helium: Bethe of the gross = Bethe / this
 
@@ -247,7 +248,8 @@ type
   Level* = object
     ein*: float32           ## energy loss (eV), < 0 superelastic
     text*: string
-    kin*: int = -1          ## anisotropy kind; -1: NANISO
+    kin*: int = -1          ## anisotropy kind; -1: NANISO (0 in an
+                            ## isotropic routine)
     kind*: LevelKind
     sigma*: Sigma
     dip*: float32           ## vibrational dipole constant (1e-16 cm² eV)
@@ -267,6 +269,7 @@ type
                             ## a Born-Bethe level); `beyond` set if used
     clampTotal*: bool       ## the sum taken as 0 if below
     openAbove*: float64     ## > 0: open above this energy (eV) instead of ein
+    dimer*: bool            ## times the density of `GasModel.dimer`
     ratio*: seq[float64]    ## `peqMomentumRatio`
     dipoleUpTo*: float64 = Inf  ## `peqDipole`
     eloss*: float64         ## != 0: energy loss in double precision
@@ -292,12 +295,27 @@ type
     group*: int
     ladder*: int = 1
 
+  AttachFormula* = enum
+    attachTable
+    cf3brAttachment
+      ## (0.0353 / √E exp(-E²/9e-6) + exp(-E / 0.0588)) 27.4e-16 cm² up to
+      ## 2 eV (CF3Br)
+
+  Dimer* = object
+    ## a level of the dimers of a gas (Hg2 in mercury): tables for pure
+    ## gas `gas` at `temperature` (K) and 760 Torr, times the dimer
+    ## fraction `fraction`
+    gas*: int
+    temperature*, fraction*: float32
+
   Attach* = object
     text*: string
     sigma*: Sigma           ## zero below the table (and above, if `zero`)
     fromStart*: bool        ## open at the table's first energy already
     beforeEnd*: bool        ## `zero`: closed at the table's last energy
     threeBody*: bool        ## table for 760 Torr, 20 °C: times the density
+    openBelow*: bool        ## not closed below the table (extrapolated)
+    formula*: AttachFormula
 
   Rotor* = object
     ## rotational states: of a linear molecule, energies B0 J (J + 1) for
@@ -372,6 +390,18 @@ type
     stepped*: bool
       ## an old routine: energies summed up bin by bin (EN = EN + ESTEP)
       ## instead of the grid's
+    fixedModel1*: bool
+      ## elastic and ionisation anisotropic, model 1, whatever NANISO (KEL
+      ## 1 for Q(2) and Q(3)), the rest isotropic; the ionisation's angles
+      ## those of the elastic scattering above 2 E(3)
+    roundedOffsets*: bool
+      ## bins after a loss: the loss / ESTEP rounded (single precision), as
+      ## some old routines
+    isotropicPeq*: float64   ## the (unused) anisotropy parameter an
+                             ## isotropic routine stores for Q(2), Q(3)
+    cutStrict*: bool         ## EFINAL cuts the levels strictly above it
+    keepLastAt*: bool        ## no cut if EFINAL is the last level's energy
+    dimer*: Dimer
 
 # ------------------------------------------------------------ builders
 
@@ -386,10 +416,11 @@ func f64*[T](a: openArray[T], k: int): float64 =
     if i == k: return float64(v)
 
 func table*[X, Y](x: openArray[X], y: openArray[Y], unit = 1e-16.cm²,
-                  interp = linear, clamp = false, scale = 1.0'f32): Sigma =
+                  interp = linear, clamp = false, scale = 1.0'f32,
+                  zeroBelow = false): Sigma =
   ## a table, the last interval continued above its end
   Sigma(x: widen(x), y: widen(y), unit: unit, scale: scale, interp: interp,
-        beyond: extrapolate, clamp: clamp)
+        beyond: extrapolate, clamp: clamp, zeroBelow: zeroBelow)
 
 func falling*[X, Y](x: openArray[X], y: openArray[Y], n: float64,
                     unit = 1e-18.cm², scale = 1.0'f32): Sigma =

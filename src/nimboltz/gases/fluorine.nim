@@ -7,23 +7,23 @@
 ## table, ground and excited populations at the gas temperature), three
 ## overtones and four excitations, all linear in tables.
 
-import common
+import engine
 
-let xen: array[29, float32] = [
+const xen: array[29, float32] = [
   0.0, 0.01, 0.028, 0.109, 0.282, 0.471, 0.681, 1.01, 1.25, 1.45, 1.49, 1.53,
   1.56, 1.62, 2.16, 2.57, 3.58, 6.19, 9.89, 16.3, 24.5, 39.3, 71.0, 120.0,
   218.0, 379.0, 953.0, 10000.0, 100000.0]
-let yxsec: array[29, float32] = [
+const yxsec: array[29, float32] = [
   10.3, 10.3, 10.2, 10.3, 10.5, 11.1, 12.7, 16.6, 21.6, 32.6, 35.6, 36.2,
   36.2, 35.4, 24.3, 19.9, 16.2, 12.2, 10.1, 8.13, 6.24, 4.19, 2.52, 1.44,
   0.684, 0.301, 0.082, 0.009, 0.001]
-let xatt: array[65, float32] = [
+const xatt: array[65, float32] = [
   0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35,
   0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4,
   2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4,
   5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4,
   8.6, 8.8, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yatt: array[65, float32] = [
+const yatt: array[65, float32] = [
   80.0, 44.4, 24.7, 13.7, 8.2, 7.4, 7.1, 6.5, 5.45, 4.8, 4.25, 3.65, 3.1,
   2.65, 2.25, 1.92, 1.34, 0.94, 0.655, 0.455, 0.32, 0.153, 0.075, 0.036,
   0.022, 0.014, 0.012, 0.011, 0.01, 0.0097, 0.0093, 0.0082, 0.0069, 0.0056,
@@ -31,122 +31,109 @@ let yatt: array[65, float32] = [
   0.0063, 0.0068, 0.0069, 0.007, 0.0069, 0.0064, 0.0058, 0.0052, 0.0049,
   0.004, 0.0035, 0.003, 0.0025, 0.0021, 0.0017, 0.0014, 0.0012, 0.0004,
   0.00004, 4e-6, 4e-7, 4e-8]
-let xion: array[24, float32] = [
+const xion: array[24, float32] = [
   15.69, 16.54, 16.56, 16.83, 17.4, 18.2, 19.6, 21.8, 25.5, 28.6, 35.4, 42.5,
   52.1, 66.6, 94.0, 118.0, 176.0, 269.0, 381.0, 507.0, 720.0, 937.0, 10000.0,
   100000.0]
-let yion: array[24, float32] = [
+const yion: array[24, float32] = [
   0.0, 0.0103, 0.015, 0.0255, 0.0413, 0.066, 0.106, 0.172, 0.302, 0.436,
   0.628, 0.783, 0.934, 1.066, 1.18, 1.22, 1.18, 1.04, 0.865, 0.721, 0.572,
   0.473, 0.05, 0.005]
-let xvib1: array[55, float32] = [
+const xvib1: array[55, float32] = [
   0.1108, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4,
   1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9,
   3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4,
   4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib1: array[55, float32] = [
+const yvib1: array[55, float32] = [
   0.0, 0.64, 0.85, 0.86, 0.77, 0.63, 0.5, 0.39, 0.3, 0.23, 0.18, 0.14, 0.12,
   0.095, 0.079, 0.066, 0.057, 0.049, 0.043, 0.038, 0.033, 0.03, 0.027, 0.024,
   0.022, 0.02, 0.018, 0.017, 0.015, 0.014, 0.013, 0.012, 0.011, 0.0105, 0.01,
   0.0094, 0.0089, 0.0084, 0.0078, 0.0074, 0.0071, 0.0067, 0.0063, 0.006,
   0.0057, 0.0054, 0.0052, 0.005, 0.0048, 0.0046, 0.0025, 0.0003, 0.00003,
   3e-6, 3e-7]
-let xvib2: array[54, float32] = [
+const xvib2: array[54, float32] = [
   0.2188, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5,
   1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0,
   3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5,
   4.6, 4.7, 4.8, 4.9, 5.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib2: array[54, float32] = [
+const yvib2: array[54, float32] = [
   0.0, 0.82, 0.99, 0.97, 0.85, 0.7, 0.55, 0.43, 0.33, 0.26, 0.21, 0.16, 0.13,
   0.11, 0.093, 0.08, 0.069, 0.06, 0.053, 0.047, 0.042, 0.037, 0.034, 0.031,
   0.028, 0.026, 0.024, 0.022, 0.02, 0.019, 0.017, 0.016, 0.015, 0.014, 0.013,
   0.012, 0.011, 0.011, 0.01, 0.01, 0.0094, 0.0089, 0.0084, 0.0081, 0.0077,
   0.0073, 0.007, 0.0067, 0.0064, 0.0035, 0.0004, 0.00004, 4e-6, 4e-7]
-let xvib3: array[32, float32] = [
+const xvib3: array[32, float32] = [
   0.3237, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4,
   2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 10.0,
   100.0, 1000.0, 10000.0, 100000.0]
-let yvib3: array[32, float32] = [
+const yvib3: array[32, float32] = [
   0.0, 0.52, 0.63, 0.61, 0.53, 0.43, 0.27, 0.16, 0.1, 0.069, 0.05, 0.039,
   0.031, 0.025, 0.021, 0.017, 0.015, 0.013, 0.011, 0.01, 0.0088, 0.0079,
   0.0071, 0.0064, 0.0058, 0.0053, 0.0048, 0.003, 0.0003, 0.00003, 3e-6, 3e-7]
-let xvib4: array[24, float32] = [
+const xvib4: array[24, float32] = [
   0.4205, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5,
   3.0, 3.5, 4.0, 4.5, 4.9, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib4: array[24, float32] = [
+const yvib4: array[24, float32] = [
   0.0, 0.18, 0.21, 0.21, 0.18, 0.15, 0.11, 0.06, 0.034, 0.023, 0.016, 0.013,
   0.01, 0.0078, 0.0052, 0.0038, 0.0028, 0.0022, 0.0018, 0.001, 0.0001,
   0.00001, 1e-6, 1e-7]
-let xexc1: array[18, float32] = [
+const xexc1: array[18, float32] = [
   3.16, 4.0, 4.2, 4.6, 5.6, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 27.0, 34.0, 40.0,
   100.0, 1000.0, 10000.0, 100000.0]
-let yexc1: array[18, float32] = [
+const yexc1: array[18, float32] = [
   0.0, 0.065, 0.1, 0.145, 0.2, 0.22, 0.23, 0.22, 0.2, 0.14, 0.107, 0.08, 0.06,
   0.048, 0.024, 0.003, 0.0003, 0.00003]
-let xexc2: array[17, float32] = [
+const xexc2: array[17, float32] = [
   4.34, 5.0, 6.0, 7.0, 8.0, 10.0, 14.7, 20.0, 25.0, 40.0, 54.0, 60.0, 80.0,
   100.0, 1000.0, 10000.0, 100000.0]
-let yexc2: array[17, float32] = [
+const yexc2: array[17, float32] = [
   0.0, 0.04, 0.06, 0.074, 0.08, 0.074, 0.06, 0.047, 0.04, 0.025, 0.02, 0.017,
   0.013, 0.01, 0.001, 0.0001, 0.00001]
-let xexc3: array[18, float32] = [
+const xexc3: array[18, float32] = [
   11.57, 11.73, 12.62, 14.0, 17.0, 18.7, 21.6, 25.8, 31.1, 39.5, 51.9, 78.4,
   142.0, 235.0, 396.0, 959.0, 10000.0, 100000.0]
-let yexc3: array[18, float32] = [
+const yexc3: array[18, float32] = [
   0.0, 0.0102, 0.0301, 0.0791, 0.232, 0.301, 0.373, 0.445, 0.502, 0.524, 0.51,
   0.477, 0.373, 0.282, 0.204, 0.119, 0.012, 0.0012]
-let xexc4: array[17, float32] = [
+const xexc4: array[17, float32] = [
   13.08, 19.25, 20.4, 23.8, 28.6, 34.6, 43.0, 53.4, 68.2, 90.6, 121.0, 180.0,
   284.0, 427.0, 970.0, 10000.0, 100000.0]
-let yexc4: array[17, float32] = [
+const yexc4: array[17, float32] = [
   0.0, 0.0104, 0.0144, 0.025, 0.0396, 0.0552, 0.0666, 0.0722, 0.074, 0.0734,
   0.0693, 0.0588, 0.0442, 0.033, 0.0176, 0.0018, 0.00018]
 
-proc fluorine*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, " F2   MORGAN", " F2   MORGAN", mass = 38.0)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.scrp[2] = " ELASTIC       FLOURINE"
-  g.e[3] = 15.69'f32
-  g.shells [(0.0'f32, 15.69'f32, 0, 0.0'f32, " IONISATION    ELOSS= 15.69")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (-0.1108'f32, " VIB V1        ELOSS= -0.1108"),
-    (0.1108, " VIB V1        ELOSS=  0.1108"),
-    (0.2188, " VIB 2V1       ELOSS=  0.2188"),
-    (0.3237, " VIB 3V1       ELOSS=  0.3237"),
-    (0.4205, " VIB 4V1       ELOSS=  0.4205"),
-    (3.16, " EXC           ELOSS=  3.16"),
-    (4.34, " EXC           ELOSS=  4.34"),
-    (11.57, " EXC           ELOSS= 11.57"),
-    (13.08, " EXC           ELOSS= 13.08")])
-  for j in 1 .. g.nin: g.kin[j] = 0
 
-  let apop = exp(g.ei[1] / inp.kT)
-  let levels = [curve(xvib2, yvib2), curve(xvib3, yvib3), curve(xvib4, yvib4),
-                curve(xexc1, yexc1), curve(xexc2, yexc2), curve(xexc3, yexc3),
-                curve(xexc4, yexc4)]
-  for i, en in inp.steps:
-    g.q[2, i] = lin(xen, yxsec, en) * 1e-16
-    g.q[3, i] = if en < g.e[3]: 0.0 else: lin(xion, yion, en) * 1e-16
-    g.q[4, i] = 0.0
-    if en < float64(xatt[^1]): g.q[4, i] = lin(xatt, yatt, en) * 1e-16
-    g.qatt[1, i] = g.q[4, i]
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    g.qin[1, i] = 0.0
-    if en > 0.0:
-      let eup = en + g.ei[2]
-      g.qin[1, i] = eup * lin(xvib1, yvib1, eup) * 1e-16 / en
-      g.qin[1, i] = g.qin[1, i] * apop / (1.0 + apop)
-    g.qin[2, i] = 0.0
-    if en > g.ei[2]:
-      g.qin[2, i] = lin(xvib1, yvib1, en) * 1e-16
-      g.qin[2, i] = g.qin[2, i] / (1.0 + apop)
-    var q = g.q[2, i] + g.q[3, i] + g.q[4, i] + g.qin[1, i] + g.qin[2, i]
-    for k, c in levels:
-      let j = k + 3
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]: g.qin[j, i] = lin(c, en) * 1e-16
-      q = q + g.qin[j, i]
-    g.q[1, i] = q
-  g.dropLevelsAbove(inp.efinal)
+const fluorineModel* = GasModel(
+  name: (" F2   MORGAN", " F2   MORGAN"),
+  elasticText: (" ELASTIC       FLOURINE", " ELASTIC       FLOURINE"),
+  mass: 38.0, e3: 15.69,
+  elastic: Elastic(interp: linear, xMomentum: widen(xen), momentum: widen(yxsec)),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 15.69,
+    channels: @[IonChannel(eoby: 15.69, text: " IONISATION    ELOSS= 15.69")]),
+  attachment: @[
+    Attach(text: " ATTACHMENT", fromStart: true, openBelow: true, beforeEnd: true,
+           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+  levels: @[
+    Level(ein: -0.1108, text: " VIB V1        ELOSS= -0.1108",
+          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), population: 1),
+    Level(ein: 0.1108, text: " VIB V1        ELOSS=  0.1108",
+          sigma: table(xvib1, yvib1), ground: 1),
+    Level(ein: 0.2188, text: " VIB 2V1       ELOSS=  0.2188",
+          sigma: table(xvib2, yvib2)),
+    Level(ein: 0.3237, text: " VIB 3V1       ELOSS=  0.3237",
+          sigma: table(xvib3, yvib3)),
+    Level(ein: 0.4205, text: " VIB 4V1       ELOSS=  0.4205",
+          sigma: table(xvib4, yvib4)),
+    Level(ein: 3.16, text: " EXC           ELOSS=  3.16",
+          sigma: table(xexc1, yexc1)),
+    Level(ein: 4.34, text: " EXC           ELOSS=  4.34",
+          sigma: table(xexc2, yexc2)),
+    Level(ein: 11.57, text: " EXC           ELOSS= 11.57",
+          sigma: table(xexc3, yexc3)),
+    Level(ein: 13.08, text: " EXC           ELOSS= 13.08",
+          sigma: table(xexc4, yexc4))],
+  isotropic: true, stepped: true,
+  populations: @[pop(1)])
+
+proc fluorine*(inp: GasInput, g: var GasXsec) = fill(fluorineModel, inp, g)

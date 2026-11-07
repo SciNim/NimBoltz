@@ -9,309 +9,315 @@
 ## 6/E above 6 eV) are taken out of the elastic; eight vibrations and seven
 ## excitations from tables, the excitations anisotropic.
 
-import common
+import engine
 
-let xmom: array[65, float32] = [
+const xmom: array[65, float32] = [
   0.0, 0.001, 0.002, 0.003, 0.005, 0.007, 0.0085, 0.01, 0.015, 0.02, 0.03,
   0.04, 0.05, 0.07, 0.1, 0.12, 0.15, 0.17, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5,
   0.7, 1.0, 1.2, 1.3, 1.5, 1.7, 1.9, 2.1, 2.2, 2.5, 2.8, 3.0, 3.3, 3.6, 4.0,
   4.5, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0, 17.0, 20.0, 25.0, 30.0, 50.0,
   75.0, 100.0, 150.0, 200.0, 300.0, 500.0, 700.0, 1000.0, 2000.0, 4000.0,
   10000.0, 20000.0, 100000.0]
-let ymom: array[65, float32] = [
+const ymom: array[65, float32] = [
   1.1, 1.36, 1.49, 1.62, 1.81, 2.0, 2.1, 2.19, 2.55, 2.85, 3.38, 3.82, 4.3,
   5.08, 5.92, 6.42, 7.08, 7.38, 7.88, 8.48, 8.98, 9.36, 9.67, 9.87, 9.97,
   9.96, 10.34, 10.92, 11.87, 13.47, 16.41, 16.85, 18.02, 17.92, 21.0, 17.2,
   15.3, 13.96, 12.42, 11.19, 10.86, 10.36, 10.0, 10.2, 9.9, 9.5, 8.7, 8.26,
   7.6, 6.7, 5.9, 3.8, 2.56, 1.8, 1.13, 0.8, 0.48, 0.23, 0.143, 0.077, 0.038,
   0.019, 0.008, 0.004, 0.001]
-let xela: array[59, float32] = [
+const xela: array[59, float32] = [
   0.0, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.07, 0.1, 0.12, 0.15, 0.17, 0.2,
   0.25, 0.3, 0.35, 0.4, 0.5, 0.7, 1.0, 1.2, 1.3, 1.5, 1.7, 1.9, 2.1, 2.2, 2.5,
   2.8, 3.0, 3.3, 3.6, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0, 17.0,
   20.0, 25.0, 30.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 500.0, 700.0,
   1000.0, 2000.0, 4000.0, 10000.0, 20000.0, 100000.0]
-let yela: array[59, float32] = [
+const yela: array[59, float32] = [
   1.1, 1.92, 2.23, 2.49, 2.95, 3.35, 3.78, 4.48, 5.26, 5.72, 6.33, 6.62, 7.11,
   7.7, 8.22, 8.62, 8.96, 9.24, 9.52, 9.74, 10.26, 10.91, 11.99, 13.78, 16.98,
   17.62, 18.94, 19.11, 22.7, 18.74, 16.88, 15.59, 14.08, 12.9, 12.74, 12.53,
   12.43, 13.01, 13.23, 13.23, 12.8, 12.56, 12.1, 11.41, 10.67, 8.3, 6.66,
   5.38, 4.18, 3.5, 2.7, 1.831, 1.455, 1.03, 0.58, 0.28, 0.1, 0.052, 0.008]
-let xvib1: array[50, float32] = [
+const xvib1: array[50, float32] = [
   0.29, 0.3, 0.33, 0.4, 0.75, 0.9, 1.0, 1.1, 1.16, 1.2, 1.22, 1.4, 1.5, 1.6,
   1.65, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9,
   3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.0, 5.0, 15.0, 18.0, 20.0, 22.0, 23.0,
   25.0, 29.0, 32.0, 50.0, 80.0, 1000.0, 100000.0]
-let yvib1: array[50, float32] = [
+const yvib1: array[50, float32] = [
   0.0, 0.001, 0.0017, 0.0025, 0.0037, 0.0055, 0.0065, 0.009, 0.011, 0.0125,
   0.0135, 0.07, 0.1, 0.15, 0.27, 0.315, 0.54, 1.485, 4.8, 2.565, 1.2, 4.5,
   2.76, 1.59, 3.15, 1.545, 0.6, 1.35, 0.525, 0.87, 1.17, 0.855, 0.66, 0.6,
   0.585, 0.57, 0.055, 0.035, 0.035, 0.04, 0.065, 0.085, 0.085, 0.06, 0.03,
   0.015, 0.012, 0.0, 0.0, 0.0]
-let xvib2: array[24, float32] = [
+const xvib2: array[24, float32] = [
   0.59, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9,
   3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1000.0, 100000.0]
-let yvib2: array[24, float32] = [
+const yvib2: array[24, float32] = [
   0.0, 0.0, 0.015, 0.63, 1.935, 3.3, 1.47, 0.54, 2.115, 3.0, 0.54, 1.05,
   1.725, 1.275, 0.33, 0.9, 0.645, 0.375, 0.345, 0.3, 0.213, 0.0, 0.0, 0.0]
-let xvib3: array[20, float32] = [
+const xvib3: array[20, float32] = [
   0.88, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1,
   3.2, 3.3, 3.4, 1000.0, 100000.0]
-let yvib3: array[20, float32] = [
+const yvib3: array[20, float32] = [
   0.0, 0.0, 0.96, 2.055, 2.7, 1.695, 0.075, 0.96, 1.47, 0.45, 0.96, 0.54,
   0.855, 0.405, 0.282, 0.291, 0.0615, 0.0, 0.0, 0.0]
-let xvib4: array[18, float32] = [
+const xvib4: array[18, float32] = [
   1.17, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1, 3.2,
   3.3, 1000.0, 100000.0]
-let yvib4: array[18, float32] = [
+const yvib4: array[18, float32] = [
   0.0, 0.0, 0.2025, 1.515, 2.385, 1.44, 0.555, 0.0825, 1.2, 1.095, 0.675,
   0.03, 0.33, 0.315, 0.06, 0.0, 0.0, 0.0]
-let xvib5: array[18, float32] = [
+const xvib5: array[18, float32] = [
   1.47, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3,
   3.4, 1000.0, 100000.0]
-let yvib5: array[18, float32] = [
+const yvib5: array[18, float32] = [
   0.0, 0.0, 0.825, 1.23, 1.53, 1.44, 0.345, 0.0225, 0.345, 0.54, 0.66, 0.2175,
   0.105, 0.315, 0.1035, 0.0, 0.0, 0.0]
-let xvib6: array[15, float32] = [
+const xvib6: array[15, float32] = [
   1.76, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1, 3.2, 1000.0,
   100000.0]
-let yvib6: array[15, float32] = [
+const yvib6: array[15, float32] = [
   0.0, 0.0, 0.0063, 1.125, 1.74, 1.38, 0.78, 0.45, 0.315, 0.246, 0.48, 0.1635,
   0.0, 0.0, 0.0]
-let xvib7: array[17, float32] = [
+const xvib7: array[17, float32] = [
   2.06, 2.3, 2.4, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5,
   1000.0, 100000.0]
-let yvib7: array[17, float32] = [
+const yvib7: array[17, float32] = [
   0.0, 0.0, 0.0126, 0.39, 0.66, 0.96, 0.795, 0.6, 0.18, 0.0063, 0.192, 0.204,
   0.078, 0.0189, 0.0, 0.0, 0.0]
-let xvib8: array[15, float32] = [
+const xvib8: array[15, float32] = [
   2.35, 2.5, 2.6, 2.7, 2.75, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 1000.0,
   100000.0]
-let yvib8: array[15, float32] = [
+const yvib8: array[15, float32] = [
   0.0, 0.0, 0.0189, 0.36, 0.36, 0.33, 0.345, 0.264, 0.0375, 0.0063, 0.1545,
   0.0252, 0.0, 0.0, 0.0]
-let xtrp1: array[25, float32] = [
+const xtrp1: array[25, float32] = [
   6.17, 7.0, 7.8, 8.5, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 16.0, 17.0, 18.0,
   20.0, 22.0, 24.0, 26.0, 30.0, 34.0, 40.0, 50.0, 70.0, 150.0, 1000.0,
   100000.0]
-let ytrp1: array[25, float32] = [
+const ytrp1: array[25, float32] = [
   0.0, 0.0033, 0.0085, 0.0213, 0.0307, 0.0468, 0.059, 0.069, 0.075, 0.082,
   0.089, 0.089, 0.084, 0.072, 0.061, 0.052, 0.045, 0.034, 0.029, 0.023, 0.019,
   0.004, 0.0, 0.0, 0.0]
-let xtrp3: array[23, float32] = [
+const xtrp3: array[23, float32] = [
   7.35, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 20.0,
   22.0, 26.0, 30.0, 34.0, 40.0, 50.0, 70.0, 150.0, 1000.0, 100000.0]
-let ytrp3: array[23, float32] = [
+const ytrp3: array[23, float32] = [
   0.0, 0.0543, 0.1434, 0.2312, 0.2975, 0.343, 0.373, 0.387, 0.397, 0.399,
   0.383, 0.354, 0.289, 0.227, 0.165, 0.131, 0.106, 0.0777, 0.0469, 0.0168,
   0.0, 0.0, 0.0]
-let xtrp5: array[26, float32] = [
+const xtrp5: array[26, float32] = [
   7.8, 8.1, 8.5, 8.7, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 16.0, 17.0, 18.0,
   20.0, 22.0, 24.0, 26.0, 30.0, 34.0, 40.0, 50.0, 70.0, 150.0, 500.0, 1000.0,
   100000.0]
-let ytrp5: array[26, float32] = [
+const ytrp5: array[26, float32] = [
   0.0, 0.0015, 0.0097, 0.018, 0.029, 0.073, 0.115, 0.148, 0.18, 0.208, 0.205,
   0.178, 0.152, 0.122, 0.105, 0.091, 0.081, 0.066, 0.057, 0.047, 0.041, 0.021,
   0.007, 0.0, 0.0, 0.0]
-let xtrp7: array[29, float32] = [
+const xtrp7: array[29, float32] = [
   11.03, 11.5, 12.0, 12.5, 13.0, 13.5, 13.8, 14.0, 14.2, 14.5, 15.0, 16.0,
   17.0, 18.0, 19.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 36.0, 40.0, 50.0,
   70.0, 100.0, 150.0, 1000.0, 100000.0]
-let ytrp7: array[29, float32] = [
+const ytrp7: array[29, float32] = [
   0.0, 0.0405, 0.093, 0.1965, 0.435, 0.735, 0.93, 0.975, 0.96, 0.945, 0.825,
   0.645, 0.525, 0.45, 0.405, 0.375, 0.315, 0.2655, 0.225, 0.2085, 0.1665,
   0.117, 0.0945, 0.0585, 0.0225, 0.0023, 0.0, 0.0, 0.0]
-let xtrp8: array[19, float32] = [
+const xtrp8: array[19, float32] = [
   11.87, 11.92, 12.7, 17.0, 19.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 32.0,
   40.0, 50.0, 70.0, 100.0, 150.0, 1000.0, 100000.0]
-let ytrp8: array[19, float32] = [
+const ytrp8: array[19, float32] = [
   0.0, 0.0496, 0.0041, 0.0346, 0.0436, 0.0448, 0.0405, 0.0338, 0.0289, 0.0241,
   0.0193, 0.0172, 0.0122, 0.01, 0.007, 0.005, 0.0, 0.0, 0.0]
-let xsng2: array[29, float32] = [
+const xsng2: array[29, float32] = [
   8.55, 9.0, 12.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 24.0, 26.0, 30.0,
   40.0, 50.0, 70.0, 100.0, 150.0, 200.0, 250.0, 300.0, 500.0, 700.0, 1000.0,
   2000.0, 4000.0, 10000.0, 20000.0, 100000.0]
-let ysng2: array[29, float32] = [
+const ysng2: array[29, float32] = [
   0.0, 0.0141, 0.163, 0.2276, 0.2412, 0.2481, 0.2483, 0.238, 0.2268, 0.215,
   0.186, 0.1734, 0.1527, 0.116, 0.09, 0.0642, 0.0425, 0.0268, 0.0201, 0.0161,
   0.0134, 0.0082, 0.006, 0.0042, 0.002, 0.001, 0.0004, 0.0002, 0.00004]
-let xsng5: array[26, float32] = [
+const xsng5: array[26, float32] = [
   13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 20.0, 22.0, 25.0, 30.0, 40.0, 60.0,
   80.0, 100.0, 150.0, 200.0, 250.0, 300.0, 500.0, 700.0, 1000.0, 2000.0,
   4000.0, 10000.0, 20000.0, 100000.0]
-let ysng5: array[26, float32] = [
+const ysng5: array[26, float32] = [
   0.0, 0.081, 0.19, 0.25, 0.42, 0.52, 0.75, 0.96, 1.19, 1.48, 1.65, 1.76,
   1.68, 1.58, 1.33, 1.16, 1.05, 0.96, 0.74, 0.64, 0.53, 0.28, 0.14, 0.06,
   0.03, 0.006]
-let xion: array[43, float32] = [
+const xion: array[43, float32] = [
   15.6, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 21.0, 22.0,
   23.0, 24.0, 25.0, 26.0, 30.0, 34.0, 38.0, 45.0, 50.0, 60.0, 75.0, 100.0,
   125.0, 150.0, 200.0, 250.0, 300.0, 400.0, 500.0, 700.0, 1000.0, 1500.0,
   2000.0, 3000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0, 40000.0, 100000.0]
-let yion: array[43, float32] = [
+const yion: array[43, float32] = [
   0.0, 0.021, 0.047, 0.071, 0.099, 0.129, 0.164, 0.199, 0.23, 0.27, 0.344,
   0.418, 0.492, 0.565, 0.64, 0.714, 1.03, 1.27, 1.49, 1.78, 1.94, 2.18, 2.39,
   2.52, 2.52, 2.45, 2.27, 2.08, 1.92, 1.66, 1.45, 1.16, 0.91, 0.654, 0.521,
   0.375, 0.295, 0.209, 0.164, 0.135, 0.073, 0.04, 0.017]
 
-proc nitrogenPhelps*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, "N2 2004 PHELPS", "N2 2004 PHELPS", mass = 27.7940)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.kel[2] = 1
-  g.kel[3] = 1
-  g.scrp[2] = " ELASTIC  ANISOTROPIC NITROGEN"
-  g.e[3] = 15.60'f32
-  g.shells [(0.0'f32, 13.0'f32, 0, 0.0'f32, " IONISATION    ELOSS= 15.60")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (0.0'f32, " ROT 2-0       ELOSS= -0.00148"),
-    (0.0, " ROT 3-1       ELOSS= -0.00247"),
-    (0.0, " ROT 4-2       ELOSS= -0.00345"),
-    (0.0, " ROT 5-3       ELOSS= -0.00444"),
-    (0.0, " ROT 6-4       ELOSS= -0.00543"),
-    (0.0, " ROT 7-5       ELOSS= -0.00641"),
-    (0.0, " ROT 8-6       ELOSS= -0.00740"),
-    (0.0, " ROT 9-7       ELOSS= -0.00839"),
-    (0.0, " ROT 10-8      ELOSS= -0.00937"),
-    (0.0, " ROT 11-9      ELOSS= -0.0104"),
-    (0.0, " ROT 12-10     ELOSS= -0.0113"),
-    (0.0, " ROT 13-11     ELOSS= -0.0123"),
-    (0.0, " ROT 14-12     ELOSS= -0.0133"),
-    (0.0, " ROT 15-13     ELOSS= -0.0143"),
-    (0.0, " ROT 16-14     ELOSS= -0.0153"),
-    (0.0, " ROT 17-15     ELOSS= -0.0163"),
-    (0.0, " ROT 18-16     ELOSS= -0.0173"),
-    (0.0, " ROT 19-17     ELOSS= -0.0183"),
-    (0.0, " ROT 20-18     ELOSS= -0.0192"),
-    (0.0, " ROT 21-19     ELOSS= -0.0202"),
-    (0.0, " ROT 22-20     ELOSS= -0.0212"),
-    (0.0, " ROT 23-21     ELOSS= -0.0222"),
-    (0.0, " ROT 24-22     ELOSS= -0.0232"),
-    (0.0, " ROT 25-23     ELOSS= -0.0242"),
-    (0.0, " ROT 26-24     ELOSS= -0.0252"),
-    (0.0, " ROT 27-25     ELOSS= -0.0261"),
-    (0.0, " ROT 28-26     ELOSS= -0.0271"),
-    (0.0, " ROT 29-27     ELOSS= -0.0281"),
-    (0.0, " ROT 0-2       ELOSS=  0.00148"),
-    (0.0, " ROT 1-3       ELOSS=  0.00247"),
-    (0.0, " ROT 2-4       ELOSS=  0.00345"),
-    (0.0, " ROT 3-5       ELOSS=  0.00444"),
-    (0.0, " ROT 4-6       ELOSS=  0.00543"),
-    (0.0, " ROT 5-7       ELOSS=  0.00641"),
-    (0.0, " ROT 6-8       ELOSS=  0.00740"),
-    (0.0, " ROT 7-9       ELOSS=  0.00839"),
-    (0.0, " ROT 8-10      ELOSS=  0.00937"),
-    (0.0, " ROT 9-11      ELOSS=  0.0104"),
-    (0.0, " ROT 10-12     ELOSS=  0.0113"),
-    (0.0, " ROT 11-13     ELOSS=  0.0123"),
-    (0.0, " ROT 12-14     ELOSS=  0.0133"),
-    (0.0, " ROT 13-15     ELOSS=  0.0143"),
-    (0.0, " ROT 14-16     ELOSS=  0.0153"),
-    (0.0, " ROT 15-17     ELOSS=  0.0163"),
-    (0.0, " ROT 16-18     ELOSS=  0.0173"),
-    (0.0, " ROT 17-19     ELOSS=  0.0183"),
-    (0.0, " ROT 18-20     ELOSS=  0.0192"),
-    (0.0, " ROT 19-21     ELOSS=  0.0202"),
-    (0.0, " ROT 20-22     ELOSS=  0.0212"),
-    (0.0, " ROT 21-23     ELOSS=  0.0222"),
-    (0.0, " ROT 22-24     ELOSS=  0.0232"),
-    (0.0, " ROT 23-25     ELOSS=  0.0242"),
-    (0.0, " ROT 24-26     ELOSS=  0.0252"),
-    (0.0, " ROT 25-27     ELOSS=  0.0261"),
-    (0.0, " ROT 26-28     ELOSS=  0.0271"),
-    (0.0, " ROT 27-29     ELOSS=  0.0281"),
-    (0.290, " VIB V1        ELOSS=  0.290"),
-    (0.590, " VIB 2V1       ELOSS=  0.590"),
-    (0.880, " VIB 3V1       ELOSS=  0.880"),
-    (1.17, " VIB 4V1       ELOSS=  1.17"),
-    (1.47, " VIB 5V1       ELOSS=  1.47"),
-    (1.76, " VIB 6V1       ELOSS=  1.76"),
-    (2.06, " VIB 7V1       ELOSS=  2.06"),
-    (2.35, " VIB 8V1       ELOSS=  2.35"),
-    (6.17, " EXC TRPLT1    ELOSS=  6.17"),
-    (7.35, " EXC TRPLT3    ELOSS=  7.35"),
-    (7.80, " EXC TRPLT5    ELOSS=  7.80"),
-    (8.55, " EXC SNGLT2    ELOSS=  8.55"),
-    (11.03, " EXC TRPLT7    ELOSS= 11.03"),
-    (11.87, " EXC TRPLT8    ELOSS= 11.87"),
-    (13.0, " EXC SNGLT5    ELOSS= 13.0")])
-  for j in 1 .. g.nin: g.kin[j] = 0
-  for j in 65 .. 71: g.kin[j] = 1
 
-  let ioff = int(float32(0.5 + g.e[3] / inp.estep))
-  # rotations: populations of J = 1..29 (odd J weight 3, even 6; J = 0
-  # weight 6), quadrupole constant
-  let b0 = 2.4668e-4
-  let a0n = float64(0.5291772083'f32)
-  let qbqa = float64(1.06'f32)
-  let qbk = float64(1.67552'f32) * pow2(qbqa * a0n) * 1e-16
-  var pj: array[1..29, float64]
-  for k in countup(1, 29, 2):
-    pj[k] = float64(3 * (2 * k + 1)) * exp(-float64(k * (k + 1)) * b0 / inp.kT)
-  for k in countup(2, 28, 2):
-    pj[k] = float64(6 * (2 * k + 1)) * exp(-float64(k * (k + 1)) * b0 / inp.kT)
-  var sum = 6.0
-  for k in 1 .. 29: sum = sum + pj[k]
-  let frot0 = 6.0 / sum
-  for k in 1 .. 29: pj[k] = pj[k] / sum
-  for k in 1 .. 28:
-    let j = k - 1
-    g.ei[k + 28] = b0 * float64(4 * j + 6)
-    g.ei[k] = -g.ei[k + 28]
-  var ioffn: array[65 .. 71, int]
-  for k in 65 .. 71: ioffn[k] = int(float32(0.5 + g.ei[k] / inp.estep))
-  let vib = [curve(xvib1, yvib1), curve(xvib2, yvib2), curve(xvib3, yvib3),
-             curve(xvib4, yvib4), curve(xvib5, yvib5), curve(xvib6, yvib6),
-             curve(xvib7, yvib7), curve(xvib8, yvib8)]
-  let exc = [curve(xtrp1, ytrp1), curve(xtrp3, ytrp3), curve(xtrp5, ytrp5),
-             curve(xsng2, ysng2), curve(xtrp7, ytrp7), curve(xtrp8, ytrp8),
-             curve(xsng5, ysng5)]
-  for i, en in inp.steps:
-    let qela = lin(xela, yela, en) * 1e-16
-    let qmom = lin(xmom, ymom, en) * 1e-16
-    g.peqel[2, i] = 0.5 + (qela - qmom) / qela
-    g.q[2, i] = qela
-    g.q[3, i] = 0.0
-    g.peqel[3, i] = 0.5
-    if en >= g.e[3]:
-      g.q[3, i] = lin(xion, yion, en) * 1e-16
-      if en > 2.0 * g.e[3]: g.peqel[3, i] = g.peqel[2, i - ioff]
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = g.q[4, i]
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    # rotations J -> J - 2 (from J = 2..29)
-    for k in 1 .. 28:
-      let aj = float64(k + 1)
-      g.qin[k, i] = pj[k + 1] * qbk * sqrt(1.0 - g.ei[k] / en) * aj *
-                    (aj - 1.0) / ((2.0 * aj + 1.0) * (2.0 * aj - 1.0))
-    # J -> J + 2 (from J = 0..27)
-    for k in 29 .. 56: g.qin[k, i] = 0.0
-    if en > g.ei[29]:
-      g.qin[29, i] = frot0 * qbk * sqrt(1.0 - g.ei[29] / en) * 2.0 / 3.0
-      for k in 30 .. 56:
-        let aj = float64(k - 29)
-        if en <= g.ei[k]: break
-        g.qin[k, i] = pj[k - 29] * qbk * sqrt(1.0 - g.ei[k] / en) *
-                      (aj + 2.0) * (aj + 1.0) / ((2.0 * aj + 3.0) * (2.0 * aj + 1.0))
-    if en >= 6.0:
-      for k in 1 .. 56: g.qin[k, i] = g.qin[k, i] * 6.0 / en
-    for k, c in vib:
-      let j = k + 57
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]: g.qin[j, i] = lin(c, en) * 1e-16
-    for k, c in exc:
-      let j = k + 65
-      g.qin[j, i] = 0.0
-      g.peqin[j, i] = 0.5
-      if en > g.ei[j]:
-        g.qin[j, i] = if j == 69: float64(0.6666'f32) * lin(c, en) * 1e-16
-                      else: lin(c, en) * 1e-16
-        if en > 2.0 * g.ei[j]: g.peqin[j, i] = g.peqel[2, i - ioffn[j]]
-    var qrot = 0.0
-    for k in 1 .. 56: qrot = qrot + g.qin[k, i]
-    g.q[2, i] = g.q[2, i] - qrot
-    var qrest = 0.0
-    for k in 57 .. 71: qrest = qrest + g.qin[k, i]
-    g.q[1, i] = g.q[2, i] + g.q[3, i] + qrot + qrest
-  g.dropLevelsAbove(inp.efinal)
+# quadrupole constant (1.67552, QBQA = 1.06 and a0 single precision in
+# Magboltz, spelled out)
+const qbk = 1.6755199432373047 * pow2(1.059999942779541 * 0.529177188873291) * 1e-16
+
+const nitrogenPhelpsModel* = GasModel(
+  name: ("N2 2004 PHELPS", "N2 2004 PHELPS"),
+  elasticText: (" ELASTIC  ANISOTROPIC NITROGEN", " ELASTIC  ANISOTROPIC NITROGEN"),
+  mass: 27.7940, e3: 15.60,
+  elastic: Elastic(interp: linear, xTotal: widen(xela), total: widen(yela),
+                   xMomentum: widen(xmom), momentum: widen(ymom),
+                   minusLevels: 1 .. 56),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 15.60,
+    channels: @[IonChannel(eoby: 13.0, text: " IONISATION    ELOSS= 15.60")]),
+  attachment: @[
+    attach(" ATTACHMENT")],
+  levels: @[
+    Level(ein: 0.0, text: " ROT 2-0       ELOSS= -0.00148",
+          kind: rotation, j: 2, up: false),
+    Level(ein: 0.0, text: " ROT 3-1       ELOSS= -0.00247",
+          kind: rotation, j: 3, up: false),
+    Level(ein: 0.0, text: " ROT 4-2       ELOSS= -0.00345",
+          kind: rotation, j: 4, up: false),
+    Level(ein: 0.0, text: " ROT 5-3       ELOSS= -0.00444",
+          kind: rotation, j: 5, up: false),
+    Level(ein: 0.0, text: " ROT 6-4       ELOSS= -0.00543",
+          kind: rotation, j: 6, up: false),
+    Level(ein: 0.0, text: " ROT 7-5       ELOSS= -0.00641",
+          kind: rotation, j: 7, up: false),
+    Level(ein: 0.0, text: " ROT 8-6       ELOSS= -0.00740",
+          kind: rotation, j: 8, up: false),
+    Level(ein: 0.0, text: " ROT 9-7       ELOSS= -0.00839",
+          kind: rotation, j: 9, up: false),
+    Level(ein: 0.0, text: " ROT 10-8      ELOSS= -0.00937",
+          kind: rotation, j: 10, up: false),
+    Level(ein: 0.0, text: " ROT 11-9      ELOSS= -0.0104",
+          kind: rotation, j: 11, up: false),
+    Level(ein: 0.0, text: " ROT 12-10     ELOSS= -0.0113",
+          kind: rotation, j: 12, up: false),
+    Level(ein: 0.0, text: " ROT 13-11     ELOSS= -0.0123",
+          kind: rotation, j: 13, up: false),
+    Level(ein: 0.0, text: " ROT 14-12     ELOSS= -0.0133",
+          kind: rotation, j: 14, up: false),
+    Level(ein: 0.0, text: " ROT 15-13     ELOSS= -0.0143",
+          kind: rotation, j: 15, up: false),
+    Level(ein: 0.0, text: " ROT 16-14     ELOSS= -0.0153",
+          kind: rotation, j: 16, up: false),
+    Level(ein: 0.0, text: " ROT 17-15     ELOSS= -0.0163",
+          kind: rotation, j: 17, up: false),
+    Level(ein: 0.0, text: " ROT 18-16     ELOSS= -0.0173",
+          kind: rotation, j: 18, up: false),
+    Level(ein: 0.0, text: " ROT 19-17     ELOSS= -0.0183",
+          kind: rotation, j: 19, up: false),
+    Level(ein: 0.0, text: " ROT 20-18     ELOSS= -0.0192",
+          kind: rotation, j: 20, up: false),
+    Level(ein: 0.0, text: " ROT 21-19     ELOSS= -0.0202",
+          kind: rotation, j: 21, up: false),
+    Level(ein: 0.0, text: " ROT 22-20     ELOSS= -0.0212",
+          kind: rotation, j: 22, up: false),
+    Level(ein: 0.0, text: " ROT 23-21     ELOSS= -0.0222",
+          kind: rotation, j: 23, up: false),
+    Level(ein: 0.0, text: " ROT 24-22     ELOSS= -0.0232",
+          kind: rotation, j: 24, up: false),
+    Level(ein: 0.0, text: " ROT 25-23     ELOSS= -0.0242",
+          kind: rotation, j: 25, up: false),
+    Level(ein: 0.0, text: " ROT 26-24     ELOSS= -0.0252",
+          kind: rotation, j: 26, up: false),
+    Level(ein: 0.0, text: " ROT 27-25     ELOSS= -0.0261",
+          kind: rotation, j: 27, up: false),
+    Level(ein: 0.0, text: " ROT 28-26     ELOSS= -0.0271",
+          kind: rotation, j: 28, up: false),
+    Level(ein: 0.0, text: " ROT 29-27     ELOSS= -0.0281",
+          kind: rotation, j: 29, up: false),
+    Level(ein: 0.0, text: " ROT 0-2       ELOSS=  0.00148",
+          kind: rotation, j: 0, up: true),
+    Level(ein: 0.0, text: " ROT 1-3       ELOSS=  0.00247",
+          kind: rotation, j: 1, up: true),
+    Level(ein: 0.0, text: " ROT 2-4       ELOSS=  0.00345",
+          kind: rotation, j: 2, up: true),
+    Level(ein: 0.0, text: " ROT 3-5       ELOSS=  0.00444",
+          kind: rotation, j: 3, up: true),
+    Level(ein: 0.0, text: " ROT 4-6       ELOSS=  0.00543",
+          kind: rotation, j: 4, up: true),
+    Level(ein: 0.0, text: " ROT 5-7       ELOSS=  0.00641",
+          kind: rotation, j: 5, up: true),
+    Level(ein: 0.0, text: " ROT 6-8       ELOSS=  0.00740",
+          kind: rotation, j: 6, up: true),
+    Level(ein: 0.0, text: " ROT 7-9       ELOSS=  0.00839",
+          kind: rotation, j: 7, up: true),
+    Level(ein: 0.0, text: " ROT 8-10      ELOSS=  0.00937",
+          kind: rotation, j: 8, up: true),
+    Level(ein: 0.0, text: " ROT 9-11      ELOSS=  0.0104",
+          kind: rotation, j: 9, up: true),
+    Level(ein: 0.0, text: " ROT 10-12     ELOSS=  0.0113",
+          kind: rotation, j: 10, up: true),
+    Level(ein: 0.0, text: " ROT 11-13     ELOSS=  0.0123",
+          kind: rotation, j: 11, up: true),
+    Level(ein: 0.0, text: " ROT 12-14     ELOSS=  0.0133",
+          kind: rotation, j: 12, up: true),
+    Level(ein: 0.0, text: " ROT 13-15     ELOSS=  0.0143",
+          kind: rotation, j: 13, up: true),
+    Level(ein: 0.0, text: " ROT 14-16     ELOSS=  0.0153",
+          kind: rotation, j: 14, up: true),
+    Level(ein: 0.0, text: " ROT 15-17     ELOSS=  0.0163",
+          kind: rotation, j: 15, up: true),
+    Level(ein: 0.0, text: " ROT 16-18     ELOSS=  0.0173",
+          kind: rotation, j: 16, up: true),
+    Level(ein: 0.0, text: " ROT 17-19     ELOSS=  0.0183",
+          kind: rotation, j: 17, up: true),
+    Level(ein: 0.0, text: " ROT 18-20     ELOSS=  0.0192",
+          kind: rotation, j: 18, up: true),
+    Level(ein: 0.0, text: " ROT 19-21     ELOSS=  0.0202",
+          kind: rotation, j: 19, up: true),
+    Level(ein: 0.0, text: " ROT 20-22     ELOSS=  0.0212",
+          kind: rotation, j: 20, up: true),
+    Level(ein: 0.0, text: " ROT 21-23     ELOSS=  0.0222",
+          kind: rotation, j: 21, up: true),
+    Level(ein: 0.0, text: " ROT 22-24     ELOSS=  0.0232",
+          kind: rotation, j: 22, up: true),
+    Level(ein: 0.0, text: " ROT 23-25     ELOSS=  0.0242",
+          kind: rotation, j: 23, up: true),
+    Level(ein: 0.0, text: " ROT 24-26     ELOSS=  0.0252",
+          kind: rotation, j: 24, up: true),
+    Level(ein: 0.0, text: " ROT 25-27     ELOSS=  0.0261",
+          kind: rotation, j: 25, up: true),
+    Level(ein: 0.0, text: " ROT 26-28     ELOSS=  0.0271",
+          kind: rotation, j: 26, up: true),
+    Level(ein: 0.0, text: " ROT 27-29     ELOSS=  0.0281",
+          kind: rotation, j: 27, up: true),
+    Level(ein: 0.290, text: " VIB V1        ELOSS=  0.290",
+          sigma: table(xvib1, yvib1)),
+    Level(ein: 0.590, text: " VIB 2V1       ELOSS=  0.590",
+          sigma: table(xvib2, yvib2)),
+    Level(ein: 0.880, text: " VIB 3V1       ELOSS=  0.880",
+          sigma: table(xvib3, yvib3)),
+    Level(ein: 1.17, text: " VIB 4V1       ELOSS=  1.17",
+          sigma: table(xvib4, yvib4)),
+    Level(ein: 1.47, text: " VIB 5V1       ELOSS=  1.47",
+          sigma: table(xvib5, yvib5)),
+    Level(ein: 1.76, text: " VIB 6V1       ELOSS=  1.76",
+          sigma: table(xvib6, yvib6)),
+    Level(ein: 2.06, text: " VIB 7V1       ELOSS=  2.06",
+          sigma: table(xvib7, yvib7)),
+    Level(ein: 2.35, text: " VIB 8V1       ELOSS=  2.35",
+          sigma: table(xvib8, yvib8)),
+    Level(ein: 6.17, text: " EXC TRPLT1    ELOSS=  6.17",
+          sigma: table(xtrp1, ytrp1), kin: 1, peq: peqElastic),
+    Level(ein: 7.35, text: " EXC TRPLT3    ELOSS=  7.35",
+          sigma: table(xtrp3, ytrp3), kin: 1, peq: peqElastic),
+    Level(ein: 7.80, text: " EXC TRPLT5    ELOSS=  7.80",
+          sigma: table(xtrp5, ytrp5), kin: 1, peq: peqElastic),
+    Level(ein: 8.55, text: " EXC SNGLT2    ELOSS=  8.55",
+          sigma: table(xsng2, ysng2), kin: 1, peq: peqElastic),
+    Level(ein: 11.03, text: " EXC TRPLT7    ELOSS= 11.03",
+          sigma: table(xtrp7, ytrp7, scale = 0.6666), kin: 1, peq: peqElastic),
+    Level(ein: 11.87, text: " EXC TRPLT8    ELOSS= 11.87",
+          sigma: table(xtrp8, ytrp8), kin: 1, peq: peqElastic),
+    Level(ein: 13.0, text: " EXC SNGLT5    ELOSS= 13.0",
+          sigma: table(xsng5, ysng5), kin: 1, peq: peqElastic)],
+  isotropic: true, stepped: true,
+  # J = 0 .. 29, odd J weight 3, even 6; above 6 eV times 6 / E
+  rotor: Rotor(b0: 2.4668e-4, jMax: 29, weights: [6.0, 3.0], quadrupole: qbk,
+               scaleAbove: 6.0),
+  fixedModel1: true, roundedOffsets: true)
+
+proc nitrogenPhelps*(inp: GasInput, g: var GasXsec) = fill(nitrogenPhelpsModel, inp, g)

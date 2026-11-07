@@ -8,9 +8,9 @@
 ## dipoles plus tables, anisotropic, V2+V4 with its superelastic partner;
 ## two harmonics and four dissociative excitations from tables.
 
-import common
+import engine
 
-let xen: array[73, float32] = [
+const xen: array[73, float32] = [
   0.0, 0.0001, 0.001, 0.004, 0.007, 0.01, 0.012, 0.014, 0.017, 0.02, 0.025,
   0.03, 0.035, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.17, 0.2,
   0.24, 0.28, 0.32, 0.36, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.4, 1.7,
@@ -18,27 +18,27 @@ let xen: array[73, float32] = [
   30.0, 40.0, 50.0, 60.0, 80.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0,
   600.0, 800.0, 1000.0, 2000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0,
   100000.0]
-let yxsec: array[73, float32] = [
+const yxsec: array[73, float32] = [
   26.7, 25.4, 22.7, 18.9, 16.6, 14.9, 14.0, 13.1, 12.1, 11.1, 9.8, 8.71, 7.78,
   6.98, 5.68, 4.7, 3.85, 3.31, 2.75, 2.32, 1.72, 1.23, 0.78, 0.5, 0.33, 0.315,
   0.34, 0.375, 0.43, 0.5, 0.6, 0.81, 1.05, 1.29, 1.8, 2.15, 2.55, 3.25, 4.05,
   5.8, 7.9, 10.1, 11.7, 14.5, 16.3, 17.2, 17.6, 17.6, 17.0, 15.0, 13.0, 8.5,
   4.7, 3.4, 2.5, 2.1, 1.55, 1.2, 0.66, 0.44, 0.25, 0.16, 0.12, 0.09, 0.06,
   0.045, 0.016, 0.006, 0.003, 0.002, 0.001, 0.00025, 0.000015]
-let xvib1: array[24, float32] = [
+const xvib1: array[24, float32] = [
   0.1234, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 2.0, 3.0, 5.0, 6.0, 7.0, 8.0,
   9.0, 10.0, 12.5, 15.0, 20.0, 50.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib1: array[24, float32] = [
+const yvib1: array[24, float32] = [
   0.0, 0.0001, 0.048, 0.054, 0.057, 0.059, 0.069, 0.079, 0.119, 0.152, 0.5,
   0.7, 0.8, 0.75, 0.65, 0.55, 0.39, 0.33, 0.19, 0.077, 0.044, 0.004, 0.0004,
   0.00004]
-let xvib2: array[22, float32] = [
+const xvib2: array[22, float32] = [
   0.275, 0.4, 0.5, 0.6, 0.8, 1.0, 2.0, 3.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
   12.5, 15.0, 20.0, 50.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib2: array[22, float32] = [
+const yvib2: array[22, float32] = [
   0.0, 0.006, 0.009, 0.01, 0.011, 0.013, 0.033, 0.09, 0.5, 0.7, 0.8, 0.75,
   0.65, 0.5, 0.25, 0.19, 0.1, 0.04, 0.02, 0.01, 0.001, 0.0001]
-let xion: array[82, float32] = [
+const xion: array[82, float32] = [
   12.99, 13.5, 14.0, 14.5, 15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5,
   19.0, 19.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 26.0, 28.0, 30.0,
   32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0,
@@ -47,7 +47,7 @@ let xion: array[82, float32] = [
   450.0, 500.0, 550.0, 600.0, 650.0, 700.0, 750.0, 800.0, 850.0, 900.0, 950.0,
   1000.0, 1500.0, 2000.0, 3000.0, 4000.0, 5000.0, 7000.0, 10000.0, 12000.0,
   15000.0, 20000.0, 40000.0, 100000.0]
-let yion: array[82, float32] = [
+const yion: array[82, float32] = [
   0.0, 0.034, 0.074, 0.13, 0.198, 0.278, 0.361, 0.445, 0.53, 0.61, 0.706,
   0.793, 0.88, 0.977, 1.24, 1.34, 1.42, 1.5, 1.57, 1.65, 1.72, 1.97, 2.2,
   2.38, 2.54, 2.68, 2.79, 2.91, 3.02, 3.21, 3.36, 3.47, 3.56, 3.62, 3.66,
@@ -55,138 +55,99 @@ let yion: array[82, float32] = [
   3.41, 3.38, 3.33, 3.25, 3.11, 3.01, 2.72, 2.49, 2.27, 2.09, 1.94, 1.83,
   1.72, 1.63, 1.54, 1.47, 1.4, 1.34, 1.28, 1.24, 1.2, 1.18, 0.82, 0.66, 0.47,
   0.37, 0.31, 0.235, 0.175, 0.151, 0.127, 0.1, 0.058, 0.028]
-let xatt: array[14, float32] = [
+const xatt: array[14, float32] = [
   7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0,
   13.5]
-let yatt: array[14, float32] = [
+const yatt: array[14, float32] = [
   0.0, 0.005, 0.12, 0.51, 0.75, 0.85, 0.96, 0.91, 0.72, 0.49, 0.27, 0.13,
   0.06, 0.0]
-let xdis1: array[32, float32] = [
+const xdis1: array[32, float32] = [
   9.0, 10.0, 13.0, 15.0, 17.0, 20.0, 22.0, 25.0, 30.0, 40.0, 50.0, 60.0, 70.0,
   80.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0,
   1500.0, 2000.0, 3000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0, 100000.0]
-let ydis1: array[32, float32] = [
+const ydis1: array[32, float32] = [
   0.0, 0.27, 0.27, 0.36, 0.45, 0.53, 0.58, 0.59, 0.58, 0.57, 0.56, 0.55, 0.54,
   0.53, 0.52, 0.5, 0.46, 0.4, 0.33, 0.28, 0.24, 0.18, 0.14, 0.098, 0.075,
   0.055, 0.04, 0.029, 0.022, 0.018, 0.009, 0.0018]
-let xdis2: array[32, float32] = [
+const xdis2: array[32, float32] = [
   10.0, 11.0, 13.0, 15.0, 17.0, 20.0, 22.0, 25.0, 30.0, 40.0, 50.0, 60.0,
   70.0, 80.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0,
   1500.0, 2000.0, 3000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0, 100000.0]
-let ydis2: array[32, float32] = [
+const ydis2: array[32, float32] = [
   0.0, 0.27, 0.27, 0.36, 0.45, 0.53, 0.58, 0.59, 0.58, 0.57, 0.56, 0.55, 0.54,
   0.53, 0.52, 0.5, 0.46, 0.4, 0.33, 0.28, 0.24, 0.18, 0.14, 0.098, 0.075,
   0.055, 0.04, 0.029, 0.022, 0.018, 0.009, 0.0018]
-let xdis3: array[32, float32] = [
+const xdis3: array[32, float32] = [
   11.0, 12.0, 13.0, 15.0, 17.0, 20.0, 22.0, 25.0, 30.0, 40.0, 50.0, 60.0,
   70.0, 80.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0,
   1500.0, 2000.0, 3000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0, 100000.0]
-let ydis3: array[32, float32] = [
+const ydis3: array[32, float32] = [
   0.0, 0.27, 0.27, 0.36, 0.45, 0.53, 0.58, 0.59, 0.58, 0.57, 0.56, 0.55, 0.54,
   0.53, 0.52, 0.5, 0.46, 0.4, 0.33, 0.28, 0.24, 0.18, 0.14, 0.098, 0.075,
   0.055, 0.04, 0.029, 0.022, 0.018, 0.009, 0.0018]
-let xdis4: array[32, float32] = [
+const xdis4: array[32, float32] = [
   11.8, 12.0, 13.0, 15.0, 17.0, 20.0, 22.0, 25.0, 30.0, 40.0, 50.0, 60.0,
   70.0, 80.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 800.0, 1000.0,
   1500.0, 2000.0, 3000.0, 4000.0, 6000.0, 8000.0, 10000.0, 20000.0, 100000.0]
-let ydis4: array[32, float32] = [
+const ydis4: array[32, float32] = [
   0.0, 0.045, 0.27, 0.36, 0.45, 0.53, 0.58, 0.59, 0.58, 0.57, 0.56, 0.55,
   0.54, 0.53, 0.52, 0.5, 0.46, 0.4, 0.33, 0.28, 0.24, 0.18, 0.14, 0.098,
   0.075, 0.055, 0.04, 0.029, 0.022, 0.018, 0.009, 0.0018]
-let yelat: array[73, float32] = [
+const yelat: array[73, float32] = [
   26.7, 25.6, 23.3, 19.9, 17.9, 16.4, 15.5, 14.8, 13.8, 12.9, 11.6, 10.6,
   9.67, 8.89, 7.6, 6.57, 5.6, 4.9, 4.2, 3.7, 2.8, 2.2, 1.62, 1.23, 0.95, 0.82,
   0.75, 0.72, 0.71, 0.73, 0.77, 0.95, 1.1, 1.28, 1.72, 2.25, 3.0, 4.0, 5.0,
   7.32, 8.81, 11.0, 13.3, 17.6, 21.2, 23.2, 24.0, 23.8, 23.1, 21.4, 19.7,
   15.6, 11.2, 8.55, 7.2, 6.09, 4.74, 3.89, 2.55, 2.0, 1.35, 1.05, 0.78, 0.65,
   0.5, 0.42, 0.23, 0.14, 0.1, 0.08, 0.064, 0.03, 0.007]
-let xvib3: array[19, float32] = [
+const xvib3: array[19, float32] = [
   0.405, 1.0, 2.0, 3.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.5, 15.0, 17.5, 20.0,
   50.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib3: array[19, float32] = [
+const yvib3: array[19, float32] = [
   0.0, 0.001, 0.005, 0.027, 0.095, 0.125, 0.135, 0.135, 0.11, 0.08, 0.055,
   0.037, 0.028, 0.02, 0.008, 0.003, 0.0003, 0.00003, 3e-6]
-let xvib4: array[19, float32] = [
+const xvib4: array[19, float32] = [
   0.545, 1.0, 2.0, 3.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.5, 15.0, 17.5, 20.0,
   50.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yvib4: array[19, float32] = [
+const yvib4: array[19, float32] = [
   0.0, 0.0008, 0.004, 0.024, 0.08, 0.105, 0.115, 0.115, 0.095, 0.07, 0.045,
   0.027, 0.018, 0.01, 0.007, 0.003, 0.0003, 0.00003, 3e-6]
 
-proc deuteratedMethane*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, " CD4    2004", " CD4    2004", mass = 20.0671)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.kel[2] = 1
-  g.kel[3] = 1
-  g.scrp[2] = " ELASTIC (ANIS)   CD4"
-  g.e[3] = 12.99'f32
-  g.shells [(0.0'f32, 7.3'f32, 0, 0.0'f32, " IONISATION    ELOSS= 12.99")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (-0.1234'f32, " VIB V2+V4     ELOSS= -0.1234"),
-    (0.1234, " VIB V2+V4     ELOSS=  0.1234"),
-    (0.275, " VIB V1+V3     ELOSS=  0.275"),
-    (0.405, " VIB  HAR      ELOSS=  0.405"),
-    (0.545, " VIB  HAR      ELOSS=  0.545"),
-    (9.0, " EXC DISOCIATN ELOSS=  9.0"),
-    (10.0, " EXC DISOCIATN ELOSS= 10.0"),
-    (11.0, " EXC DISOCIATN ELOSS= 11.0"),
-    (11.8, " EXC DISOCIATN ELOSS= 11.8")])
-  for j in 1 .. g.nin: g.kin[j] = 0
-  g.kin[2] = 1
-  g.kin[3] = 1
 
-  let avib = [float64(0.059'f32), float64(0.050'f32)]
-  let rat = float64(0.8'f32)
-  let ioff = int(float32(0.5 + g.e[3] / inp.estep))
-  let apop = exp(g.ei[1] / inp.kT)
-  let vib = [curve(xvib1, yvib1), curve(xvib2, yvib2)]
-  let levels = [(4, curve(xvib3, yvib3)), (5, curve(xvib4, yvib4)),
-                (6, curve(xdis1, ydis1)), (7, curve(xdis2, ydis2)),
-                (8, curve(xdis3, ydis3)), (9, curve(xdis4, ydis4))]
-  for i, en in inp.steps:
-    var qela, qmom: float64
-    if en <= float64(xen[1]):
-      qela = 26.7e-16
-      qmom = 26.7e-16
-    else:
-      qela = logLog(xen, yelat, en) * 1e-16
-      qmom = logLog(xen, yxsec, en) * 1e-16
-    g.peqel[2, i] = 0.5 + (qela - qmom) / qela
-    g.q[2, i] = qela
-    g.q[3, i] = 0.0
-    g.peqel[3, i] = 0.5
-    if en >= g.e[3]:
-      g.q[3, i] = lin(xion, yion, en) * 1e-16
-      if en > 2.0 * g.e[3]: g.peqel[3, i] = g.peqel[2, i - ioff]
-    g.q[4, i] = 0.0
-    if en >= float64(xatt[0]) and en <= float64(xatt[^1]):
-      g.q[4, i] = lin(xatt, yatt, en) * 1e-19
-    g.qatt[1, i] = g.q[4, i]
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    # V2+V4 de-excitation: Born dipole plus detailed balance on the table
-    g.qin[1, i] = 0.0
-    if en > 0.0:
-      let eup = en + g.ei[2]
-      g.qin[1, i] = vibrationalDipole(avib[0], g.ei[1], en)
-      g.qin[1, i] = g.qin[1, i] + eup * lin(vib[0], eup) / en
-      g.qin[1, i] = g.qin[1, i] * apop / (1.0 + apop) * 1e-16
-    # V2+V4 and V1+V3 excitations, anisotropic as Born dipole scattering
-    for k in 0 .. 1:
-      let j = k + 2
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]:
-        let t = lin(vib[k], en)
-        let qd = vibrationalDipole(avib[k], g.ei[j], en)
-        let xmt = (momentumFactor(en, g.ei[j]) * qd + rat * t) * 1e-16
-        g.qin[j, i] = (t + qd) * 1e-16
-        g.peqin[j, i] = 0.5 + (g.qin[j, i] - xmt) / g.qin[j, i]
-        if j == 2: g.qin[j, i] = g.qin[j, i] / (1.0 + apop)
-    for (j, c) in levels:
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]: g.qin[j, i] = lin(c, en) * 1e-16
-    var q = g.q[2, i] + g.q[3, i] + g.q[4, i]
-    for j in 1 .. 9: q = q + g.qin[j, i]
-    g.q[1, i] = q
-  g.dropLevelsAbove(inp.efinal, first = 3)
+const deuteratedMethaneModel* = GasModel(
+  name: (" CD4    2004", " CD4    2004"),
+  elasticText: (" ELASTIC (ANIS)   CD4", " ELASTIC (ANIS)   CD4"),
+  mass: 20.0671, e3: 12.99,
+  elastic: Elastic(interp: logLog, xTotal: widen(xen), total: widen(yelat),
+                   xMomentum: widen(xen), momentum: widen(yxsec),
+                   low: constant, lowBelow: f64(xen, 1), lowQ: 26.7e-16),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 12.99,
+    channels: @[IonChannel(eoby: 7.3, text: " IONISATION    ELOSS= 12.99")]),
+  attachment: @[
+    Attach(text: " ATTACHMENT", fromStart: true,
+           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-19.cm², beyond: zero))],
+  levels: @[
+    Level(ein: -0.1234, text: " VIB V2+V4     ELOSS= -0.1234",
+          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), dip: 0.059, population: 1),
+    Level(ein: 0.1234, text: " VIB V2+V4     ELOSS=  0.1234",
+          sigma: table(xvib1, yvib1), dip: 0.059, ground: 1, kin: 1, peq: peqBorn),
+    Level(ein: 0.275, text: " VIB V1+V3     ELOSS=  0.275",
+          sigma: table(xvib2, yvib2), dip: 0.050, kin: 1, peq: peqBorn),
+    Level(ein: 0.405, text: " VIB  HAR      ELOSS=  0.405",
+          sigma: table(xvib3, yvib3)),
+    Level(ein: 0.545, text: " VIB  HAR      ELOSS=  0.545",
+          sigma: table(xvib4, yvib4)),
+    Level(ein: 9.0, text: " EXC DISOCIATN ELOSS=  9.0",
+          sigma: table(xdis1, ydis1)),
+    Level(ein: 10.0, text: " EXC DISOCIATN ELOSS= 10.0",
+          sigma: table(xdis2, ydis2)),
+    Level(ein: 11.0, text: " EXC DISOCIATN ELOSS= 11.0",
+          sigma: table(xdis3, ydis3)),
+    Level(ein: 11.8, text: " EXC DISOCIATN ELOSS= 11.8",
+          sigma: table(xdis4, ydis4))],
+  isotropic: true, stepped: true,
+  populations: @[pop(1)], momentumRatio: 0.8,
+  fixedModel1: true, roundedOffsets: true, firstCut: 3)
+
+proc deuteratedMethane*(inp: GasInput, g: var GasXsec) = fill(deuteratedMethaneModel, inp, g)

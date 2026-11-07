@@ -5,9 +5,9 @@
 ## Elastic (momentum transfer), ionisation, attachment and five excitations,
 ## all linear in tables.
 
-import common
+import engine
 
-let xen: array[67, float32] = [
+const xen: array[67, float32] = [
   0.0, 0.00005, 0.0001, 0.00015, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006,
   0.0007, 0.0008, 0.0009, 0.001, 0.00125, 0.0015, 0.0017, 0.00185, 0.002,
   0.0025, 0.003, 0.004, 0.005, 0.0056, 0.006, 0.007, 0.008, 0.009, 0.01,
@@ -15,7 +15,7 @@ let xen: array[67, float32] = [
   0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.5, 1.6, 1.8,
   2.0, 2.2, 2.4, 2.6, 2.8, 4.0, 10.0, 1000.0, 2000.0, 10000.0, 20000.0,
   100000.0]
-let yxsec: array[67, float32] = [
+const yxsec: array[67, float32] = [
   1190.0, 1188.0, 1005.0, 916.0, 851.0, 760.0, 708.0, 667.0, 639.0, 624.0,
   609.0, 639.0, 696.0, 1149.0, 4745.0, 10930.0, 10930.0, 7038.0, 2782.0,
   2130.0, 2354.0, 4620.0, 6849.0, 6300.0, 4016.0, 2848.0, 2520.0, 2876.0,
@@ -23,81 +23,73 @@ let yxsec: array[67, float32] = [
   670.0, 630.0, 600.0, 415.0, 340.0, 290.0, 260.0, 230.0, 210.0, 195.0, 180.0,
   170.0, 135.0, 100.0, 80.0, 65.0, 58.5, 52.5, 47.6, 44.4, 43.1, 41.2, 36.0,
   26.0, 0.14, 0.07, 0.012, 0.006, 0.0012]
-let xatt: array[3, float32] = [
+const xatt: array[3, float32] = [
   10.0, 100.0, 100000.0]
-let yatt: array[3, float32] = [
+const yatt: array[3, float32] = [
   0.0, 1e-7, 1e-10]
-let xion: array[27, float32] = [
+const xion: array[27, float32] = [
   3.8926, 5.0, 6.0, 7.0, 8.0, 10.0, 12.0, 14.0, 15.0, 17.0, 20.0, 25.0, 30.0,
   40.0, 50.0, 60.0, 80.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0,
   1000.0, 10000.0, 100000.0]
-let yion: array[27, float32] = [
+const yion: array[27, float32] = [
   0.0, 2.7, 4.8, 6.0, 7.2, 8.0, 8.2, 9.8, 10.0, 9.3, 8.4, 9.9, 10.2, 9.92,
   9.82, 9.58, 9.08, 8.79, 7.4, 6.25, 5.44, 5.02, 4.88, 4.8, 4.5, 0.45, 0.045]
-let xexc1: array[27, float32] = [
+const xexc1: array[27, float32] = [
   1.3859, 1.4, 1.45, 1.5, 1.6, 1.7, 1.9, 2.0, 2.2, 2.5, 3.0, 3.5, 4.0, 5.0,
   6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 40.0, 60.0, 80.0, 100.0, 1000.0, 10000.0,
   100000.0]
-let yexc1: array[27, float32] = [
+const yexc1: array[27, float32] = [
   0.0, 1.47, 15.4, 23.7, 17.8, 17.1, 14.2, 12.7, 12.0, 11.2, 12.2, 12.7, 13.0,
   13.8, 14.3, 15.1, 15.1, 14.7, 13.8, 13.3, 8.32, 6.24, 4.94, 4.16, 0.42,
   0.042, 0.0042]
-let xexc2: array[25, float32] = [
+const xexc2: array[25, float32] = [
   1.4546, 1.5, 1.6, 1.7, 1.9, 2.0, 2.2, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 7.0,
   8.0, 10.0, 15.0, 20.0, 40.0, 60.0, 80.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yexc2: array[25, float32] = [
+const yexc2: array[25, float32] = [
   0.0, 23.7, 34.6, 32.3, 26.9, 24.2, 21.5, 19.5, 20.5, 21.5, 22.0, 23.3, 24.2,
   25.5, 25.5, 24.9, 23.3, 22.4, 14.1, 10.6, 8.36, 7.04, 0.7, 0.07, 0.007]
-let xexc3: array[22, float32] = [
+const xexc3: array[22, float32] = [
   1.7977, 1.9, 2.0, 2.2, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0,
   20.0, 40.0, 60.0, 80.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yexc3: array[22, float32] = [
+const yexc3: array[22, float32] = [
   0.0, 7.5, 14.7, 19.8, 20.3, 21.8, 23.2, 23.5, 24.9, 25.8, 27.3, 27.3, 26.6,
   24.9, 24.0, 15.0, 11.3, 8.93, 7.52, 0.75, 0.075, 0.0075]
-let xexc4: array[20, float32] = [
+const xexc4: array[20, float32] = [
   2.2981, 2.4, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 40.0,
   60.0, 80.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yexc4: array[20, float32] = [
+const yexc4: array[20, float32] = [
   0.0, 3.4, 4.9, 6.4, 7.3, 7.5, 7.95, 8.25, 8.7, 8.7, 8.47, 7.95, 7.65, 4.8,
   3.6, 2.85, 2.4, 0.24, 0.024, 0.0024]
-let xexc5: array[18, float32] = [
+const xexc5: array[18, float32] = [
   2.6986, 3.0, 3.5, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 40.0, 60.0,
   80.0, 100.0, 1000.0, 10000.0, 100000.0]
-let yexc5: array[18, float32] = [
+const yexc5: array[18, float32] = [
   0.0, 1.9, 3.3, 4.4, 4.66, 4.84, 5.1, 5.1, 4.97, 4.66, 4.49, 2.82, 2.11,
   1.67, 1.41, 0.141, 0.0141, 0.00141]
 
-proc cesium*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, " CESIUM 2001", " CESIUM 2001", mass = 132.90545)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.scrp[2] = " ELASTIC       CESIUM"
-  g.e[3] = 3.8926'f32
-  g.shells [(0.0'f32, 3.8926'f32, 0, 0.0'f32, " IONISATION    ELOSS=  3.8926")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (1.3859'f32, " EXC P1/2      ELOSS=  1.3859"),
-    (1.4546, " EXC P3/2      ELOSS=  1.4546"),
-    (1.7977, " EXC D3/2+5/2  ELOSS=  1.7977"),
-    (2.2981, " EXC S1/2      ELOSS=  2.2981"),
-    (2.6986, " EXC HIGHER    ELOSS=  2.6986")])
-  for j in 1 .. g.nin: g.kin[j] = 0
 
-  let levels = [curve(xexc1, yexc1), curve(xexc2, yexc2), curve(xexc3, yexc3),
-                curve(xexc4, yexc4), curve(xexc5, yexc5)]
-  for i, en in inp.steps:
-    g.q[2, i] = lin(xen, yxsec, en) * 1e-16
-    g.q[3, i] = if en < g.e[3]: 0.0 else: lin(xion, yion, en) * 1e-16
-    g.q[4, i] = 0.0
-    if en >= float64(xatt[0]) and en < float64(xatt[^1]):
-      g.q[4, i] = lin(xatt, yatt, en) * 1e-16
-    g.qatt[1, i] = g.q[4, i]
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    var q = g.q[2, i] + g.q[3, i] + g.q[4, i]
-    for k, c in levels:
-      let j = k + 1
-      g.qin[j, i] = 0.0
-      if en > g.ei[j]: g.qin[j, i] = lin(c, en) * 1e-16
-      q = q + g.qin[j, i]
-    g.q[1, i] = q
-  g.dropLevelsAbove(inp.efinal)
+const cesiumModel* = GasModel(
+  name: (" CESIUM 2001", " CESIUM 2001"),
+  elasticText: (" ELASTIC       CESIUM", " ELASTIC       CESIUM"),
+  mass: 132.90545, e3: 3.8926,
+  elastic: Elastic(interp: linear, xMomentum: widen(xen), momentum: widen(yxsec)),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 3.8926,
+    channels: @[IonChannel(eoby: 3.8926, text: " IONISATION    ELOSS=  3.8926")]),
+  attachment: @[
+    Attach(text: " ATTACHMENT", fromStart: true, beforeEnd: true,
+           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+  levels: @[
+    Level(ein: 1.3859, text: " EXC P1/2      ELOSS=  1.3859",
+          sigma: table(xexc1, yexc1)),
+    Level(ein: 1.4546, text: " EXC P3/2      ELOSS=  1.4546",
+          sigma: table(xexc2, yexc2)),
+    Level(ein: 1.7977, text: " EXC D3/2+5/2  ELOSS=  1.7977",
+          sigma: table(xexc3, yexc3)),
+    Level(ein: 2.2981, text: " EXC S1/2      ELOSS=  2.2981",
+          sigma: table(xexc4, yexc4)),
+    Level(ein: 2.6986, text: " EXC HIGHER    ELOSS=  2.6986",
+          sigma: table(xexc5, yexc5))],
+  isotropic: true, stepped: true)
+
+proc cesium*(inp: GasInput, g: var GasXsec) = fill(cesiumModel, inp, g)
