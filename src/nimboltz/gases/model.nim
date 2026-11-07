@@ -40,6 +40,10 @@ type
                    ## (`Ionisation.counting`)
     zero         ## nothing
 
+  BornForm* = enum
+    bornStandard  ## times E / (E + ein + E(3))
+    bornShifted   ## at E + 2 ein, over E (neutral dissociation, N2)
+
   Sigma* = object
     ## a cross section: a table, interpolated, and its continuation. Without
     ## table (`x` empty) only the continuation (`born`, `bethe`).
@@ -54,6 +58,7 @@ type
     fraction*: float32     ## `bethe`: share of the total
     clamp*: bool           ## table values below 0 are taken as 0
     upTo*: float64         ## > 0: the table only up to this energy (eV)
+    bornForm*: BornForm    ## `born`: its energy factor
     zeroBelow*: bool       ## nothing at or below the table's first energy
 
   LowEnergy* = enum
@@ -90,6 +95,8 @@ type
     minusLevels*: Slice[int]
       ## levels (rotations) whose sum is taken out of the elastic cross
       ## section
+    minusFloor*: float64
+      ## cm²; > 0: the elastic cross section if not above 0 after that
 
   Bend* = object
     ## elastic scattering of the molecules in excited bending states
@@ -114,6 +121,11 @@ type
       ## > 0: the table at the energy less the difference of this channel's
       ## ionisation energy and that of channel `shiftFrom` (O2+ A, B from
       ## the X table)
+    rampTo*: float64
+      ## > 0 (eV): linear from 0 at the ionisation energy to `rampQ` (1e-16
+      ## cm²) here, from here on `share` of channel `shareOf` (N2)
+    rampQ*, share*: float32
+    shareOf*: int
 
   IonChannel* = object
     eion*, eoby*: float32   ## ionisation energy, Opal-Beaty energy (eV)
@@ -147,6 +159,7 @@ type
     channels*: seq[IonChannel]
     renorm*: Renormalisation
     gateInclusive*: bool     ## anisotropic from gate × eion on (not above)
+    split*: Split            ## channels 1 .. sharing one cross section
     subtract*: seq[Subtraction]  ## after the renormalisation, in order
     peqZero*: bool           ## anisotropy parameter 0 (not isotropic)
                              ## below the gates
@@ -155,12 +168,20 @@ type
     gross*: Sigma            ## helium: gross ionisation
     grossBethe*: float32     ## helium: Bethe of the gross = Bethe / this
 
+  Split* = object
+    ## one cross section (from channel 1's energy on) shared by the open
+    ## ones of channels 1 .. fractions.len + 1: with channels 1 .. n open,
+    ## `fractions[n - 2]` (channel 1 alone: all of it) (N2+ X, A, B, C)
+    sigma*: Sigma
+    fractions*: seq[seq[float32]]
+
   Subtraction* = object
     ## a channel taken out of another (excited ion states, Auger electrons
     ## of inner shells): target -= factor × channel, up to `below` (eV)
     target*, channel*: int
     factor*: float64 = 1.0
     below*: float64 = Inf
+    firstTerm*: bool       ## only the first term of the channel
 
   LevelKind* = enum
     tabulated     ## `sigma`, plus a vibrational dipole term (`dip`)
@@ -208,6 +229,12 @@ type
                   ## the elastic model 1 parameter
     peqScreened   ## as `peqElastic`, from gate × |ein| on, in anisotropy
                   ## model 2 only
+    peqMomentumRatio
+                  ## isotropic up to gate × ein; above, model 1: 1.5 - the
+                  ## ratio of momentum transfer to total (`Level.ratio` on
+                  ## the table's energies, falling as 1/E above), model 2:
+                  ## the elastic scattering's at the energy after the loss
+    peqSameAs     ## that of level `Level.level` (if open)
     peqDipole     ## Born dipole scattering: 1 - eps from
                   ## `GasModel.dipoleAngles` at E / |ein| (up to
                   ## `dipoleUpTo`; above, the elastic scattering's at the
@@ -239,6 +266,8 @@ type
     extra*: Sigma           ## `tabulated`: added (e.g. a triplet table to
                             ## a Born-Bethe level); `beyond` set if used
     clampTotal*: bool       ## the sum taken as 0 if below
+    openAbove*: float64     ## > 0: open above this energy (eV) instead of ein
+    ratio*: seq[float64]    ## `peqMomentumRatio`
     dipoleUpTo*: float64 = Inf  ## `peqDipole`
     eloss*: float64         ## != 0: energy loss in double precision
     j*: int                 ## `rotation`, `dipoleRotation`: initial J
@@ -287,6 +316,17 @@ type
     dipole*: float64        ## cm² eV
     dipoleScale*: float32 = 1.0   ## factor of the dipole transitions
     dipoleCutoff*: float64 = Inf  ## dipole transitions up to this energy
+    weights*: array[2, float64] = [1.0, 1.0]
+      ## statistical weights of even and odd J (nuclear spin; N2 6 and 3)
+    enhance*: Sigma
+      ## quadrupole rotations times 1 + y enhanceNum / enhanceDen, y this
+      ## table at E (excitation) or E' y(E') / E (de-excitation): the
+      ## resonance of the vibrations (N2)
+    enhanceNum*, enhanceDen*: float32
+    momentumAbove*: float64
+      ## > 0 (eV): from here on the rotations times the momentum transfer
+      ## cross section over `momentumRef` (cm²)
+    momentumRef*: float64
 
   RotState* = tuple
     e: float64              ## eV

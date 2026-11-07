@@ -6,104 +6,93 @@
 ## (the latter scaled by the gas density), rotation, two vibrations, one
 ## excitation.
 
-import common
+import engine
 
-let xen: array[58, float32] = [
+const xen: array[58, float32] = [
   0.0, 0.005, 0.007, 0.01, 0.012, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
   0.08, 0.09, 0.1, 0.12, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
   1.2, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 15.0, 20.0,
   30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 120.0, 150.0, 200.0, 300.0,
   400.0, 500.0, 1000.0, 2000.0, 10000.0, 100000.0]
-let yxsec: array[58, float32] = [
+const yxsec: array[58, float32] = [
   32.0, 30.8, 29.8, 27.8, 25.5, 22.1, 20.0, 15.7, 13.3, 11.2, 10.0, 9.25,
   8.63, 8.34, 8.24, 8.0, 6.73, 6.0, 6.0, 6.14, 6.5, 6.88, 7.7, 8.25, 8.95,
   9.78, 10.6, 13.3, 13.6, 12.8, 10.2, 9.78, 8.45, 7.1, 6.1, 5.2, 4.75, 4.1,
   2.85, 1.85, 1.12, 0.82, 0.59, 0.49, 0.39, 0.32, 0.28, 0.24, 0.18, 0.14,
   0.09, 0.05, 0.035, 0.025, 0.01, 0.004, 0.0005, 0.0001]
-let xion: array[48, float32] = [
+const xion: array[48, float32] = [
   9.2644, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0, 13.5, 14.0, 15.0,
   16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0, 26.0, 28.0, 32.0, 36.0, 40.0,
   45.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 120.0, 140.0, 160.0, 200.0,
   300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 1000.0, 2000.0, 4000.0,
   10000.0, 20000.0, 100000.0]
-let yion: array[48, float32] = [
+const yion: array[48, float32] = [
   0.0, 0.011, 0.018, 0.031, 0.047, 0.064, 0.093, 0.131, 0.184, 0.244, 0.305,
   0.418, 0.503, 0.585, 0.663, 0.736, 0.813, 0.959, 1.11, 1.26, 1.4, 1.65,
   1.87, 2.08, 2.3, 2.48, 2.74, 2.91, 3.04, 3.11, 3.14, 3.14, 3.1, 3.04, 2.86,
   2.45, 2.11, 1.86, 1.67, 1.51, 1.39, 1.27, 1.21, 0.8, 0.45, 0.23, 0.14,
   0.035]
-let xatt: array[23, float32] = [
+const xatt: array[23, float32] = [
   6.5, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8,
   10.0, 10.4, 10.6, 10.8, 11.0, 11.5, 13.0, 14.0]
-let yatt: array[23, float32] = [
+const yatt: array[23, float32] = [
   0.0, 0.02, 0.08, 0.33, 0.71, 0.96, 1.08, 1.11, 1.11, 1.09, 1.04, 0.95, 0.83,
   0.65, 0.51, 0.38, 0.18, 0.11, 0.08, 0.06, 0.04, 0.03, 0.0]
-let xrot1: array[18, float32] = [
+const xrot1: array[18, float32] = [
   0.1, 0.12, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.5, 2.0,
   10.0, 100.0, 100000.0]
-let yrot1: array[18, float32] = [
+const yrot1: array[18, float32] = [
   0.0, 0.037, 0.037, 0.033, 0.026, 0.018, 0.014, 0.011, 0.009, 0.006, 0.005,
   0.004, 0.003, 0.002, 0.001, 0.0001, 0.00001, 1e-6]
-let xvib1: array[24, float32] = [
+const xvib1: array[24, float32] = [
   0.2326, 0.24, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.5, 2.0,
   3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 20.0, 100.0, 100000.0]
-let yvib1: array[24, float32] = [
+const yvib1: array[24, float32] = [
   0.0, 0.05, 0.08, 0.1, 0.08, 0.06, 0.05, 0.04, 0.032, 0.027, 0.023, 0.018,
   0.012, 0.008, 0.004, 0.002, 0.0015, 0.0012, 0.001, 0.0008, 0.0005, 0.0001,
   0.00002, 1e-6]
-let xvib2: array[23, float32] = [
+const xvib2: array[23, float32] = [
   0.6, 0.63, 0.7, 0.8, 0.9, 1.0, 1.2, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
   10.0, 15.0, 20.0, 40.0, 60.0, 100.0, 1000.0, 100000.0]
-let yvib2: array[23, float32] = [
+const yvib2: array[23, float32] = [
   0.0, 0.6, 0.9, 0.9, 0.85, 0.8, 0.7, 0.5, 0.31, 0.16, 0.11, 0.075, 0.055,
   0.042, 0.035, 0.025, 0.012, 0.008, 0.002, 0.001, 0.0005, 0.00005, 5e-6]
-let xexc1: array[32, float32] = [
+const xexc1: array[32, float32] = [
   6.1, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 10.0, 12.0, 15.0, 20.0, 30.0, 40.0, 50.0,
   60.0, 70.0, 80.0, 90.0, 100.0, 120.0, 150.0, 200.0, 300.0, 400.0, 500.0,
   1000.0, 2000.0, 4000.0, 10000.0, 20000.0, 40000.0, 100000.0]
-let yexc1: array[32, float32] = [
+const yexc1: array[32, float32] = [
   0.0, 0.01, 0.02, 0.085, 0.2, 0.55, 0.7, 1.0, 1.65, 2.21, 3.3, 3.5, 3.3, 3.0,
   2.65, 2.26, 2.16, 2.0, 1.8, 1.6, 1.4, 1.03, 0.85, 0.65, 0.52, 0.25, 0.13,
   0.06, 0.025, 0.012, 0.0065, 0.0025]
-let xat3: array[18, float32] = [
+const xat3: array[18, float32] = [
   0.01, 0.012, 0.015, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,
   0.12, 0.15, 0.2, 0.3, 1.0, 10.0]
-let yat3: array[18, float32] = [
+const yat3: array[18, float32] = [
   0.0, 0.085, 0.24, 0.14, 0.07, 0.041, 0.029, 0.023, 0.019, 0.017, 0.015,
   0.014, 0.013, 0.012, 0.01, 0.0085, 0.0035, 0.0]
 
-proc nitricOxide*(inp: GasInput, g: var GasXsec) =
-  g.describe(inp, "NO      1995", "NO      1995", mass = 30.00614)
-  for k in 1 .. 6: g.kel[k] = 0
-  g.scrp[2] = " ELASTIC       NITRIC OXIDE"
-  g.e[3] = 9.2644'f32
-  g.shells [(0.0'f32, 13.6'f32, 0, 0.0'f32, " IONISATION    ELOSS=  9.2644")]
-  g.attachment [" ATTACHMENT 2-BODY", " ATTACHMENT 3-BODY"]
-  g.levels(inp, [
-    (0.100'f32, " ROT           ELOSS=  0.100"),
-    (0.2326, " VIB V1        ELOSS=  0.2326"),
-    (0.600, " VIB SUM       ELOSS=  0.600"),
-    (6.10, " EXC           ELOSS=  6.10")])
-  for j in 1 .. g.nin: g.kin[j] = 0
 
-  let fac = 273.1499938964844 * inp.torr / ((inp.tempc + 273.1499938964844) * 760.0)
-  let excitations = [curve(xrot1, yrot1), curve(xvib1, yvib1),
-                     curve(xvib2, yvib2), curve(xexc1, yexc1)]
+const nitricOxideModel* = GasModel(
+  name: ("NO      1995", "NO      1995"),
+  elasticText: (" ELASTIC       NITRIC OXIDE", " ELASTIC       NITRIC OXIDE"),
+  mass: 30.00614, e3: 9.2644,
+  elastic: Elastic(interp: linear, xMomentum: widen(xen), momentum: widen(yxsec)),
+  ionisation: Ionisation(
+    scheme: single, counting: table(xion, yion), countingFrom: 9.2644,
+    channels: @[IonChannel(eoby: 13.6, text: " IONISATION    ELOSS=  9.2644")]),
+  # inside the tables only; the three-body table for 760 Torr and 20 °C,
+  # scaled with the density
+  attachment: @[
+    Attach(text: " ATTACHMENT 2-BODY", fromStart: true,
+           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-18.cm², beyond: zero)),
+    Attach(text: " ATTACHMENT 3-BODY", fromStart: true, threeBody: true,
+           sigma: Sigma(x: widen(xat3), y: widen(yat3), unit: 1e-16.cm², beyond: zero))],
+  levels: @[
+    Level(sigma: table(xrot1, yrot1), ein: 0.100, text: " ROT           ELOSS=  0.100"),
+    Level(sigma: table(xvib1, yvib1), ein: 0.2326, text: " VIB V1        ELOSS=  0.2326"),
+    Level(sigma: table(xvib2, yvib2), ein: 0.600, text: " VIB SUM       ELOSS=  0.600"),
+    Level(sigma: table(xexc1, yexc1), ein: 6.10, text: " EXC           ELOSS=  6.10")],
+  isotropic: true, stepped: true)
 
-  for i, en in inp.steps:
-    g.q[2, i] = lin(xen, yxsec, en) * 1e-16
-    g.q[3, i] = if en < g.e[3]: 0.0 else: lin(xion, yion, en) * 1e-16
-    g.qatt[1, i] = 0.0
-    if en >= xatt[0] and en <= xatt[^1]: g.qatt[1, i] = lin(xatt, yatt, en) * 1e-18
-    g.qatt[2, i] = 0.0
-    if en >= xat3[0] and en <= xat3[^1]:
-      g.qatt[2, i] = fac * lin(xat3, yat3, en) * 1e-16
-    g.q[4, i] = 0.0
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    for j, c in excitations:
-      g.qin[j + 1, i] = 0.0
-      if en > g.ei[j + 1]: g.qin[j + 1, i] = lin(c, en) * 1e-16
-    g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i] + g.qin[1, i] + g.qin[2, i] +
-                g.qin[3, i] + g.qin[4, i]
-  g.dropLevelsAbove(inp.efinal)
+proc nitricOxide*(inp: GasInput, g: var GasXsec) = fill(nitricOxideModel, inp, g)
