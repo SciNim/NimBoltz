@@ -23,6 +23,7 @@ type
     negative: Negative
     qcount: cm²          ## counting ionisation (`countingShare`)
     density: float64     ## gas density relative to 760 Torr and 0 °C
+    bb: cm²•eV           ## Born-Bethe constant
 
 proc betheIonisation(c: Context, fraction = 1.0'f32): cm² =
   ## Bethe's ionisation cross section times a share of it
@@ -30,13 +31,13 @@ proc betheIonisation(c: Context, fraction = 1.0'f32): cm² =
   let x1 = x2 * ln(c.r.beta2 / (1.0 - c.r.beta2)) - 1.0
   bornIonisation * (c.am2 * x1 + c.c * x2) * fraction
 
-proc bornExcitation(c: Context, f: float32, ein, en: eV,
+proc bornExcitation(c: Context, f: float64, ein, en: eV,
                     form = bornStandard): cm² =
   ## Born-Bethe cross section of an allowed transition with oscillator
   ## strength f and energy loss ein
-  let bb = bbconst.cm²•eV
+  let bb = c.bb
   let r = c.r
-  let b = float64(f) / (ein * r.beta2) *
+  let b = f / (ein * r.beta2) *
     (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * ein.float)) - r.beta2) * bb
   let d = case form
           of bornStandard: b * (en / (en + ein + c.eion))
@@ -56,6 +57,7 @@ proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
   ## the cross section at energy en (ein: energy loss for `born`)
   let x = en.float
   if s.zeroBelow and x <= s.x[0]: return 0.0.cm²
+  if s.zeroUnder and x < s.x[0]: return 0.0.cm²
   let tableEnd = if s.upTo > 0.0: s.upTo elif s.x.len > 0: s.x[^1] else: 0.0
   if s.x.len > 0 and (s.beyond in {extrapolate, power} or x <= tableEnd):
     var v = if s.beyond == power and x > s.x[^1]:
@@ -64,9 +66,11 @@ proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
     if s.clamp and v < 0.0: v = 0.0
     return v * s.unit * float64(s.scale)
   case s.beyond
-  of born: c.bornExcitation(s.f, ein, en, s.bornForm) * float64(s.tailScale)
+  of born:
+    c.bornExcitation(if s.fd != 0.0: s.fd else: float64(s.f), ein, en, s.bornForm) *
+      float64(s.tailScale)
   of bethe: c.betheIonisation(s.fraction) * float64(s.tailScale)
-  of countingShare: c.qcount * float64(s.fraction)
+  of countingShare: c.qcount * float64(s.fraction) * float64(s.tailScale)
   of extrapolate, power, zero: 0.0.cm²
 
 # ------------------------------------------------------------ elastic
@@ -120,7 +124,9 @@ proc elasticAt(m: static Elastic, en: eV, bend: float64):
         1.0 - (if x <= m.xEps[0]: m.eps[0] else: interp(m.epsInterp, m.xEps, m.eps))
       else: 1.0 - interp(m.epsInterp, m.xEps, m.eps)
     else: 0.0
-  template q(xs, ys: seq[float64]): cm² = interp(m.interp, xs, ys) * 1e-16.cm²
+  template q(xs, ys: seq[float64]): cm² =
+    when m.scale != 1.0: interp(m.interp, xs, ys) * 1e-16.cm² * m.scale
+    else: interp(m.interp, xs, ys) * 1e-16.cm²
   when m.bend.populations.len > 0:
     # ground state and bending states
     template mix(q, qb: cm²): cm² =
@@ -139,7 +145,8 @@ proc elasticAt(m: static Elastic, en: eV, bend: float64):
     elif m.low == constant:
       if x <= m.lowBelow:
         let qmom = if m.lowQMomentum != 0.0: m.lowQMomentum else: m.lowQ
-        return (m.lowQ.cm², qmom.cm², (when m.lowIsotropic: 0.0 else: eps))
+        return (m.lowQ.cm² * m.scale, qmom.cm² * m.scale,
+                (when m.lowIsotropic: 0.0 else: eps))
     when m.xTotal.len > 0 and m.xMomentum.len > 0:
       (q(m.xTotal, m.total), q(m.xMomentum, m.momentum), eps)
     elif m.xTotal.len > 0:
@@ -160,7 +167,8 @@ proc describe(m: static GasModel, inp: GasInput, g: var GasXsec) =
   g.e[3] = m.e3
   g.e[4] = m.e4
   for k in 1 .. 6:
-    g.kel[k] = when m.fixedModel1: (if k in 2 .. 3: 1 else: 0)
+    g.kel[k] = when m.forceModel2: 2
+               elif m.fixedModel1: (if k in 2 .. 3: 1 else: 0)
                elif m.isotropic: 0
                elif m.elastic.alwaysAnisotropic: 2
                else: inp.naniso
@@ -193,7 +201,8 @@ proc describe(m: static GasModel, inp: GasInput, g: var GasXsec) =
         else: -(b0 * 2.0 * float64(lv.j))
       elif lv.eloss != 0.0: lv.eloss
       else: lv.ein
-    g.kin[j + 1] = when m.isotropic: max(lv.kin, 0)
+    g.kin[j + 1] = when m.forceModel2: 2
+                   elif m.isotropic: max(lv.kin, 0)
                    else: (if lv.kin < 0: inp.naniso else: lv.kin)
     g.scrp[4 + g.nion + g.natt + j + 1] = lv.text
   let first = if m.penning.first > 0: m.penning.first else: 1
@@ -300,6 +309,10 @@ type
     iso: float64
     naniso: int
 
+func inside(w: Sigma, x: float64, open: bool): bool {.inline.} =
+  ## x inside the table's range (ends excluded if open)
+  if open: x > w.x[0] and x < w.x[^1] else: x >= w.x[0] and x <= w.x[^1]
+
 proc vibrationalDipole(lv: Level, en, ein: eV): cm² =
   ## Born cross section of a dipole active vibration
   var c = float64(lv.dip)
@@ -312,6 +325,7 @@ type
     excited: seq[float64]    ## of each population (its ladder summed)
     ground: seq[float64]     ## of the ground state of its group
     rotation: seq[float64]   ## of the rotational states J = 0, 2, ..
+    rotationEnergy: seq[float64]  ## (`Rotor.ladder`)
     bend: float64            ## of the bending states (Elastic.bend)
 
 proc populations(m: static GasModel, g: GasXsec, kT: float64): Populations =
@@ -331,7 +345,28 @@ proc populations(m: static GasModel, g: GasXsec, kT: float64): Populations =
     result.excited[k] = result.excited[k] / sums[p.group]
     result.ground.add 1.0 / sums[p.group]
   for k in m.elastic.bend.populations: result.bend = result.bend + result.excited[k - 1]
-  when m.rotor.jMax > 0 or m.rotor.states.len > 0:
+  when m.rotor.ladder.len > 0:
+    const r = m.rotor
+    var e = newSeq[float64](r.jMax + 1)
+    e[1] = r.oddBase
+    for j in 2 .. r.jMax: e[j] = e[j - 2] + g.ei[r.ladder[j - 2]]
+    var p = newSeq[float64](r.jMax + 1)
+    for j in 0 .. r.jMax: p[j] = r.weights[j mod 2] * float64(2 * j + 1) * exp(-e[j] / kT)
+    var sum = 0.0
+    if r.fixBelow > 0.0 and kT < r.fixBelow:
+      var odd, even = 0.0
+      for j in countup(1, r.jMax, 2): odd = odd + p[j]
+      for j in countup(0, r.jMax, 2): even = even + p[j]
+      let fix = odd * r.fixRatio.mul / r.fixRatio.den
+      let orpafix = fix / even
+      for j in countup(2, r.jMax, 2): p[j] = p[j] * orpafix
+      sum = odd + fix
+      p[0] = p[0] * orpafix
+    else:
+      for v in p: sum = sum + v
+    for v in p: result.rotation.add v / sum
+    result.rotationEnergy = e
+  elif m.rotor.jMax > 0 or m.rotor.states.len > 0:
     var sum = 0.0
     when m.rotor.states.len > 0:
       for (e, j, w) in m.rotor.states:
@@ -359,6 +394,7 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
   if (if lv.openAbove > 0.0: en.float <= lv.openAbove else: en <= ein) or
      (lv.sigma.beyond == zero and en.float > lv.sigma.x[^1]) or
      (lv.kind == dipoleRotation and en.float > m.rotor.dipoleCutoff) or
+     en.float > lv.closedAbove or
      (lv.kind == tabulatedRotation and lv.up and en.float < lv.sigma.x[0]):
     g.qin[j, i] = 0.0    # (closed)
     return
@@ -371,7 +407,13 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
       const fold = true
     else:
       const fold = false
-    if fold and lv.dip != 0.0 and lv.peq != peqBorn and s.x.len > 0 and
+    if lv.windows.len > 0:
+      # (dipole term and windows summed before the unit)
+      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float)
+      for w in lv.windows:
+        if inside(w, en.float, lv.windowOpen): t = t + float64(w.scale) * w.interpolate(en)
+      q = s.at(en, ein, b.c) + t * lv.windows[0].unit
+    elif fold and lv.dip != 0.0 and lv.peq != peqBorn and s.x.len > 0 and
        s.beyond == extrapolate:
       let t = if s.zeroBelow and en.float <= s.x[0]: 0.0
               else: float64(s.scale) * s.interpolate(en)
@@ -395,11 +437,20 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
             of crossTail: s.y[^1] * s.x[^1] * float(e2 / (en * en).float) * s.unit
             of mixedTail: s.y[^1] * (s.x[^1] / e2.float) / en.float * s.unit
             of e2Tail: s.y[^1] * s.x[^1] / e2.float * s.unit
+            of powerTail: s.y[^1] * s.unit * pow(s.x[^1] / e2.float, s.n)
+            of zeroTail: 0.0.cm²
             of cf4Tail: s.y[^1] * (s.x[^1] / pow2(float(en * e2))) * s.unit
             of noTail: float(e2) * s.interpolate(e2) / en.float * s.unit
           else: float(e2) * s.interpolate(e2) / en.float * s.unit
       q = q * float64(s.scale)
     if lv.dip != 0.0: dip = lv.vibrationalDipole(en, ein)
+    if lv.windows.len > 0:
+      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float)
+      for w in lv.windows:
+        if inside(w, e2.float, lv.windowOpen):
+          t = t + float64(w.scale) * float(e2) * w.interpolate(e2) / en.float
+      q = q + t * lv.windows[0].unit
+      dip = 0.0.cm²
     when m.stepped:
       # (the old routines add the dipole term before the unit)
       if dip != 0.0.cm² and lv.tail == noTail:
@@ -408,10 +459,11 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
           t = float64(s.scale) * (float(e2) * s.interpolate(e2) / en.float)
         q = (vibrationalDipole(float64(lv.dip), ein.float, en.float) + t) * 1e-16.cm²
         dip = 0.0.cm²
-    let p = lv.population - 1
-    let w = pops.excited[p] / m.populations[p].deg
-    q = q * w
-    dip = dip * w
+    if lv.population > 0:
+      let p = lv.population - 1
+      let w = pops.excited[p] / m.populations[p].deg
+      q = q * w
+      dip = dip * w
   of rotation:
     let r = m.rotor
     let aj = float64(lv.j)
@@ -467,7 +519,7 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
     q = if enp > s.x[^1]:
           if lv.sigma.f == 0.0:
             float64(lv.factor) * s.y[^1] * power(s.x[^1] / enp, s.n) * s.unit
-          else: b.c.bornExcitation(lv.sigma.f, ein, en)
+          else: b.c.bornExcitation(float64(lv.sigma.f), ein, en)
         else:
           # (the ratio of the oscillator strengths in single precision)
           let factor = if lv.sigma.f == 0.0: float64(lv.factor)
@@ -477,6 +529,10 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
   if lv.dampAbove > 0.0 and en.float > lv.dampAbove:
     q = q * sqrt(lv.dampAbove / en.float)
     if q < 0.0.cm²: q = 0.0.cm²
+  if lv.rotState >= 0:
+    let w = pops.rotation[lv.rotState] * lv.weight
+    q = q * w
+    dip = dip * w
   if lv.dimer:
     q = q * b.dimer
     dip = dip * b.dimer
@@ -487,7 +543,8 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
   case lv.peq
   of peqElastic:
     let e0 = if lv.gateAbs: abs(ein.float) else: ein.float
-    if (if lv.gateEnergy > 0.0: en.float > lv.gateEnergy
+    if (if lv.gateEnergy > 0.0:
+          (if lv.gateInclusive: en.float >= lv.gateEnergy else: en.float > lv.gateEnergy)
         elif lv.gateInclusive: en.float >= lv.gate * e0
         else: en.float > lv.gate * e0):
       g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
@@ -520,12 +577,34 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
   if lv.peq in {peqHalf, peqBorn, peqRatio} and en.float > lv.pq1Above:
     g.peqin[j, i] = b.pq1
 
-proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context) =
+proc h2Attachment(a: Attach, en: eV, c: Context, pops: Populations): float64 =
+  let h = a.h2
+  let s = a.sigma
+  let x = en.float
+  let e = pops.rotationEnergy
+  let n = h.strengths.len
+  block resonances:
+    for k in countdown(n, 1):
+      if x < h.threshold - e[k]: break resonances
+      let t = h.amp * h.strengths[k - 1] * pops.rotation[k] *
+              exp(-((x - h.threshold + e[k]) / h.width))
+      result = if k == n: t else: result + t
+    if x < h.threshold: break resonances
+    result = result + h.amp * pops.rotation[0] * exp(-((x - h.threshold) / h.width))
+    if x < s.x[0]: break resonances
+    if x <= s.x[^1]: result = result + float(s.at(en, 0.0.eV, c))
+    if x <= h.highAt: break resonances
+    result = result + h.highAmp * exp(-((x - h.highAt) / h.highWidth))
+
+proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context,
+                pops: Populations, iso: float64) =
   for k, a in m.attachment:
     let s = a.sigma
     let x = en.float
+    if a.isoPeq: g.peqel[4, i] = iso
     g.qatt[k + 1, i] =
       case a.formula
+      of h2Attachment: h2Attachment(a, en, c, pops)
       of cf3brAttachment:
         if x > 2.0: 0.0
         else:
@@ -537,13 +616,19 @@ proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context) 
         if s.x.len > 0 and
            (a.openBelow or (if a.fromStart: x >= s.x[0] else: x > s.x[0])) and
            (s.beyond != zero or (if a.beforeEnd: x < s.x[^1] else: x <= s.x[^1])):
-          float(s.at(en, 0.0.eV, c)) * (if a.threeBody: c.density else: 1.0)
+          var v = float(s.at(en, 0.0.eV, c)) * (if a.threeBody: c.density else: 1.0)
+          for f in a.factors: v = v * float64(f)
+          v
         else: 0.0
   when m.attachment.len == 1:
     g.q[4, i] = g.qatt[1, i]
 
 proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
   ## the cross sections of the gas described by m (g zeroed before)
+  var inp = inp
+  when m.alwaysModel2: inp.naniso = 2
+  when m.forceModel2:
+    if inp.naniso != 0: inp.naniso = 2
   describe(m, inp, g)
   when m.roundedOffsets:
     # (int(float32(0.5 + e / ESTEP)), as these routines)
@@ -556,7 +641,11 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
   let pops = populations(m, g, inp.kT)
   var b = Bin(iso: if inp.naniso == 2: 0.0 else: 0.5, naniso: inp.naniso)
   b.c = Context(am2: float64(m.ionisation.am2), c: float64(m.ionisation.c),
-                eion: float64(m.e3).eV, negative: m.negative)
+                eion: float64(m.e3).eV, negative: m.negative,
+                bb: bbconst.cm²•eV)
+  when m.bbBohr > 0.0:
+    const (a0, ry) = (m.bbBohr, m.bbRydberg)
+    b.c.bb = (16.0 * arccos(-1.0) * a0 * a0 * ry * ry / emass2).cm²•eV
   when m.dimer.gas > 0:
     b.dimer = inp.percent(m.dimer.gas) / 100.0 *
       (float64(m.dimer.temperature) / (273.1499938964844 + inp.tempc)) * inp.torr / 760.0
@@ -572,7 +661,14 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     b.en = e.eV
     b.c.r = relativistic(e)
     let (qela, qmom, pq2) = elasticAt(m.elastic, b.en, pops.bend)
-    when m.fixedModel1:
+    when m.forceModel2:
+      if inp.naniso == 0:
+        g.q[2, i] = qmom.float
+        g.peqel[2, i] = 0.0
+      else:
+        g.q[2, i] = qela.float
+        g.peqel[2, i] = pq2
+    elif m.fixedModel1:
       g.q[2, i] = qela.float
       g.peqel[2, i] = 0.5 + float((qela - qmom) / qela)
     elif m.isotropic:
@@ -596,7 +692,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     when m.fixedModel1:
       g.peqel[3, i] = 0.5
       if e > 2.0 * g.e[3]: g.peqel[3, i] = g.peqel[2, i - ioffion[0]]
-    attachment(m, g, i, b.en, b.c)
+    attachment(m, g, i, b.en, b.c, pops, b.iso)
     for j in 1 .. m.levels.len:
       level(m, j, b, g.ei[j].eV, pops, g, i, ioffn)
     when m.elastic.minusLevels.b > 0:
@@ -605,6 +701,11 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
       g.q[2, i] = g.q[2, i] - sum
       when m.elastic.minusFloor > 0.0:
         if g.q[2, i] <= 0.0: g.q[2, i] = m.elastic.minusFloor
+  when m.ninBy.len > 0:
+    for (e, n) in m.ninBy:
+      if inp.efinal > e:
+        g.nin = n
+        return
   when m.keepLastAt:
     if inp.efinal == g.ei[g.nin]: return
   when m.cutStrict:

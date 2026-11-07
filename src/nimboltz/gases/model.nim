@@ -36,7 +36,7 @@ type
     power        ## falls off as (x_end / E)^n from the last value
     born         ## Born-Bethe cross section of an allowed transition (`f`)
     bethe        ## Bethe ionisation cross section times `fraction`
-    countingShare  ## `fraction` of the counting ionisation
+    countingShare  ## `fraction` (times `tailScale`) of the counting ionisation
                    ## (`Ionisation.counting`)
     zero         ## nothing
 
@@ -54,12 +54,14 @@ type
     beyond*: Beyond
     n*: float64            ## `power`: the exponent
     f*: float32            ## `born`: oscillator strength
+    fd*: float64           ## `born`: if not 0, the strength in double precision
     tailScale*: float32 = 1.0  ## `born`, `bethe`: factor of the continuation
     fraction*: float32     ## `bethe`: share of the total
     clamp*: bool           ## table values below 0 are taken as 0
     upTo*: float64         ## > 0: the table only up to this energy (eV)
     bornForm*: BornForm    ## `born`: its energy factor
     zeroBelow*: bool       ## nothing at or below the table's first energy
+    zeroUnder*: bool       ## nothing below the table's first energy
 
   LowEnergy* = enum
     lowNone
@@ -88,6 +90,7 @@ type
     alwaysAnisotropic*: bool
       ## model 2 (1 - eps, total cross section, KEL = 2) whatever NANISO
     epsConstantBelow*: bool  ## eps = its first value below the table
+    scale*: float64 = 1.0    ## factor of the cross sections (D2 0.988)
     mert*: Mert
     bend*: Bend
     isotropicBelow*: float64
@@ -211,6 +214,8 @@ type
     crossTail     ## y_end x_end E' / E²
     mixedTail     ## y_end x_end / (E' E)
     e2Tail        ## y_end x_end / E'
+    powerTail     ## y_end (x_end / E')^n (`Sigma.n`)
+    zeroTail      ## nothing
     noTail        ## the table's last interval continued
     cf4Tail       ## y_end x_end / (E E')² (CF4, see bugs/QUESTIONS.md Q-10)
 
@@ -270,6 +275,16 @@ type
     clampTotal*: bool       ## the sum taken as 0 if below
     openAbove*: float64     ## > 0: open above this energy (eV) instead of ein
     dimer*: bool            ## times the density of `GasModel.dimer`
+    windows*: seq[Sigma]
+      ## tables added to the dipole term inside their range (both ends
+      ## included), each times its scale, at the energy after the gain for
+      ## a superelastic level (E' y(E') / E): resonances (N2O, C2H4)
+    windowOpen*: bool       ## the ends of the windows excluded
+    rotState*: int = -1     ## >= 0: times the population of rotational
+                            ## state J = rotState (`GasModel.rotor`) and
+                            ## `weight`
+    weight*: float64 = 1.0
+    closedAbove*: float64 = Inf  ## eV
     ratio*: seq[float64]    ## `peqMomentumRatio`
     dipoleUpTo*: float64 = Inf  ## `peqDipole`
     eloss*: float64         ## != 0: energy loss in double precision
@@ -297,9 +312,22 @@ type
 
   AttachFormula* = enum
     attachTable
+    h2Attachment
+      ## H2: resonances from the rotational states, then the table and a
+      ## high resonance (`Attach.h2`)
     cf3brAttachment
       ## (0.0353 / √E exp(-E²/9e-6) + exp(-E / 0.0588)) 27.4e-16 cm² up to
       ## 2 eV (CF3Br)
+
+  H2Attachment* = object
+    ## Σ_J amp strength_J pop_J exp(-(E - threshold + E_J) / width) from
+    ## J = n down to 1, open from threshold - E_J on; amp pop_0 exp(-(E -
+    ## threshold) / width) above threshold; the table; highAmp exp(-(E -
+    ## highAt) / highWidth) above highAt (single precision constants of
+    ## Magboltz as their doubles)
+    threshold*, width*, amp*: float64
+    strengths*: seq[float64]
+    highAt*, highWidth*, highAmp*: float64
 
   Dimer* = object
     ## a level of the dimers of a gas (Hg2 in mercury): tables for pure
@@ -316,6 +344,10 @@ type
     threeBody*: bool        ## table for 760 Torr, 20 °C: times the density
     openBelow*: bool        ## not closed below the table (extrapolated)
     formula*: AttachFormula
+    factors*: seq[float32]  ## further factors, in order (single precision)
+    isoPeq*: bool           ## sets the attachment's (unused) anisotropy
+                            ## parameter to the isotropic value
+    h2*: H2Attachment
 
   Rotor* = object
     ## rotational states: of a linear molecule, energies B0 J (J + 1) for
@@ -334,6 +366,16 @@ type
     dipole*: float64        ## cm² eV
     dipoleScale*: float32 = 1.0   ## factor of the dipole transitions
     dipoleCutoff*: float64 = Inf  ## dipole transitions up to this energy
+    ladder*: seq[int]
+      ## states J = 0 .. jMax with energies built from the losses of the
+      ## levels J -> J + 2 (ladder[J]): E(J + 2) = E(J) + ein; E(1) = oddBase
+      ## (H2, D2)
+    oddBase*: float64
+    fixBelow*: float64
+      ## kT (eV); below it the ortho/para ratio stays at its room temperature
+      ## value: the even states' total = odd total × fixRatio.mul /
+      ## fixRatio.den
+    fixRatio*: tuple[mul, den: float64]
     weights*: array[2, float64] = [1.0, 1.0]
       ## statistical weights of even and odd J (nuclear spin; N2 6 and 3)
     enhance*: Sigma
@@ -381,6 +423,9 @@ type
                              ## tables (`peqBorn`, `peqRatio`)
     magnitudeOffsets*: bool  ## bins after a loss from |ein| (superelastic)
     negative*: Negative      ## Born-Bethe values below 0
+    bbBohr*, bbRydberg*: float64
+      ## > 0: the routine's own Born-Bethe constant 16 π a₀² Ry² / (2 m c²)
+      ## from these a₀ (cm) and Ry (eV)
     penning*: Penning
     firstCut*: int = 1       ## EFINAL cuts the levels from this one on
     minLevels*: int          ## but keeps at least these
@@ -390,6 +435,11 @@ type
     stepped*: bool
       ## an old routine: energies summed up bin by bin (EN = EN + ESTEP)
       ## instead of the grid's
+    alwaysModel2*: bool
+      ## NANISO taken as 2 whatever the input (C2H4)
+    forceModel2*: bool
+      ## anisotropic means model 2 (NANISO 1 taken as 2), all KEL and KIN
+      ## 2; isotropic: the momentum transfer cross section with parameter 0
     fixedModel1*: bool
       ## elastic and ionisation anisotropic, model 1, whatever NANISO (KEL
       ## 1 for Q(2) and Q(3)), the rest isotropic; the ionisation's angles
@@ -402,6 +452,9 @@ type
     cutStrict*: bool         ## EFINAL cuts the levels strictly above it
     keepLastAt*: bool        ## no cut if EFINAL is the last level's energy
     dimer*: Dimer
+    ninBy*: seq[tuple[efinal: float64, nin: int]]
+      ## instead of the cut: the number of levels used, the first one whose
+      ## EFINAL is below the input's
 
 # ------------------------------------------------------------ builders
 
