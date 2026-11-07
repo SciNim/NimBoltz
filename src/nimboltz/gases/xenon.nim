@@ -637,7 +637,7 @@ const xenonModel* = GasModel(
   elastic: Elastic(interp: logLog, xTotal: widen(xel), total: widen(yel),
                    xMomentum: widen(xen), momentum: widen(ymom),
                    xEps: widen(xeps), eps: widen(yeps),
-                   low: constant, lowBelow: float64(xen[1]), lowQ: 122.0e-16),
+                   low: constant, lowBelow: f64(xen, 1), lowQ: 122.0e-16),
   # charge states 1..3 (Bethe above the tables) make up what the shells
   # leave of the counting ionisation
   ionisation: Ionisation(

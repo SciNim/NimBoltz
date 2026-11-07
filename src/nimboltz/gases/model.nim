@@ -50,9 +50,11 @@ type
     beyond*: Beyond
     n*: float64            ## `power`: the exponent
     f*: float32            ## `born`: oscillator strength
-    bornScale*: float32 = 1.0  ## `born`: factor of the Born-Bethe value
+    tailScale*: float32 = 1.0  ## `born`, `bethe`: factor of the continuation
     fraction*: float32     ## `bethe`: share of the total
     clamp*: bool           ## table values below 0 are taken as 0
+    upTo*: float64         ## > 0: the table only up to this energy (eV)
+    zeroBelow*: bool       ## nothing at or below the table's first energy
 
   LowEnergy* = enum
     lowNone
@@ -76,8 +78,26 @@ type
     low*: LowEnergy
     lowBelow*: float64   ## eV
     lowQ*: float64       ## cm²
+    lowQMomentum*: float64  ## cm² (0: lowQ)
     lowIsotropic*: bool  ## `constant`: model 2 parameter 0 below lowBelow
+    alwaysAnisotropic*: bool
+      ## model 2 (1 - eps, total cross section, KEL = 2) whatever NANISO
+    epsConstantBelow*: bool  ## eps = its first value below the table
     mert*: Mert
+    bend*: Bend
+    isotropicBelow*: float64
+      ## eV; below it momentum transfer and isotropic (if anisotropic)
+    minusLevels*: Slice[int]
+      ## levels (rotations) whose sum is taken out of the elastic cross
+      ## section
+
+  Bend* = object
+    ## elastic scattering of the molecules in excited bending states
+    ## (CO2): their tables, the share of them in the tables of the gas, and
+    ## the populations whose sum gives their share in the gas
+    total*, momentum*: seq[float64]   ## on Elastic.xTotal (1e-16 cm²)
+    share*: float64
+    populations*: seq[int]
 
   IonTerm* = object
     ## part of an ionisation channel: a cross section times a factor
@@ -90,11 +110,16 @@ type
       ## whole sum
     seriesOnset*: seq[float32]
     seriesFactor*: seq[float64]     ## (charge / 3, double in Magboltz)
+    shiftFrom*: int
+      ## > 0: the table at the energy less the difference of this channel's
+      ## ionisation energy and that of channel `shiftFrom` (O2+ A, B from
+      ## the X table)
 
   IonChannel* = object
     eion*, eoby*: float32   ## ionisation energy, Opal-Beaty energy (eV)
     eobyScale*: seq[float32]  ## if given, Opal-Beaty energy = eion times
                               ## these factors, in order
+    eobyBase*: int            ## > 0: the eion of this channel instead
     nc0*: int               ## Auger electrons
     ec0*: float32           ## their energy (eV)
     text*: string
@@ -107,6 +132,8 @@ type
     channels      ## each channel from its terms, then renormalised
     grossCounting ## helium: charge 1 = 2 counting - gross, charge 2 =
                   ## gross - counting
+    single        ## one cross section (`counting`) in Q(3), from
+                  ## `countingFrom` on
 
   Renormalisation* = enum
     noRenorm
@@ -120,10 +147,20 @@ type
     channels*: seq[IonChannel]
     renorm*: Renormalisation
     gateInclusive*: bool     ## anisotropic from gate × eion on (not above)
+    subtract*: seq[Subtraction]  ## after the renormalisation, in order
+    peqZero*: bool           ## anisotropy parameter 0 (not isotropic)
+                             ## below the gates
     counting*: Sigma         ## counting (or, for helium, gross) cross section
     countingFrom*: float32   ## zero up to this energy (eV)
     gross*: Sigma            ## helium: gross ionisation
     grossBethe*: float32     ## helium: Bethe of the gross = Bethe / this
+
+  Subtraction* = object
+    ## a channel taken out of another (excited ion states, Auger electrons
+    ## of inner shells): target -= factor × channel, up to `below` (eV)
+    target*, channel*: int
+    factor*: float64 = 1.0
+    below*: float64 = Inf
 
   LevelKind* = enum
     tabulated     ## `sigma`, plus a vibrational dipole term (`dip`)
@@ -133,11 +170,26 @@ type
                   ## the excited state over its degeneracy
     scaled        ## another level's table at energies scaled by the ratio
                   ## of the energy losses, times `factor` (helium n > 4)
+    rotation      ## J -> J ± 2 of a linear rotor, Born quadrupole
+                  ## (`GasModel.rotor`)
+    dipoleRotation  ## a rotational transition, Born dipole: from state
+                    ## `state` (or J = `j`) with line strength `strength`
+                    ## (or J + 1, J); `GasModel.rotor`
+    tabulatedRotation
+      ## J <-> J + 2 (`j` the lower J) from a table of the excitation
+      ## (`sigma`), plus `Rotor.resonance`; the de-excitation by detailed
+      ## balance with the ratio of the degeneracies; populations of
+      ## `GasModel.rotor`; above `Rotor.scaleAbove` times scaleAbove / E, all
+      ## times `Rotor.tabulatedScale` (O2)
 
   SuperelasticTail* = enum
     ## a superelastic level whose energy after the gain lies above the table
     squareTail    ## y_end (x_end / E')²
     inverseTail   ## y_end x_end / E
+    crossTail     ## y_end x_end E' / E²
+    mixedTail     ## y_end x_end / (E' E)
+    e2Tail        ## y_end x_end / E'
+    noTail        ## the table's last interval continued
     cf4Tail       ## y_end x_end / (E E')² (CF4, see bugs/QUESTIONS.md Q-10)
 
   DipoleScale* = enum
@@ -156,6 +208,10 @@ type
                   ## the elastic model 1 parameter
     peqScreened   ## as `peqElastic`, from gate × |ein| on, in anisotropy
                   ## model 2 only
+    peqDipole     ## Born dipole scattering: 1 - eps from
+                  ## `GasModel.dipoleAngles` at E / |ein| (up to
+                  ## `dipoleUpTo`; above, the elastic scattering's at the
+                  ## energy after the loss); from `gateEnergy` on
 
   PeqBelow* = enum
     belowIso      ## 0.5, or 0 in anisotropy model 2
@@ -176,7 +232,23 @@ type
     peq*: PeqKind
     peqBelow*: PeqBelow
     gate*: float64 = 2.0    ## `peqElastic`: anisotropic above gate × ein
+    gateAbs*: bool          ## gate × |ein|
+    gateInclusive*: bool    ## from gate × ein on (not above)
     gateEnergy*: float64    ## `peqElastic`: > 0: above this energy instead
+    dampAbove*: float64     ## > 0: times sqrt(dampAbove / E) above it
+    extra*: Sigma           ## `tabulated`: added (e.g. a triplet table to
+                            ## a Born-Bethe level); `beyond` set if used
+    clampTotal*: bool       ## the sum taken as 0 if below
+    dipoleUpTo*: float64 = Inf  ## `peqDipole`
+    eloss*: float64         ## != 0: energy loss in double precision
+    j*: int                 ## `rotation`, `dipoleRotation`: initial J
+    up*: bool               ## `rotation`, `dipoleRotation`: J up (else down)
+    state*: int             ## `dipoleRotation`: initial state (1-based) of
+                            ## `Rotor.states` (0: by J)
+    strength*: float64      ## `dipoleRotation`: line strength (0: J + 1, J)
+    aj*: float64            ## `dipoleRotation` from a state: the J of the
+                            ## 2J + 1 of the cross section (Magboltz's AJIN;
+                            ## not always the state's)
     ground*: int            ## > 0: weighted by the ground state population
                             ## of this mode (`popPairs`)
     pq1Above*: float64 = Inf  ## eV
@@ -193,7 +265,38 @@ type
 
   Attach* = object
     text*: string
-    sigma*: Sigma           ## zero outside the table
+    sigma*: Sigma           ## zero below the table (and above, if `zero`)
+    fromStart*: bool        ## open at the table's first energy already
+    beforeEnd*: bool        ## `zero`: closed at the table's last energy
+    threeBody*: bool        ## table for 760 Torr, 20 °C: times the density
+
+  Rotor* = object
+    ## rotational states: of a linear molecule, energies B0 J (J + 1) for
+    ## J = jStart, jStart + jStep .. jMax; or tabulated states (energy,
+    ## J, statistical weight). Boltzmann populations w (2J + 1) exp(-E/kT),
+    ## normalised. Quadrupole (J ± 2) and dipole (J ± 1 or tabulated)
+    ## transitions in the Born approximation.
+    b0*: float64            ## eV
+    jStart*, jMax*: int
+    jStep*: int = 1         ## 2: even (CO2) or odd (O2) J only
+    states*: seq[RotState]
+    resonance*: Sigma       ## `tabulatedRotation`: inside its table only
+    tabulatedScale*: float64 = 1.0
+    quadrupole*: float64    ## cm²
+    scaleAbove*: float64    ## quadrupole: above it times scaleAbove / E
+    dipole*: float64        ## cm² eV
+    dipoleScale*: float32 = 1.0   ## factor of the dipole transitions
+    dipoleCutoff*: float64 = Inf  ## dipole transitions up to this energy
+
+  RotState* = tuple
+    e: float64              ## eV
+    j: float64
+    weight: float64
+
+  DipoleAngles* = object
+    ## angular distribution of Born dipole scattering, 1 - eps over E / |ein|
+    ## (excitation and de-excitation)
+    xUp*, xDown*, eps*: seq[float64]
 
   Penning* = object
     fraction*, length*, time*: float32
@@ -214,17 +317,33 @@ type
     levels*: seq[Level]
     populations*: seq[Population]
       ## Boltzmann populations of excited vibrational states
+    rotor*: Rotor
+    dipoleAngles*: DipoleAngles
     momentumRatio*: float32  ## momentum transfer over total of vibrational
                              ## tables (`peqBorn`, `peqRatio`)
     magnitudeOffsets*: bool  ## bins after a loss from |ein| (superelastic)
     negative*: Negative      ## Born-Bethe values below 0
     penning*: Penning
     firstCut*: int = 1       ## EFINAL cuts the levels from this one on
+    minLevels*: int          ## but keeps at least these
+    isotropic*: bool
+      ## an old routine: isotropic whatever NANISO (anisotropy kinds 0 and
+      ## parameters left 0), the momentum transfer cross section as elastic
+    stepped*: bool
+      ## an old routine: energies summed up bin by bin (EN = EN + ESTEP)
+      ## instead of the grid's
 
 # ------------------------------------------------------------ builders
 
 func widen*[T](a: openArray[T]): seq[float64] =
   for v in a: result.add float64(v)
+
+func f64*[T](a: openArray[T], k: int): float64 =
+  ## element k of a table, widened. (Not `float64(a[k])`: for a `const`
+  ## float32 table Nim folds that from the decimal literal, unrounded, even
+  ## in code run at run time.)
+  for i, v in a:
+    if i == k: return float64(v)
 
 func table*[X, Y](x: openArray[X], y: openArray[Y], unit = 1e-16.cm²,
                   interp = linear, clamp = false, scale = 1.0'f32): Sigma =
@@ -242,11 +361,11 @@ func withBorn*[X, Y](x: openArray[X], y: openArray[Y], f: float32,
                      unit = 1e-18.cm², scale = 1.0'f32): Sigma =
   ## a table, Born-Bethe with oscillator strength f above its end
   Sigma(x: widen(x), y: widen(y), unit: unit, scale: scale, beyond: born,
-        f: f, bornScale: 1.0)
+        f: f, tailScale: 1.0)
 
 func bornOnly*(f: float32): Sigma =
   ## Born-Bethe alone
-  Sigma(beyond: born, f: f, bornScale: 1.0)
+  Sigma(beyond: born, f: f, tailScale: 1.0)
 
 func withBethe*[X, Y](x: openArray[X], y: openArray[Y], fraction: float32,
                       unit = 1e-16.cm², clamp = false): Sigma =

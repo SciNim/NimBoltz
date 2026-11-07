@@ -5,9 +5,12 @@
 ##
 ##   compare [-t tol] gas...
 ##
-## Each gas runs on the 72 cases of tests/gasdump (EFINAL, NANISO,
+## Each gas runs on the 72 cases of tests/gasdump plus EFINAL 1 and 15 (EFINAL, NANISO,
 ## temperature, alone or 10 % in argon). Every output is compared, floats
 ## to a relative tolerance (default 1e-12), integers and strings exactly.
+## The anisotropy parameter of a process is skipped where its cross section
+## is zero in both (the Monte Carlo never picks the process there; the
+## routines leave different values there).
 ## Prints one line per gas and the largest relative difference; exit code 1
 ## if any gas differs.
 
@@ -33,6 +36,7 @@ var a, b: GasXsec   # (large: static storage)
 type Worst = object
   rel: float64
   where: string
+  differ, total: int  # values not bit-identical / compared
 
 proc relDiff(x, y: float64): float64 =
   if x == y: 0.0
@@ -43,6 +47,8 @@ proc compare(a, b: GasXsec, worst: var Worst, fails: var seq[string]) =
   ## the outputs MIXER and MIXERT read (as tests/gasdump/dumpdiff -u)
   template num(name: string, x, y: float64) =
     let r = relDiff(x, y)
+    inc worst.total
+    if r > 0.0: inc worst.differ
     if r > worst.rel: worst = Worst(rel: r, where: name)
     if r > tol and fails.len < 8:
       fails.add name & ": " & formatFloat(x, ffDefault, 17) & " vs " &
@@ -53,6 +59,13 @@ proc compare(a, b: GasXsec, worst: var Worst, fails: var seq[string]) =
     for r in rs:
       for c in 1 .. nEnergyBins:
         num(astToStr(field) & "(" & $r & "," & $c & ")", a.field[r, c], b.field[r, c])
+  template angles(field, xs: untyped, rs: untyped, xrow: int = 0) =
+    ## anisotropy parameters where the cross section xs is open
+    for r in rs:
+      let xr = if xrow > 0: xrow else: r
+      for c in 1 .. nEnergyBins:
+        if a.xs[xr, c] != 0.0 or b.xs[xr, c] != 0.0:
+          num(astToStr(field) & "(" & $r & "," & $c & ")", a.field[r, c], b.field[r, c])
   template elems(field: untyped, rs: untyped) =
     for r in rs:
       when a.field[r] is float64: num(astToStr(field) & "(" & $r & ")", a.field[r], b.field[r])
@@ -66,14 +79,15 @@ proc compare(a, b: GasXsec, worst: var Worst, fails: var seq[string]) =
   if nion <= 1: qrows.add 3
   if natt <= 1: qrows.add 4
   rows(q, qrows)
-  rows(peqel, (if nion <= 1: @[2, 3] else: @[2]))
+  angles(peqel, q, [2])
+  if nion <= 1: angles(peqel, q, [3])
   if nion > 1:
     rows(qion, 1 .. nion)
-    rows(peqion, 1 .. nion)
+    angles(peqion, qion, 1 .. nion)
     elems(eion, 1 .. nion)
   if natt > 1: rows(qatt, 1 .. natt)
   rows(qin, 1 .. nin)
-  rows(peqin, 1 .. nin)
+  angles(peqin, qin, 1 .. nin)
   for c in 1 .. nin:
     for r in 1 .. 3: num("penfra(" & $r & "," & $c & ")", a.penfra[r, c], b.penfra[r, c])
   elems(e, 2 .. 4); elems(kel, 1 .. 6)
@@ -94,7 +108,7 @@ for gas in gases:
   var worst: Worst
   var fails: seq[string]
   var n = 0
-  for ef in [0.3, 4.0, 40.0, 400.0, 8000.0, 200000.0]:
+  for ef in [0.3, 1.0, 4.0, 15.0, 40.0, 400.0, 8000.0, 200000.0]:
     for an in 0 .. 2:
       for t in [20.0, -50.0]:
         for fr in [100.0, 10.0]:
@@ -126,7 +140,7 @@ for gas in gases:
             fails.add &"case EFINAL={ef} NANISO={an} T={t} share={fr}:"
             fails.add f
   if fails.len == 0:
-    echo &"ok    gas{gas} ({n} cases, largest relative difference {worst.rel:.2g} in {worst.where})"
+    echo &"ok    gas{gas} ({n} cases, largest relative difference {worst.rel:.2g} in {worst.where}, {worst.differ} of {worst.total} values not bit-identical)"
   else:
     inc failed
     echo &"FAIL  gas{gas}"
