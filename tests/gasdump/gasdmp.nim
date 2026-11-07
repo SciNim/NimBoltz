@@ -2,8 +2,7 @@
 ## Build: nim c -d:release --path:../../port gasdmp.nim
 
 import std/[os, strutils]
-import nimboltz/frt, nimboltz/legacy/[commons, setupt]
-import nimboltz/gases
+import nimboltz/[frt, deck, conditions, tables, mixture, gases]
 
 var
   q, peqel: Arr2[float64, 6, 4000]
@@ -22,7 +21,7 @@ var
   scrpt: array[1..300, string]
   scrptn: array[1..10, string]
   name: string
-  nin, nion, natt, nnull, last: int
+  nin, nion, natt, nnull: int
   virl: float64
   x: GasXsec      # gases rewritten in nimboltz/gases
 
@@ -43,35 +42,19 @@ for line in stdin.lines:
   if w.len == 0: continue
   let ngs = parseInt(w[0])
   let fracg = parseFloat(w[5])
-  inpt.ngas = 2
-  gasn.ngasn[1] = ngs
-  ratio.frac[1] = fracg
-  gasn.ngasn[2] = 2
-  ratio.frac[2] = 100.0 - fracg
-  if fracg == 100.0: inpt.ngas = 1
-  for j in inpt.ngas + 1 .. 6:
-    gasn.ngasn[j] = 0
-    ratio.frac[j] = 0.0
-  setp.nmax = 1
-  inpt.ipen = 0
-  thrm.ithrm = 1
-  inpt.efinal = parseFloat(w[2])
-  inpt.tempc = parseFloat(w[3])
-  inpt.torr = parseFloat(w[4])
-  setp.efield = 1000.0
-  bfld.bmag = 0.0
-  bfld.btheta = 0.0
-  setupt(last)
-  inpt.naniso = parseInt(w[1])
-  # grid exactly as in MIXERT
-  inpt.estep = inpt.efinal / float64(inpt.nstep)
-  let ehalf = inpt.estep / 2.0
-  mix2.eg[1] = ehalf
-  for i in 2 .. 4000:
-    let aj = float64(i - 1)
-    mix2.eg[i] = ehalf + inpt.estep * aj
-    mix2.eroot[i] = sqrt(mix2.eg[i])
-  mix2.eroot[1] = sqrt(ehalf)
+  var d = Deck(ngas: 2, nmax: 1, ithrm: 1, efinal: parseFloat(w[2]),
+               tempc: parseFloat(w[3]), torr: parseFloat(w[4]), efield: 1000.0)
+  d.gas[1] = ngs
+  d.percent[1] = fracg
+  d.gas[2] = 2
+  d.percent[2] = 100.0 - fracg
+  if fracg == 100.0:
+    d.ngas = 1
+    d.gas[2] = 0
+    d.percent[2] = 0.0
+  let cond = conditions(d)
+  let naniso = parseInt(w[1])
+  let grid = energyGrid(d.efinal, nEnergyBins)  # as in MIXERT
   # all outputs start out zero
   reset q; reset peqel; reset qin; reset peqin; reset qion; reset peqion
   reset qatt; reset qnull; reset penfra; reset ev; reset ei; reset kin
@@ -82,11 +65,9 @@ for line in stdin.lines:
   name = repeat(' ', 25)
   nin = 0; nion = 0; natt = 0; nnull = 0; virl = 0.0
   reset x
-  let inp = GasInput(e: mix2.eg, naniso: inpt.naniso, kT: inpt.akt,
-                     efinal: inpt.efinal, estep: inpt.estep,
-                     penning: inpt.ipen != 0, torr: inpt.torr,
-                     tempc: inpt.tempc,
-                     mixture: mixtureOf(gasn.ngasn, ratio.frac))
+  let inp = GasInput(e: grid.e, naniso: naniso, kT: cond.kT, efinal: d.efinal,
+                     estep: grid.estep, penning: false, torr: d.torr, tempc: d.tempc,
+                     mixture: mixtureOf(d.gas, d.percent))
   crossSections(ngs, inp, x)
   # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
   q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei
@@ -102,8 +83,8 @@ for line in stdin.lines:
   f.put wk; f.put efl; f.put ng1; f.put eg1; f.put ng2; f.put eg2
   for s in scrpt: f.putStr(s, 50)
   for s in scrptn: f.putStr(s, 50)
-  f.put mix2.eg; f.put mix2.eroot
+  f.put grid.e; f.put grid.eroot
   for k in 1 .. 4: f.put default(array[4000, float64])   # QT1..QT4 (unused)
-  f.put dens.den
-  f.put inpt.naniso; f.put inpt.estep; f.put inpt.akt
+  f.put default(array[4000, float64])                    # DEN (unused)
+  f.put naniso; f.put grid.estep; f.put cond.kT
 f.close()

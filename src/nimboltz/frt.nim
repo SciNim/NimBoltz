@@ -61,10 +61,6 @@ func fstr*(s: string, n: int): string =
   ## assignment to CHARACTER*n: pad with blanks or truncate
   if s.len >= n: s[0 ..< n] else: s & repeat(' ', n - s.len)
 
-# ---------------------------------------------------------------- RNG
-
-var rng* = initMagRng(stdout)  ## Magboltz's drand48 stream
-
 # ---------------------------------------------------------------- STOP
 
 proc fstop*() {.noreturn.} =

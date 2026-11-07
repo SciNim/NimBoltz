@@ -1,7 +1,6 @@
 ## Fortran-style arrays: column major, 1-based, fixed size.
 ##
-## Used by the legacy code and, until MIXER is rewritten, by the collision
-## tables.
+## Used by the collision tables and the gas cross sections.
 
 type
   Arr2*[T; N1, N2: static int] = object

@@ -4,33 +4,39 @@ How the Magboltz 11.21 port becomes idiomatic Nim. Agreed 2026-10-31.
 
 ## Starting point
 
-`src/nimboltz/legacy/` holds the translation of `magboltz-11.21.f` (with
-the fixes MB-01..MB-29 of the `fixes` branch of the Magboltz fork) that
-`tools/f2nim` produced. It matches the gfortran build bit for bit. The
-translator is retired: a better translator cannot produce idiomatic code.
-From now on `legacy/` is edited by hand and shrinks as routine families
-are rewritten. f2nim stays for one-off jobs (extracting DATA tables,
+`tools/f2nim` translated `magboltz-11.21.f` (with the fixes MB-01..MB-29
+of the `fixes` branch of the Magboltz fork) into `src/nimboltz/legacy/`,
+bit for bit equal to the gfortran build. The translator is retired: a
+better translator cannot produce idiomatic code. `legacy/` was then
+rewritten by hand, routine family by routine family, and removed
+(2026-11-07). f2nim stays for one-off jobs (extracting DATA tables,
 diffing a new Magboltz release). Defects found later (MB-30 onwards) are
-fixed by hand in both `legacy/` and the fork, so that the bitwise
+fixed by hand in both the port and the fork, so that the bitwise
 comparison keeps holding.
 
 ## Order of work
 
 1. ELIMIT family (done first: small, and it settles the patterns below).
-2. SETUP / MIXER / OUTPUT: inputs, the tables, the results. MIXER and
-   MIXERT done (`mixture.nim`, one builder for both table layouts).
+2. SETUP / MIXER / OUTPUT: inputs, the tables, the results. Done: MIXER
+   and MIXERT (`mixture.nim`, one builder for both table layouts), READIN
+   (`deck.nim`), SETUP* (`conditions.nim`), PRNTER*, OUTPUT* (`report.nim`)
+   and the main program (`magboltz.nim`).
 3. The MONTE family. Done: the main Monte Carlo (MONTE, MONTEA/B/C and
    the thermal versions; `drift.nim`) and the avalanche runs behind the
    SST and time-of-flight analyses (MONTEFT, MONTEFTA/G/H, MONTEFD and
    the thermal versions; `cascade.nim`), one generic driver each, and
    their analyses (the eight ALPCALC drivers, SST, PT, TOF, FRIEDLAND;
-   `townsend.nim`). Left in `legacy/`: OUTPUT*, SETUP*, PRNTER*.
-4. Gas cross sections (95 kLOC): data tables as data, shared interpolation
-   helpers.
+   `townsend.nim`, driven by `analyses.nim`).
+4. Gas cross sections (95 kLOC): first every GASn by hand, bit for bit
+   (`gases/`, done), then one generic engine with a compile-time
+   description per gas.
 
-COMMON blocks are replaced family by family. While old and new code
-coexist, a small bridge in `legacy/` (e.g. `legacy/elimits.nim`) reads the
-COMMON blocks, calls the new code and writes the results back.
+COMMON blocks were replaced family by family, with small bridges in
+`legacy/` while old and new code coexisted. Now the state of a run is a
+`Run[M]` value (`simulation.nim`; M = `ColdMixture` or `WarmMixture`
+selects the thermal variants at compile time) and what lives across decks
+(random numbers, position rings of MONTE, the table memory) a `Session`
+(`magboltz.nim`). No module keeps global state.
 
 ## Variants are compile-time parameters
 
@@ -68,8 +74,8 @@ Rules:
   (TCFMAX, the null-collision bounds, grows by 5% when exceeded); such data
   belongs to the walker (`NullBounds`).
 - Random numbers come from a `var MagRng` that belongs to the walker. For
-  now that is still the one global stream, so that results stay comparable
-  with Fortran.
+  now that is the one stream of the `Session`, passed to every run in
+  Magboltz's order, so that results stay comparable with Fortran.
 
 Known leftovers that matter here: table layout is Magboltz's (`cf[ie, i]`
 with the energy bin fastest), which is poor for the per-bin scan over
@@ -82,7 +88,7 @@ segments, errors from the scatter of the segment estimates, diffusion from
 pairs of collisions NCORLN apart, kept in a ring of NCOLM positions
 (64 MB). Each geometry has its own estimators (B ⊥ E splits the y-z spread
 along and across the drift; B at other angles rotates the tensor to the
-frame of E). The bridge `legacy/montes.nim` keeps one ring per Magboltz
+frame of E). The `Session` (`magboltz.nim`) keeps one ring per Magboltz
 routine across runs, because the Fortran arrays are static and MONTEC
 reads unfilled entries when NCOLM exceeds two segments (reduced NSCALE
 only). Merging walkers (threads) needs per-walker rings and a different
@@ -165,8 +171,8 @@ including the SST cases that failed with the printed errors.
 
 ```
 src/nimboltz/
-  legacy/        translated Magboltz, shrinking
-  frt.nim        Fortran runtime for legacy (arrays, FORMAT, powi, ...)
+  frt.nim        Fortran FORMAT output, list-directed input, fstop
+  farrays.nim    Fortran-style 2D arrays (collision tables, gases)
   rm48.nim       Magboltz's random numbers, bit-exact
   vec3.nim       small 3-vector
   tables.nim     CollisionTable, NullBounds
@@ -184,5 +190,14 @@ src/nimboltz/
                  and pulsed Townsend, time of flight, Friedland estimate
   mixture.nim    GasXsec (output of a gas routine), collision tables of a
                  mixture (MIXER, MIXERT)
-  magboltz_main.nim  program: reads the deck on stdin
+  gases.nim, gases/  cross sections of the 80 gases (GAS1..GAS80)
+  deck.nim       the input deck (READIN)
+  conditions.nim constants and what follows from a deck (SETUP, SETUPT)
+  simulation.nim state of one run: Run[M], ColdMixture, WarmMixture,
+                 collision counts and frequencies (COLF)
+  analyses.nim   Townsend analyses after MONTE (ALPCALC*, avalanche runs)
+  report.nim     printout (PRNTER*, OUTPUT*, OUTPUT1, OUTPUT2*)
+  magboltz.nim   the program: Session, per-deck driver (MIXER, ELIMIT,
+                 MONTE calls)
+  magboltz_main.nim  entry point: decks on stdin
 ```

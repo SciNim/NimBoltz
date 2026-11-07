@@ -51,7 +51,7 @@ type
 
 func geometryOf*(bmag, btheta: float64): FieldGeometry =
   ## Field geometry; B ∥ E includes the angle -180° (MONTE dispatches -180°
-  ## to MONTEC, see legacy/montes.nim)
+  ## to MONTEC, see simulation.monteGeometry)
   if bmag == 0.0: fgElectric
   elif btheta == 0.0 or abs(btheta) == 180.0: fgParallel
   elif btheta == 90.0: fgCrossed
