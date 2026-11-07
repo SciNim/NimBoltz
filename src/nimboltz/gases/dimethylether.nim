@@ -594,12 +594,11 @@ proc dimethylEther*(inp: GasInput, g: var GasXsec) =
     (38.0, " DIPOLE               F=.00072861  ELOSS= 38.0"),
     (39.0, " DIPOLE               F=.00036430  ELOSS= 39.0")])
   # rotational constant B0 (eV), populations of the rotational states J
-  # (weights 2J - 1 in Magboltz)
   let b0 = 2.5e-4
   var pj: array[1 .. 26, float64]
   for k in 1 .. 26:
     let ak = float64(k)
-    pj[k] = (2.0 * ak - 1.0) * exp(-ak * (ak + 1.0) * b0 / inp.kT)
+    pj[k] = (2.0 * ak + 1.0) * exp(-ak * (ak + 1.0) * b0 / inp.kT)
   var sum = 1.0
   for k in 1 .. 26: sum = sum + pj[k]
   let frot0 = 1.0 / sum
@@ -802,9 +801,8 @@ proc dimethylEther*(inp: GasInput, g: var GasXsec) =
     efac = sqrt(1.0 - g.ei[57] / en)
     g.qin[57, i] = avib3 * ln((efac + 1.0) / (efac - 1.0)) / en
     e2 = en + g.ei[58]
-    # (Magboltz multiplies by EN * EIN(58) where EN + EIN(58) is meant)
     ares = if e2 <= xvibh[0] or e2 >= xvibh[^1]: 0.0
-           else: ampv3r * (en * g.ei[58]) * lin(xvibh, yvibh, e2) / en
+           else: ampv3r * e2 * lin(xvibh, yvibh, e2) / en
     g.qin[57, i] = (g.qin[57, i] + ares) * apop3 * 1e-16
     if en >= 2.0: g.peqin[57, i] = g.peqel[2, i - ioffn[56]]
     if en >= g.ei[58]:

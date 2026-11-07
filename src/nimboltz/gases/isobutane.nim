@@ -236,7 +236,6 @@ proc isobutane*(inp: GasInput, g: var GasXsec) =
     for k in 1 .. 3:
       g.qion[k, i] = 0.0
       g.peqion[k, i] = iso
-    g.peqion[2, i] = 0.5   # (Magboltz resets PEQIN(2) instead)
     if en >= g.eion[1]:
       g.qion[1, i] = if en > xion[^1]: bethe.ionisation(r) else: lin(xion, yion, en) * 1e-16
       if en > 2.0 * g.eion[1]: g.peqion[1, i] = g.peqel[2, i - ioffion[0]]

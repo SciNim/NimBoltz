@@ -1105,14 +1105,13 @@ proc oxygen*(inp: GasInput, g: var GasXsec) =
           g.qin[55, i] = lin(xexc1, yexc1, en, 2.0) * 1e-16
           angles(55, 6.0)
       elif k == 58:
-        # b1Σg+ (1/E² above); Magboltz sets the angular distribution of
-        # level 61 instead of 59
+        # b1Σg+ (1/E² above)
         if en > g.ei[59]:
           g.qin[59, i] = lin(xexc2, yexc2, en, 2.0) * 1e-16
-          if en > 3.0 * g.ei[59]: g.peqin[61, i] = g.peqel[2, i - ioffn[58]]
-    # V1 sum 21-30: table yvib21, but the tail of yvib20 above it
+          if en > 3.0 * g.ei[59]: g.peqin[59, i] = g.peqel[2, i - ioffn[58]]
+    # V1 sum 21-30 (1/E above the table)
     if en > g.ei[72]:
-      g.qin[72, i] = if en > float64(xvib[^1]): float64(yvib20[^1]) * (float64(xvib[^1]) / en) * 1e-16
+      g.qin[72, i] = if en > float64(xvib[^1]): float64(yvib21[^1]) * (float64(xvib[^1]) / en) * 1e-16
                      else: lin(xvib, yvib21, en) * 1e-16
       angles(72, 6.0)
     for (k, c) in herzberg:

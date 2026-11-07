@@ -7,12 +7,9 @@
 ## vibrations with Boltzmann populations and their superelastic partners
 ## (tables, Born dipoles for V4 and V3), higher harmonics, three triplets
 ## and 54 Born dipole levels; bremsstrahlung on C and Cl (levels 67, 68,
-## counted only above 1 keV). Neither Q(1) nor Q(3) is set. Upstream
-## prints the triplet scale (format 392) on every call.
+## counted only above 1 keV). Neither Q(1) nor Q(3) is set.
 
-import common, ../frt
-
-const fmt392 = "(' ATRP=',D12.3)"
+import common
 
 let xen: array[180, float32] = [
   0.0001, 0.001, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018,
@@ -419,9 +416,7 @@ proc carbonTetrachloride*(inp: GasInput, g: var GasXsec) =
   for k in 1 .. g.nin:
     for l in 1 .. 3: g.penfra[l, k] = 0.0
 
-  # upstream prints the triplet scale on every call
   let atrp = 2.4000000953674316
-  fwrite(fmt392, atrp)
   let ampvibh = float64(1.0'f32)
   let amptrp = 2.549999952316284 * atrp
   let bethe = bornBethe(19.9, 211.7)
@@ -458,63 +453,62 @@ proc carbonTetrachloride*(inp: GasInput, g: var GasXsec) =
   proc tail(c: Curve, e: float64): float64 = c.y[^1] * pow2(c.x[^1] / e)
   let triplets = [(16, curve(xtr1, ytr1)), (20, curve(xtr2, ytr2)),
                   (34, curve(xtr3, ytr3))]
-  # Born dipole levels: level, level whose threshold opens it (upstream
-  # typo for 19), oscillator strength
+  # Born dipole levels: level, oscillator strength
   let dipoles = [
-    (10, 10, 0.0010750'f32),
-    (11, 11, 0.0017033'f32),
-    (12, 12, 0.0048633'f32),
-    (13, 13, 0.0249610'f32),
-    (14, 14, 0.0278980'f32),
-    (15, 15, 0.0070671'f32),
-    (17, 17, 0.0288320'f32),
-    (18, 18, 0.0956970'f32),
-    (19, 18, 0.1763500'f32),
-    (21, 21, 0.0292240'f32),
-    (22, 22, 0.0586590'f32),
-    (23, 23, 0.0781810'f32),
-    (24, 24, 0.0873450'f32),
-    (25, 25, 0.0796810'f32),
-    (26, 26, 0.0861850'f32),
-    (27, 27, 0.1019200'f32),
-    (28, 28, 0.0949180'f32),
-    (29, 29, 0.0862500'f32),
-    (30, 30, 0.0732900'f32),
-    (31, 31, 0.0657260'f32),
-    (32, 32, 0.0899530'f32),
-    (33, 33, 0.0388000'f32),
-    (35, 35, 0.0559550'f32),
-    (36, 36, 0.1788500'f32),
-    (37, 37, 0.2165600'f32),
-    (38, 38, 0.1121400'f32),
-    (39, 39, 0.0675670'f32),
-    (40, 40, 0.0598940'f32),
-    (41, 41, 0.1618000'f32),
-    (42, 42, 0.1459100'f32),
-    (43, 43, 0.1274800'f32),
-    (44, 44, 0.1165800'f32),
-    (45, 45, 0.1956100'f32),
-    (46, 46, 0.2747400'f32),
-    (47, 47, 0.2233600'f32),
-    (48, 48, 0.1623400'f32),
-    (49, 49, 0.1372200'f32),
-    (50, 50, 0.0793350'f32),
-    (51, 51, 0.0825970'f32),
-    (52, 52, 0.0131500'f32),
-    (53, 53, 0.0132170'f32),
-    (54, 54, 0.0129800'f32),
-    (55, 55, 0.0126190'f32),
-    (56, 56, 0.0118100'f32),
-    (57, 57, 0.0053895'f32),
-    (58, 58, 0.0058077'f32),
-    (59, 59, 0.0113160'f32),
-    (60, 60, 0.0111700'f32),
-    (61, 61, 0.0102720'f32),
-    (62, 62, 0.0082257'f32),
-    (63, 63, 0.0063630'f32),
-    (64, 64, 0.0044384'f32),
-    (65, 65, 0.0025793'f32),
-    (66, 66, 0.0007708'f32),
+    (10, 0.0010750'f32),
+    (11, 0.0017033'f32),
+    (12, 0.0048633'f32),
+    (13, 0.0249610'f32),
+    (14, 0.0278980'f32),
+    (15, 0.0070671'f32),
+    (17, 0.0288320'f32),
+    (18, 0.0956970'f32),
+    (19, 0.1763500'f32),
+    (21, 0.0292240'f32),
+    (22, 0.0586590'f32),
+    (23, 0.0781810'f32),
+    (24, 0.0873450'f32),
+    (25, 0.0796810'f32),
+    (26, 0.0861850'f32),
+    (27, 0.1019200'f32),
+    (28, 0.0949180'f32),
+    (29, 0.0862500'f32),
+    (30, 0.0732900'f32),
+    (31, 0.0657260'f32),
+    (32, 0.0899530'f32),
+    (33, 0.0388000'f32),
+    (35, 0.0559550'f32),
+    (36, 0.1788500'f32),
+    (37, 0.2165600'f32),
+    (38, 0.1121400'f32),
+    (39, 0.0675670'f32),
+    (40, 0.0598940'f32),
+    (41, 0.1618000'f32),
+    (42, 0.1459100'f32),
+    (43, 0.1274800'f32),
+    (44, 0.1165800'f32),
+    (45, 0.1956100'f32),
+    (46, 0.2747400'f32),
+    (47, 0.2233600'f32),
+    (48, 0.1623400'f32),
+    (49, 0.1372200'f32),
+    (50, 0.0793350'f32),
+    (51, 0.0825970'f32),
+    (52, 0.0131500'f32),
+    (53, 0.0132170'f32),
+    (54, 0.0129800'f32),
+    (55, 0.0126190'f32),
+    (56, 0.0118100'f32),
+    (57, 0.0053895'f32),
+    (58, 0.0058077'f32),
+    (59, 0.0113160'f32),
+    (60, 0.0111700'f32),
+    (61, 0.0102720'f32),
+    (62, 0.0082257'f32),
+    (63, 0.0063630'f32),
+    (64, 0.0044384'f32),
+    (65, 0.0025793'f32),
+    (66, 0.0007708'f32),
   ]
 
   for i, en in inp.bins:
@@ -602,15 +596,12 @@ proc carbonTetrachloride*(inp: GasInput, g: var GasXsec) =
       g.qin[6, i] =
         if en > v1.x[^1]: tail(v1, en) * 1e-16 * apopgs
         else: lin(v1, en) * apopgs * 1e-16
-    # V3: upstream's tail takes E - EIN(8), and every bin but the first is
-    # scaled from QIN(7,1) (index typo), which leaves the superelastic V3
-    # practically zero
+    # V3
     if en > 0.0:
       let eup = en + g.ei[8]
-      g.qin[7, i] =
-        if eup > v3.x[^1]: tail(v3, en - g.ei[8]) else: eup * lin(v3, eup) / en
+      g.qin[7, i] = if eup > v3.x[^1]: tail(v3, eup) else: eup * lin(v3, eup) / en
       g.qin[7, i] = g.qin[7, i] + vibrationalDipole(float64(0.076'f32), g.ei[7], en) * 4.0
-      g.qin[7, i] = g.qin[7, 1] * apopv3 / degv3 * 1e-16
+      g.qin[7, i] = g.qin[7, i] * apopv3 / degv3 * 1e-16
     if en > g.ei[8]:
       g.qin[8, i] = if en > v3.x[^1]: tail(v3, en) else: lin(v3, en)
       g.qin[8, i] = g.qin[8, i] + vibrationalDipole(float64(0.076'f32), g.ei[8], en) * 4.0
@@ -627,8 +618,8 @@ proc carbonTetrachloride*(inp: GasInput, g: var GasXsec) =
         if en > c.x[^1]: tail(c, en) * 1e-16 * amptrp
         else: lin(c, en) * 1e-16 * amptrp
       if en > 2.0 * g.ei[l]: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-    for (l, gate, f) in dipoles:
-      if en <= g.ei[gate]: continue
+    for (l, f) in dipoles:
+      if en <= g.ei[l]: continue
       g.qin[l, i] = dipole(f, g.ei[l], r, en) / (en + g.ei[l] + g.e[3])
       if g.qin[l, i] < 0.0: g.qin[l, i] = 0.0
       if en > 2.0 * g.ei[l]: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]

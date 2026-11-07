@@ -520,8 +520,7 @@ proc ethane*(inp: GasInput, g: var GasXsec) =
 
     for j in 11 .. 55:
       let ein = g.ei[j]
-      # (level 20 starts at the energy of level 21 in Magboltz)
-      if en <= (if j == 20: g.ei[21] else: ein): continue
+      if en <= ein: continue
       let x = dissociation[j]
       g.qin[j, i] =
         if x.f == 0.0: lin(x.x, x.y, en, x.falloff) * x.unit

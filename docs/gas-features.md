@@ -222,69 +222,15 @@ Magboltz this only matters to direct calls. The modules override their own copy.
 CO, DME, methanol and ethanol use A0=0.5291772083e-8 (others 0.52917720859e-8) before computing
 BBCONST, so their Born dipoles pass their own constant (`dipole(..., bb)`).
 
-## Upstream quirks kept bit for bit (to report as MB-44+)
+## Upstream defects and open questions
 
-- GAS1 CF4 superelastic V4/V1/V3 tail above the table: `Y*(X/(EN*(EN-EIN))**2)`,
-  i.e. Y*X/(E*E')^2, drops ~1e-5 at the table end (table branch is detailed balance).
-- GAS1 CF4 level 46 uses F=0.00198, description says 0.00189.
-- GAS4 He3 DATA Y41F(53)=0.0007827; He4 has 0.0000727 (neighbours .0000786, .0000678): typo.
-- GAS7 Xe `3710 QIN(2,I)=Y4DSUM(N4DSUM)*...` should be QIN(23,I): above the 4D-sum
-  table, level 23 is 0 and level 2 (1S4 resonance) is overwritten by the 4D tail.
-- GAS7 Xe levels 25-27 (2P3/2P2/2P1) never copy PEQEL: isotropic, unlike the other 47.
-- GAS8 CH4 level 33 EIN=20.5, description 20.25.
-- GAS9 C2H6 level 20 gated on EIN(21) instead of EIN(20).
-- GAS11 iC4H10 `IF(NANISO.EQ.2)PEQIN(2,I)=0.0` should be PEQION(2,I).
-- GAS14 H2O SUMTRP sums QIN(230) (a dipole) instead of QIN(241) (higher triplets); the sums are not used, no effect.
-- GAS15 O2 level 59 (b1Σg+) sets PEQIN(61,I) instead of PEQIN(59,I): level 59 stays
-  isotropic, level 61 gets level 59's distribution between 3 EIN(59) and 6 eV.
-- GAS15 O2 level 72 (V1 sum 21-30) takes its tail above the table from YVIB20, not YVIB21.
-- GAS16 N2 level 119 takes the ratio's energy above its table from XSNG12(NSNG13), not XSNG13
-  (both end at 100 eV, no effect).
-- GAS16 N2 QION(9), QION(10): at exactly EN = EION(10) both stay 0, and QION(10) at exactly
-  120 eV (`.LT.120` / `.GT.120`).
-- GAS18 N2O level 156 (high triplets) gates its angular distribution on 2 EIN(147), not 2 EIN(156).
-- GAS18 N2O level 134 (300) tests the table end XV101(NV300) instead of XV300(NV300)
-  (both 4.25 eV, no effect); `QELM=YELMT(1)` for QELMT below XEN(1) (1e-9 eV, never reached).
-- GAS19 C2H4 PEQEL(2)=0.0 for NANISO=0 (0.5 elsewhere); unreachable, the routine sets NANISO=2.
-  Description of the H+ channel says ELOSS=18.46, EION is 18.66.
-- GAS20 C2H2 cuts the last level with `EFINAL.LT.EIN(7)`, the others with `.LE.`.
-- GAS21 H2 level 98 (D band) starts at EIN(91), not EIN(98) (`727 IF(EN.LE.EIN(91))`).
-- GAS22 D2 levels 115 and 132 start at EIN(114) and EIN(131) (`744 IF(EN.LE.EIN(114))`, `761`).
-- GAS22 D2 level 105 uses EIN(104) in the logarithm and in the denominator (f=.003391).
-- GAS23 CO vibration 115 (3V1) has the angular-distribution test inverted:
-  `IF(EN.GT.4.0) GO TO 425`, anisotropic only below 4 eV (the other vibrations `.LT.`).
-- GAS23 CO level 199 starts at EIN(194) (`IF(EN.LE.EIN(194)) GO TO 825`).
-- GAS23 CO level 128 (a3Π v=5-10) never copies PEQEL (isotropic), unlike 123-127.
-- GAS23 CO Q(3) (counting ionisation) is not set below XION(1) or above 5 keV: stale values.
-- GAS25 DME resonance of level 57 uses `AMPV3R*(EN*EIN(58))` where `(EN+EIN(58))` is meant
-  (cf. level 55).
-- GAS25 DME rotational populations weight (2J-1), CO (2J+1).
-- GAS25 DME total Q(1) leaves out the excitations 61..110 (SUMINEL has rot, vib, att, ion only).
-- GAS25 DME level 58 gate `EN.LT.EIN(58)`, the others `.LE.`.
-- GAS29 C2F6 carbon K-shell: `IF(EN.LE.XION11(J)) GO TO 151` jumps to the loop's own
-  CONTINUE (152 meant), so QION(11) always extrapolates the table's last interval.
-- GAS29 C2F6 QION(5) (C2F4+) share of QIONC is .0045 to 3 keV, .00045 in the Born-Bethe branch.
-- GAS29 C2F6 `DO 395 L=4,6` sets PEQIN(L) where PEQIN(2L-1) is meant: the inelastic V6/V5/V7
-  (7, 9, 11) stay isotropic, levels 4, 5, 6 get their values; the gate tests EIN(2L).
-- GAS29 C2F6 level 8 opens with EIN(7) (same energy); PEQIN = PEQEL above 20 eV only inside the
-  VHIGH branch, which ends at XVIBR(NVIBR) = 12.5 eV: dead code. Q(1) is never set.
-- GAS30 SF6 level 23 text says F=0.1211, the code DIP(0.01211, ...).
-- GAS30 SF6 Q(4)=0 after the attachment (QATT only); PEQION opens at 2 EION inclusive for
-  channels 6, 7 (`.LT.`), above it for the others; F K-shell gated `.LE.EION`, others `.LT.`.
-- GAS30 SF6 APOPGS is normalised and then reset to 1.0 (excited states normalised, ground not).
-- GAS35 ethanol: the sums are commented out, Q(1) is not set.
-- GAS31 NH3 (MB-44 candidates, rotational populations): level 2 (J 0->1) weights PJ(2) (population of J=1) where the ground state PJ(1) is meant; level 3 (2->1) has PJ(5)*(AJG2+1.0) for K=1 (should be AJG2-1.0, cf. all other levels); level 4 (1->2) keeps AJ=2.0 from level 3 (AJG set twice, AJ not reset -> (2AJ+1)=5 not 3); PEQIN(32,I)=PEQIN(32,I-IOFFN(32)) copies PEQIN (always 0), not PEQEL; harmonics level 33 not gated by EIN(33) (resonance 4.5-10.5 eV only); rotations and their angular distributions skipped above 1 keV; Q(1) not set.
-- GAS38 F2: SCRPT(2) ' ELASTIC       FLOURINE' (spelling, cosmetic).
-- GAS39 CS2: QATT(1) is a three-body attachment "AT 40TORR" scaled by a fixed 1.3, not by the actual pressure (O2/NO scale with TORR/TEMPC).
-- GAS41 CD4: EOBY(1)=7.3 while E(3)=EION=12.99 (Opal-Beaty split 0.56·EION; maybe intended).
-- GAS43 C2H2F4: EFINAL>1000 adds 3 bremsstrahlung levels (NIN+3) whose EIN stay 0 and KIN unset (loop ran to the old NIN); Q(1) never set; K-shell C uses GO TO 151 quirk (last interval extrapolated) as GAS29; penning block commented out; FAC=(273.15+20.0)·TORR/((TEMPC+273.15)·760) (3-body).
-- GAS44 TMA: AUGKC/AUGKN K-shell subtraction from QION(1) sits inside the `EN > 2*EION(3)` angular branch, so between 285 eV (C-K) / 401.6 eV (N-K) and 803 eV the K-shells are double counted; NAME not set for NANISO=1; Bethe uses DEN(1) not DEN(I) (DEN=0 anyway); bremsstrahlung QIN(38..40) computed but NIN never reaches them.
-- GAS45 C3F4H2: active debug WRITE(6,9011) inside the energy loop prints 4000 CSV lines (EN,QELA,QMMT,QSUP,...) every call — still in fork44 (candidate MB-44: comment out). Penning loop DO 61 K=61,NIN never runs (NIN=29). QIONC/QIONG computed, unused; Q(1) never set; brems levels 30-32 EIN=0 when EFINAL>1000; QIN(1..12) zeroed above 1 keV.
-- GAS46 n-propanol: SCRPT(111) 'ELOSS= 13.25' but EIN(75)=13.35 (and comment 13.35); XTRP4(4) 18.8 vs isopropanol 17.8.
-- GAS49 C4F7N: NVIBL=NVIBH=19 while XVIBL/YVIBL have 21 and XVIBH/YVIBH 20 points (tails unused); mass E(2) uses 114.0416 (C3F4H2, copied; C4F7N is 195.04); N K-shell QION(5)/EION(5) beyond NION=4 (never used, not subtracted by CRFAC, only set above the F K-edge 685.4 eV, otherwise stale); SCRPT(4) says ELOSS=35.0 but EION(2)=38.0; debug WRITE 9011 per bin + two WRITE(6,*) headers AFTER the table (candidate MB-44 with GAS45).
-- GAS52 C3F8: K-shells (C, F) not subtracted from the other channels (no CRFAC, unlike C2F6/C2H2F4) and C not ×3 / F not ×8; same DO 395 PEQIN(L) for PEQIN(2L-1) quirk as GAS29; SCRPT(2) says CARBON HEXAFLUORIDE (C3F8 is octafluoropropane).
-- GAS53 OZONE: Q(4,I)=0.0 after the attachment block, so QATT(1..2) (O-, O2-) are neither in Q(4) nor in the total Q(1). MIXER reads QATT, so transport is fine; only Q(1)/printout of the total is low.
-- GAS54 Hg dimer: NIN cut uses EFINAL.LT.EIN (others .LE.); QELA (XEL/YEL table) computed every bin and never used; GFRAC from the LAST slot with NGASN=54 (two slots of Hg = only one counted).
-- GAS55 H2S: SCRPT(9) 'ROT R2 EL0SS' (zero for O); below XEL(2) elastic is YEL(2), not YEL(1); rotations R1/R2 (QIN1-4) subtracted from Q(2) (elastic was total incl. rotations — intended?).
-- GAS60 SiH4: QIN(25) gated on EN>EIN(26) and QIN(27) on EIN(28) (next level's threshold); PEQIN(24)=PEQEL(2,I-IOFFN(25)) uses level 25's offset; brems QIN(50/51) beyond NIN.
-- GAS61 CCl4 (MB-44 candidate, real effect): QIN(7,I)=QIN(7,1)*APOPV3/DEGV3*1.D-16 (index 1 for I) -> V3 superelastic = first-bin value *1e-16 again (~1e-33 cm2), detailed balance with V3 lost; V3 super tail uses (EN-EIN(8)) not (EN+EIN(8)); QIN(19) gated EN>EIN(18); active debug WRITE(6,392) ATRP every call; SCRPT(3) CCL3+ says ELOSS=13.35 but EION(1)=11.35; ion gates mix .LE./.LT.; Q(3) zero; brems levels 67/68 KIN unset.
+The irregularities found while writing these modules are reported in the
+Magboltz fork (`~/src/Magboltz`, branch `fixes`): `bugs/README.md` MB-44 …
+MB-56 are fixed in the fork and here in the same way, so the bitwise
+comparison holds against `fixes`. The cases whose intent is unclear are
+kept as in Magboltz 11.21 and listed in `bugs/QUESTIONS.md` (Q-01 … Q-13:
+descriptions that disagree with the code, CF4 superelastic tails, C2F6 QION(5)
+share, C3F8 K-shells, CS2 three-body attachment, CD4 EOBY, C4F7N E(3) and
+nitrogen K-shell, HFO-1234ze Penning loop, Hg2 GFRAC, the totals Q(1)).
+Harmless inconsistencies (`.LT.`/`.LE.` thresholds, unread quantities) are
+in the README's "Inconsistencies left unchanged".

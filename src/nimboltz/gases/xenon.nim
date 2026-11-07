@@ -741,10 +741,6 @@ proc xenon*(inp: GasInput, g: var GasXsec) =
         g.qin[j + 1, i] = 0.0
         continue
       g.qin[j + 1, i] = x.excitation(ein, g.e[3], r, en, ionFirst = false)
-      if j + 1 == 23 and en > x.x[^1]:
-        # Magboltz 11.21 stores the 4D tail in level 2 (1S4)
-        g.qin[2, i] = g.qin[23, i]
-        g.qin[23, i] = 0.0
-      if en > 2.0 * ein and j + 1 notin 25 .. 27:   # (isotropic in Magboltz)
+      if en > 2.0 * ein:
         g.peqin[j + 1, i] = g.peqel[2, i - ioffn[j]]
   g.dropLevelsAbove(inp.efinal)

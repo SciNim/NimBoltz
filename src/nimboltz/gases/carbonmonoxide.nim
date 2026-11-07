@@ -1037,24 +1037,22 @@ proc carbonMonoxide*(inp: GasInput, g: var GasXsec) =
       let j = k + 113
       if en <= g.ei[j] or en > c.x[^1]: continue
       g.qin[j, i] = logLog(c, en) * 1e-16
-      # (level 115 has the test inverted in Magboltz)
-      if (j == 115) == (en <= 4.0): g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
+      if en >= 4.0: g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
 
-    # a3Π (123..128): none above 1 keV; level 128 stays isotropic
+    # a3Π (123..128): none above 1 keV
     block aPi:
       if en > 1000.0: break aPi
       for k, c in aTriplets:
         let j = k + 123
         if en <= g.ei[j]: break aPi
         g.qin[j, i] = table(c, en)
-        if j != 128: g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
+        g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
     for (j, c) in triplets:
       if en <= g.ei[j]: continue
       g.qin[j, i] = table(c, en)
       g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
     for (j, f) in dipoles:
-      # (level 199 starts at the energy of level 194 in Magboltz)
-      if en <= g.ei[if j == 199: 194 else: j]: continue
+      if en <= g.ei[j]: continue
       g.qin[j, i] = nonNegative(dipole(f, g.ei[j], r, en, bbco) / (en + g.e[3] + g.ei[j]))
       if en > 2.0 * g.ei[j]: g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
 

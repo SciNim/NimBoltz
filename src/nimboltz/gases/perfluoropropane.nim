@@ -472,9 +472,8 @@ proc perfluoropropane*(inp: GasInput, g: var GasXsec) =
       if en > vr[0] and en <= vr[1]:
         g.qin[m, i] = logLog(xvibr, yvibr, en) * 1e-16 * anvres[k]
     # angular distributions: dipole (Okhrimovskyy) for the vibrations,
-    # isotropic for the resonances. Upstream quirk (as GAS29): for the
-    # inelastic ones the result goes to levels 4..6 (PEQIN(L) for
-    # PEQIN(2L-1)), tested on the resonance energies.
+    # isotropic for the resonances; the inelastic ones are tested on the
+    # (equal) resonance energies
     for l in 1 .. 3:
       let epoint = en / abs(g.ei[2 * l])
       if epoint > enrts[^1]: fwrite(fmt922, epoint, enrts[^1], en)
@@ -486,7 +485,7 @@ proc perfluoropropane*(inp: GasInput, g: var GasXsec) =
       if en <= g.ei[2 * l]:
         g.peqin[2 * l, i] = 0.0
         continue
-      g.peqin[l, i] = 1.0 - lin(enrot, yepsr, epoint)
+      g.peqin[2 * l - 1, i] = 1.0 - lin(enrot, yepsr, epoint)
     for k in 4 .. 6: g.peqin[2 * k, i] = 0.0
     # 2V3 and the high vibration (falloff 1/E² above the tables)
     if en > float64(xvib4[0]):

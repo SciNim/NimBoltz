@@ -349,11 +349,9 @@ proc trimethylamine*(inp: GasInput, g: var GasXsec) =
     g.peqion[3, i] = peq0
     if en > g.eion[3]:
       g.qion[3, i] = lin(xkshn, ykshn, en) * 1e-16
-      # upstream: the K-shells are taken out of the counting ionisation only
-      # above twice the nitrogen K-edge
-      if en > 2.0 * g.eion[3]:
-        g.peqion[3, i] = g.peqel[2, i - ioffion[2]]
-        g.qion[1, i] = g.qion[1, i] - augkc * g.qion[2, i] - augkn * g.qion[3, i]
+      if en > 2.0 * g.eion[3]: g.peqion[3, i] = g.peqel[2, i - ioffion[2]]
+    # K-shells taken out of the counting ionisation (MB-48)
+    g.qion[1, i] = g.qion[1, i] - augkc * g.qion[2, i] - augkn * g.qion[3, i]
     g.q[4, i] = 0.0
     g.qatt[1, i] = g.q[4, i]
     g.q[5, i] = 0.0

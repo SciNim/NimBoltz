@@ -8,13 +8,10 @@
 ## (the three-body channel has no data, MB-15). The same six vibrations with
 ## their resonances, the moderation level, five triplets (log-log, falloff
 ## 1/E²) and Born dipole dissociation; bremsstrahlung on N, C and F (levels
-## 27..29, above 1 keV; MB-21). No total cross section (Q(1) is not set);
-## upstream prints a debug table (format 9011) on every call.
+## 27..29, above 1 keV; MB-21). No total cross section (Q(1) is not set).
+## Mass and resonance table lengths per MB-47 (upstream has those of GAS45).
 
-import common, ../frt
-
-const fmt9011 = "(D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4," &
-  "',',D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4)"
+import common
 
 let xel: array[131, float32] = [
   0.0001, 0.001, 0.01, 0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 4.0,
@@ -277,7 +274,7 @@ proc c4f7n*(inp: GasInput, g: var GasXsec) =
   var inp = inp
   inp.naniso = 2
   g.describe(inp, " C4F7N 2025    ISOTROPIC", " C4F7N 2025  ANISOTROPIC",
-             mass = 114.0416)
+             mass = 195.0383)
   for k in 1 .. 6: g.kel[k] = 2
   g.scrp[2] = " ELASTIC   ANISOTROPIC C4F7N"
   g.e[3] = 11.0'f32
@@ -350,10 +347,8 @@ proc c4f7n*(inp: GasInput, g: var GasXsec) =
   let ampsing = float64(1.0'f32)
   var apop: array[6, float64]
   for k in 0 .. 5: apop[k] = exp(g.ei[k + 1] / inp.kT)
-  # upstream uses the first NVIBL = NVIBH = 19 points of the resonance
-  # tables (21 and 20 given)
-  let vibl = curve(xvibl[0 ..< 19], yvibl[0 ..< 19])
-  let vibh = curve(xvibh[0 ..< 19], yvibh[0 ..< 19])
+  let vibl = curve(xvibl, yvibl)
+  let vibh = curve(xvibh, yvibh)
   let vl = (vibl.x[0], vibl.x[^1])
   let vh = (vibh.x[0], vibh.x[^1])
   # triplets (log-log)
@@ -475,21 +470,6 @@ proc c4f7n*(inp: GasInput, g: var GasXsec) =
       g.qin[28, i] = logLin(ebrm, z6t, en) * 4e-24
       g.qin[29, i] = logLin(ebrm, z9t, en) * 7e-24
 
-    # upstream debug output
-    var qsup = g.qin[1, i]
-    for l in 2 .. 6: qsup = qsup + g.qin[l, i]
-    var qvib = g.qin[7, i]
-    for l in 8 .. 12: qvib = qvib + g.qin[l, i]
-    var qtrip = g.qin[14, i]
-    for l in [15, 16, 19, 22]: qtrip = qtrip + g.qin[l, i]
-    var qsing = g.qin[17, i]
-    for l in [18, 20, 21, 23, 24, 25, 26]: qsing = qsing + g.qin[l, i]
-    let qionsum = g.qion[1, i] + g.qion[2, i] + g.qion[3, i] + g.qion[4, i]
-    let qattsum = g.qatt[1, i] + g.qatt[2, i] + g.qatt[3, i] + g.qatt[4, i]
-    fwrite(fmt9011, en, qela, qmmt, qsup, qvib, g.qin[13, i], qtrip, qsing,
-           qionsum, qattsum, g.qatt[5, i])
-  fwriteList("--------------XSEC--------------")
-  fwriteList("EN,ELTOT,ELMT,SUP,VIB,MOD,TRIP,SING,ION,              QATT,QATT3B")
   g.dropLevelsAbove(inp.efinal)
   if g.nin < 6: g.nin = 6
   if inp.efinal > 1000.0: g.nin = g.nin + 3

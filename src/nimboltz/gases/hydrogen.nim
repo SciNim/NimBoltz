@@ -1006,8 +1006,7 @@ proc hydrogenModel(inp: GasInput, g: var GasXsec, para: bool) =
       g.qin[j, i] = if en > xefsg[^1]: dipole(f, g.ei[j], r, en) / (en + g.ei[j] + g.e[3])
                     else: lin(xefsg, yefsg, en) * 1e-16 * share
     for (j, f, factor) in dipoles:
-      # (level 98 starts at the energy of level 91 in Magboltz)
-      if en <= g.ei[if j == 98: 91 else: j]: continue
+      if en <= g.ei[j]: continue
       g.qin[j, i] = dipoleD(f, g.ei[j], r, en) / (en + g.ei[j] + g.e[3]) * factor
     for j in 19 .. 114:
       g.qin[j, i] = nonNegative(g.qin[j, i])

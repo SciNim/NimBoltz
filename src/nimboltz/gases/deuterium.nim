@@ -1176,16 +1176,12 @@ proc deuteriumModel(inp: GasInput, g: var GasXsec, ortho: bool) =
       g.qin[j, i] = if en > xefsg[^1]: dipole(f, g.ei[j], r, en) / (en + g.ei[j] + g.e[3])
                     else: lin(xefsg, yefsg, en) * 1e-16 * share
     for (j, f, factor) in dipoles:
-      # (levels 115 and 132 start at the energies of levels 114 and 131 in
-      # Magboltz)
-      if en <= g.ei[if j in [115, 132]: j - 1 else: j]: continue
+      if en <= g.ei[j]: continue
       g.qin[j, i] = dipoleD(f, g.ei[j], r, en) / (en + g.ei[j] + g.e[3]) * factor
-    # level 105: strength .003391 with the energy of level 104 in the
-    # logarithm and the denominator
     if en > g.ei[105]:
       g.qin[105, i] = float64(0.003391'f32) / (g.ei[105] * r.beta2) *
-        (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * g.ei[104])) - r.beta2) *
-        bbconst * en / (en + g.ei[104] + g.e[3])
+        (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * g.ei[105])) - r.beta2) *
+        bbconst * en / (en + g.ei[105] + g.e[3])
     for j in 19 .. 142:
       g.qin[j, i] = nonNegative(g.qin[j, i])
       if en > 2.0 * g.ei[j]: g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]

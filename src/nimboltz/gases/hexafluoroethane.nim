@@ -470,9 +470,7 @@ proc hexafluoroethane*(inp: GasInput, g: var GasXsec) =
       # K-shells (carbon twice, fluorine six times), taken out of the
       # channels above
       if en <= g.eion[11]: break ionisation
-      # upstream quirk: the table search jumps to its own end (GO TO 151
-      # for 152), so the last interval is always extrapolated
-      g.qion[11, i] = 2.0 * lin(xion11[^2 .. ^1], yion11[^2 .. ^1], en) * 1e-16
+      g.qion[11, i] = 2.0 * lin(xion11, yion11, en) * 1e-16
       if en > g.eion[12]:
         g.qion[12, i] = 6.0 * lin(xion12, yion12, en) * 1e-16
       let ssum = g.qion[11, i] + g.qion[12, i]
@@ -519,9 +517,8 @@ proc hexafluoroethane*(inp: GasInput, g: var GasXsec) =
       if en > xvibr[0] and en <= xvibr[^1]:
         g.qin[m, i] = logLog(xvibr, yvibr, en) * apop * 1e-16 * ampres
     # angular distributions: dipole (Okhrimovskyy) for the vibrations,
-    # 1 - EPSRES for the resonances. Upstream quirk: for the inelastic ones
-    # the result goes to levels 4..6 (PEQIN(L) for PEQIN(2L-1)), tested on
-    # the resonance energies.
+    # 1 - EPSRES for the resonances; the inelastic ones are tested on the
+    # (equal) resonance energies
     for l in 1 .. 3:
       let epoint = en / abs(g.ei[2 * l])
       g.peqin[2 * l - 1, i] = 1.0 - lin(enrts, yepsr, epoint)
@@ -531,7 +528,7 @@ proc hexafluoroethane*(inp: GasInput, g: var GasXsec) =
       if en <= g.ei[2 * l]:
         g.peqin[2 * l, i] = 0.0
         continue
-      g.peqin[l, i] = 1.0 - lin(enrot, yepsr, epoint)
+      g.peqin[2 * l - 1, i] = 1.0 - lin(enrot, yepsr, epoint)
     for k in 4 .. 6: g.peqin[2 * k, i] = 1.0 - epsres
     # 2V7 and the high vibration (resonance only); above 20 eV all
     # vibrations scatter as elastic, when the last one is open

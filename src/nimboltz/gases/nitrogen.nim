@@ -863,8 +863,7 @@ proc nitrogen*(inp: GasInput, g: var GasXsec) =
     (curve(xtrp14, ytrp14), curve(xtrp14, ytp14m), 1.5, 0.0),
     (curve(xsng11, ysng11), curve(xsng11, ysg11m), 0.0, 0.0663),
     (curve(xsng12, ysng12), curve(xsng12, ysg12m), 0.0, 0.0601),
-    # above its table Magboltz takes the ratio's energy from xsng12
-    (curve(xsng13, ysng13), curve(xsng12, ysg13m), 0.0, 0.0828),
+    (curve(xsng13, ysng13), curve(xsng13, ysg13m), 0.0, 0.0828),
     (curve(xsng14, ysng14), curve(xsng14, ysg14m), 0.0, 0.1390),
     (curve(xsng15, ysng15), curve(xsng15, ysg15m), 0.0, 0.2650)]
   let singlets = [(122, 0.0108'f32), (123, 0.0237), (124, 0.0117), (125, 0.1152)]

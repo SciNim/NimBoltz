@@ -810,8 +810,7 @@ proc nitrousOxide*(inp: GasInput, g: var GasXsec) =
       if en <= g.ei[j]: continue
       g.qin[j, i] = if en > c.x[^1]: c.y[^1] * pow(c.x[^1] / en, 1.5) * 1e-16
                     else: logLog(c.x, c.y, en) * 1e-16
-      # (level 156 uses the threshold of level 147 in Magboltz)
-      if en > 2.0 * g.ei[if j == 156: 147 else: j]:
+      if en > 2.0 * g.ei[j]:
         g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
     for j in 140 .. 179:
       let f = strengths[j]

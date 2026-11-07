@@ -493,14 +493,12 @@ proc ammonia*(inp: GasInput, g: var GasXsec) =
                 0.00323, 0.00344, 0.00108]
   let vh = (float64(xvibh[0]), float64(xvibh[^1]))
   # rotations: level, sum in brackets, J and J' of the (2J+1) J' factor,
-  # populations and K² of the states. Upstream: level 2 takes the
-  # population of J=1 (not the ground state), level 3 has K²=-1 for K=1,
-  # level 4 keeps J=2 from level 3.
+  # populations and K² of the states (MB-46: levels 2-4)
   let rotations = [
     (1, false, 1.0, 1.0, @[(2, 0.0)]),
-    (2, false, 0.0, 1.0, @[(2, 0.0)]),
-    (3, true, 2.0, 2.0, @[(4, 0.0), (5, -1.0)]),
-    (4, true, 2.0, 2.0, @[(2, 0.0), (3, 1.0)]),
+    (2, false, 0.0, 1.0, @[(1, 0.0)]),
+    (3, true, 2.0, 2.0, @[(4, 0.0), (5, 1.0)]),
+    (4, true, 1.0, 2.0, @[(2, 0.0), (3, 1.0)]),
     (5, true, 3.0, 3.0, @[(7, 0.0), (8, 1.0), (9, 4.0)]),
     (6, true, 2.0, 3.0, @[(4, 0.0), (5, 1.0), (6, 4.0)]),
     (7, true, 4.0, 4.0, @[(11, 0.0), (12, 1.0), (13, 4.0), (14, 9.0)]),
@@ -691,8 +689,7 @@ proc ammonia*(inp: GasInput, g: var GasXsec) =
       var ares = 0.0
       if en > vh[0] and en < vh[1]: ares = ampv13r * lin(xvibh, yvibh, en)
       g.qin[32, i] = (vibrationalDipole(ampv13, g.ei[32], en) + ares) * 1e-16
-      # upstream copies PEQIN (always 0), not PEQEL
-      if en > 2.0 * g.ei[32]: g.peqin[32, i] = g.peqin[32, i - ioffn[31]]
+      if en > 2.0 * g.ei[32]: g.peqin[32, i] = g.peqel[2, i - ioffn[31]]
     # harmonics: resonance only, not gated by their threshold
     if en > vh[0] and en < vh[1]:
       g.qin[33, i] = amphar * lin(xvibh, yvibh, en) * 1e-16

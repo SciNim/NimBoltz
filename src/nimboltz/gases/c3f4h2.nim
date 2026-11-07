@@ -9,12 +9,9 @@
 ## 1 keV), a moderation level, two B3Π triplet parts (log-log, falloff
 ## 1/E²), Born dipole singlets and dissociation; bremsstrahlung on H, C and
 ## F (levels 30..32, above 1 keV). No total cross section (Q(1) is not
-## set); upstream prints a debug table (format 9011) on every call.
+## set).
 
-import common, ../frt
-
-const fmt9011 = "(D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4," &
-  "',',D12.4,',',D12.4,',',D12.4,',',D12.4,',',D12.4)"
+import common
 
 let xel: array[131, float32] = [
   0.0001, 0.001, 0.01, 0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 4.0,
@@ -492,19 +489,6 @@ proc c3f4h2*(inp: GasInput, g: var GasXsec) =
       g.qin[31, i] = logLin(ebrm, z6t, en) * 3e-24
       g.qin[32, i] = logLin(ebrm, z9t, en) * 4e-24
 
-    # upstream debug output
-    var qsup = g.qin[1, i]
-    for l in 2 .. 6: qsup = qsup + g.qin[l, i]
-    var qvib = g.qin[7, i]
-    for l in 8 .. 12: qvib = qvib + g.qin[l, i]
-    var qtrip = g.qin[14, i]
-    for l in [15, 20, 22, 24, 27]: qtrip = qtrip + g.qin[l, i]
-    var qsing = g.qin[16, i]
-    for l in [17, 18, 19, 21, 23, 25, 26, 28, 29]: qsing = qsing + g.qin[l, i]
-    let qionsum = g.qion[1, i] + g.qion[2, i] + g.qion[3, i] + g.qion[4, i]
-    let qattsum = g.qatt[1, i] + g.qatt[2, i] + g.qatt[3, i] + g.qatt[4, i]
-    fwrite(fmt9011, en, qela, qmmt, qsup, qvib, g.qin[13, i], qtrip, qsing,
-           qionsum, qattsum, g.qatt[5, i])
   g.dropLevelsAbove(inp.efinal)
   if g.nin < 6: g.nin = 6
   if inp.efinal > 1000.0: g.nin = g.nin + 3

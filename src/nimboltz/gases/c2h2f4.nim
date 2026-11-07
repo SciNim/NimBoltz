@@ -302,9 +302,7 @@ proc c2h2f4*(inp: GasInput, g: var GasXsec) =
       # K-shells (carbon twice, fluorine four times) taken out of the
       # counting ionisation
       if en <= g.eion[2]: break ionisation
-      # upstream quirk: the table search jumps to its own end (GO TO 151
-      # for 152), so the last interval is always extrapolated
-      g.qion[2, i] = 2.0 * lin(xion1[^2 .. ^1], yion1[^2 .. ^1], en) * 1e-16
+      g.qion[2, i] = 2.0 * lin(xion1, yion1, en) * 1e-16
       if en > g.eion[3]: g.qion[3, i] = 4.0 * lin(xion2, yion2, en) * 1e-16
       let ssum = g.qion[2, i] + g.qion[3, i]
       let tot = g.qion[1, i]
