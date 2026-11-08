@@ -256,7 +256,8 @@ proc ionisation[M](g: var GasXsec, i: int, en: eV,
     g.qion[2, i] = float(max(gross - counting, 0.0.cm²))
   else:
     var firstTerm: array[m.channels.len, float64]  # (`Subtraction.firstTerm`)
-    for k, ch in m.channels:
+    for k in 0 ..< m.channels.len:
+      let ch {.cursor.} = m.channels[k]
       let k1 = k + 1
       g.qion[k1, i] = 0.0
       g.peqion[k1, i] = when m.peqZero: 0.0 else: iso
@@ -270,11 +271,13 @@ proc ionisation[M](g: var GasXsec, i: int, en: eV,
           when m.stopAtClosed: break
           else: continue
       var q = 0.0.cm²
-      for n, t in ch.terms:
+      for n in 0 ..< ch.terms.len:
+        let t {.cursor.} = ch.terms[n]
         if n == 1: firstTerm[k] = q.float
         if t.series.len > 0:
           var s = 0.0.cm²
-          for n, x in t.series:
+          for n in 0 ..< t.series.len:
+            let x {.cursor.} = t.series[n]
             if en.float <= float64(t.seriesOnset[n]): break
             if en.float > x.x[^1]:
               s = c.betheIonisation(t.sigma.fraction)
@@ -311,8 +314,8 @@ proc ionisation[M](g: var GasXsec, i: int, en: eV,
 
     elif m.renorm != noRenorm:
       var outer, shells = 0.0
-      for k, ch in m.channels:
-        if ch.shell: shells = shells + g.qion[k + 1, i]
+      for k in 0 ..< m.channels.len:
+        if m.channels[k].shell: shells = shells + g.qion[k + 1, i]
         else: outer = outer + g.qion[k + 1, i]
       when m.renorm == counting:
         let qcount =
@@ -321,8 +324,8 @@ proc ionisation[M](g: var GasXsec, i: int, en: eV,
         let fac = if qcount == 0.0: 1.0 else: (qcount - shells) / qcount
       else:
         let fac = if outer == 0.0: 1.0 else: (outer - shells) / outer
-      for k, ch in m.channels:
-        if not ch.shell: g.qion[k + 1, i] = g.qion[k + 1, i] * fac
+      for k in 0 ..< m.channels.len:
+        if not m.channels[k].shell: g.qion[k + 1, i] = g.qion[k + 1, i] * fac
     for d in m.subtract:
       if en.float <= d.below:
         let v = if d.firstTerm: firstTerm[d.channel - 1] else: g.qion[d.channel, i]
@@ -419,7 +422,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
   ## cross section and anisotropy of level j (1-based) in bin i
   mixin descriptionOf
   template m: untyped = descriptionOf(M)
-  let lv = m.levels[j - 1]
+  let lv {.cursor.} = m.levels[j - 1]
   let en = b.en
   when m.isotropic:
     if lv.kin > 0: g.peqin[j, i] = 0.5
@@ -438,7 +441,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
   var q, dip = 0.0.cm²
   case lv.kind
   of tabulated:
-    let s = lv.sigma
+    let s {.cursor.} = lv.sigma
     when m.stepped:
       # (the old routines add table and dipole term before the unit)
       const fold = true
@@ -465,7 +468,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
       q = q * w
       dip = dip * w
   of superelastic:
-    let s = lv.sigma
+    let s {.cursor.} = lv.sigma
     let e2 = en - ein
     if s.x.len > 0 and not (s.zeroBelow and e2.float <= s.x[0]):
       q = if e2.float > s.x[^1]:
@@ -504,7 +507,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
       q = q * w
       dip = dip * w
   of rotation:
-    let r = m.rotor
+    let r {.cursor.} = m.rotor
     let aj = float64(lv.j)
     let p = pops.rotation[(lv.j - r.jStart) div r.jStep]
     let born = p * r.quadrupole.cm² * sqrt(1.0 - ein / en)
@@ -519,7 +522,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
     when m.rotor.momentumAbove > 0.0:
       if en.float >= r.momentumAbove: q = q * (b.qmom / r.momentumRef)
   of dipoleRotation:
-    let r = m.rotor
+    let r {.cursor.} = m.rotor
     let (p, aj) =
       if lv.state > 0: (pops.rotation[lv.state - 1], lv.aj)
       else: (pops.rotation[(lv.j - r.jStart) div r.jStep], float64(lv.j))
@@ -535,7 +538,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
               else: p * r.dipole.cm²•eV * lg * strength
     q = num / ((2.0 * aj + 1.0) * en) * float64(r.dipoleScale)
   of symmetricTop:
-    let r = m.rotor
+    let r {.cursor.} = m.rotor
     let enrt = sqrt(en.float)
     let s = sqrt(float(en - ein))
     let lg = if ein.float < 0.0: ln((enrt + s) / (s - enrt)) else: ln((enrt + s) / (enrt - s))
@@ -547,8 +550,8 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
           (r.dipole * lg * w / den).cm²
         else: (r.dipole * lg * pops.rotation[lv.top[0].state - 1] * ajg2 / den).cm²
   of tabulatedRotation:
-    let r = m.rotor
-    let s = lv.sigma
+    let r {.cursor.} = m.rotor
+    let s {.cursor.} = lv.sigma
     let x = if lv.up: en else: en - ein    # energy of the excitation
     let jl = float64(lv.j)
     let (p, f) =
@@ -558,7 +561,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
     q = if x.float > s.x[^1]: p * f * s.y[^1] * s.x[^1] / x.float * s.unit
         elif lv.up: p * s.interpolate(x) * s.unit
         else: p * f * float(x / en) * s.interpolate(x) * s.unit
-    let rs = r.resonance
+    let rs {.cursor.} = r.resonance
     if x.float <= rs.x[^1] and x.float > rs.x[0]:
       q = q + (if lv.up: rs.interpolate(x) * p
                else: float(x / en) * rs.interpolate(x) * p) * rs.unit
@@ -618,7 +621,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
   of peqMomentumRatio:
     if en.float > lv.gate * ein.float:
       if b.naniso == 1:
-        let x = lv.sigma.x
+        let x {.cursor.} = lv.sigma.x
         let ratio = if en.float > x[^1]: lv.ratio[^1] * (x[^1] / en.float)
                     else: lin(x, lv.ratio, en.float)
         g.peqin[j, i] = 1.5 - ratio
@@ -638,7 +641,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
 
 proc h2Attachment(a: Attach, en: eV, c: Context, pops: Populations): float64 =
   let h = a.h2
-  let s = a.sigma
+  let s {.cursor.} = a.sigma
   let x = en.float
   let e = pops.rotationEnergy
   let n = h.strengths.len
@@ -659,8 +662,9 @@ proc attachment[M](g: var GasXsec, i: int, en: eV, c: Context,
                 pops: Populations, iso: float64) =
   mixin descriptionOf
   template m: untyped = descriptionOf(M)
-  for k, a in m.attachment:
-    let s = a.sigma
+  for k in 0 ..< m.attachment.len:
+    let a {.cursor.} = m.attachment[k]
+    let s {.cursor.} = a.sigma
     let x = en.float
     if a.isoPeq: g.peqel[4, i] = iso
     g.qatt[k + 1, i] =
