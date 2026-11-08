@@ -110,9 +110,9 @@ const ozoneModel* = GasModel(
     channels: @[IonChannel(eoby: 12.75, text: " IONISATION    ELOSS= 12.75")]),
   attachment: @[
     Attach(text: " DISOCIATIVE ATTACHMENT  O -", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yat1), unit: 1e-16.cm², beyond: zero)),
+           sigma: table(xatt, yat1, beyond = zero)),
     Attach(text: " DISOCIATIVE ATTACHMENT  O2 -", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yat2), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yat2, beyond = zero))],
   levels: @[
     Level(ein: -0.005, text: " ROT           ELOSS= -0.005",
           kind: superelastic, tail: noTail, dip: 0.450, population: 1),

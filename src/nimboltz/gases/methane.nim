@@ -464,7 +464,7 @@ func buildMethane(): GasModel =
             sigma: falling(xtr1, ytr1, 2, unit = 1e-16.cm²),
             kin: 2, peqBelow: belowZero, gate: 3.0),
       Level(ein: 7.80, text: " ATTACHMENT - DEATTACHMENT         ELOSS=  7.8",
-            sigma: Sigma(x: widen(xdet), y: widen(ydet), unit: 1e-16.cm², beyond: zero),
+            sigma: table(xdet, ydet, beyond = zero),
             kin: 2, peqBelow: belowZero, gate: 3.0),
       Level(ein: 8.50, text: " EXCITATION TRIPLET  DISSOCIATION  ELOSS=  8.5",
             sigma: falling(xtr2, ytr2, 2, unit = 1e-16.cm²),

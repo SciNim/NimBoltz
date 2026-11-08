@@ -78,7 +78,7 @@ const cesiumModel* = GasModel(
     channels: @[IonChannel(eoby: 3.8926, text: " IONISATION    ELOSS=  3.8926")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true, beforeEnd: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yatt, beyond = zero))],
   levels: @[
     Level(ein: 1.3859, text: " EXC P1/2      ELOSS=  1.3859",
           sigma: table(xexc1, yexc1)),

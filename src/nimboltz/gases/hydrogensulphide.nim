@@ -82,7 +82,7 @@ const hydrogenSulphideModel* = GasModel(
     channels: @[IonChannel(eoby: 10.48, text: " IONISATION    ELOSS= 10.48")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yatt, beyond = zero))],
   levels: @[
     Level(ein: -0.025, text: " ROT R1        ELOSS= -0.025",
           kind: superelastic, tail: noTail, dip: 0.1875, population: 1),

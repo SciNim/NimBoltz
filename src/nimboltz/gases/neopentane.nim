@@ -111,15 +111,18 @@ const neopentaneModel* = GasModel(
   # vibrations: superelastic by detailed balance, populations of each mode
   # with its ground state; tables extrapolated linearly
   levels: @[
-    Level(kind: superelastic, sigma: table(xvib1, yvib1), tail: noTail, population: 1, ein: -0.052,
+    Level(kind: superelastic, sigma: table(xvib1, yvib1), tail: noTail, population: 1,
+          ein: -0.052,
           text: " VIB           ELOSS= -0.052"),
     Level(sigma: table(xvib1, yvib1), ground: 1, ein: 0.052,
           text: " VIB           ELOSS=  0.052"),
-    Level(kind: superelastic, sigma: table(xvib2, yvib2), tail: noTail, population: 2, ein: -0.108,
+    Level(kind: superelastic, sigma: table(xvib2, yvib2), tail: noTail, population: 2,
+          ein: -0.108,
           text: " VIB           ELOSS= -0.108"),
     Level(sigma: table(xvib2, yvib2), ground: 2, ein: 0.108,
           text: " VIB           ELOSS=  0.108"),
-    Level(kind: superelastic, sigma: table(xvib3, yvib3), tail: noTail, population: 3, ein: -0.173,
+    Level(kind: superelastic, sigma: table(xvib3, yvib3), tail: noTail, population: 3,
+          ein: -0.173,
           text: " VIB           ELOSS= -0.173"),
     Level(sigma: table(xvib3, yvib3), ground: 3, ein: 0.173,
           text: " VIB           ELOSS=  0.173"),

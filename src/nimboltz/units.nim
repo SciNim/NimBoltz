@@ -51,9 +51,10 @@ defUnit(cm²•eV, toExport = true)           ## Born-Bethe constant
 defUnit(cm²•eV¹ᐟ², toExport = true)        ## cross section ∝ 1/√E (GAS27)
 defUnit(cm²•eV⁻¹, toExport = true)         ## cross section ∝ E (GAS28)
 defUnit(eV•K⁻¹, toExport = true)           ## Boltzmann's constant
-defUnit(cm⁻²•ps⁻¹•eV⁻¹ᐟ², toExport = true)
-defUnit(ps⁻¹•eV⁻¹ᐟ², toExport = true)       ## collision frequency / √E (MIXER)  ## collision frequency per cm² of
-                                            ## cross section and √eV of energy
+defUnit(cm⁻²•ps⁻¹•eV⁻¹ᐟ², toExport = true)  ## gas density times the speed of 1 eV (VAN): the
+                                            ## collision frequency per cm² of cross section
+                                            ## and √eV of energy
+defUnit(ps⁻¹•eV⁻¹ᐟ², toExport = true)       ## collision frequency / √E (MIXER)
 # results
 defUnit(cm²•s⁻¹, toExport = true)          ## diffusion
 defUnit(μm•cm⁻¹ᐟ², toExport = true)        ## spread per √(drift distance)

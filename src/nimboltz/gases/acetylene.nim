@@ -93,10 +93,11 @@ const acetyleneModel* = GasModel(
     channels: @[IonChannel(eoby: 10.0, text: " IONISATION    ELOSS= 11.42")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-21.cm², beyond: zero))],
+           sigma: table(xatt, yatt, unit = 1e-21.cm², beyond = zero))],
   levels: @[
     Level(ein: -0.0904, text: " VIB V5        ELOSS= -0.0904",
-          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1, scale = 0.5), population: 1),
+          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1, scale = 0.5),
+          population: 1),
     Level(ein: 0.0904, text: " VIB V5        ELOSS=  0.0904",
           sigma: table(xvib1, yvib1), ground: 1),
     Level(ein: 0.180, text: " VIB 2V5       ELOSS=  0.180",

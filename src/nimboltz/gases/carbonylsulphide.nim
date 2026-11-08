@@ -102,7 +102,7 @@ const carbonylSulphideModel* = GasModel(
     channels: @[IonChannel(eoby: 11.19, text: " IONISATION    ELOSS= 11.19")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yatt, beyond = zero))],
   levels: @[
     Level(ein: -0.064, text: " VIB V2        ELOSS= -0.064",
           kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), population: 1),

@@ -112,7 +112,8 @@ const mercuryDimerModel* = GasModel(
     attach("")],
   levels: @[
     Level(ein: -0.040, text: " DIMER SUPER   ELOSS= -0.040",
-          kind: superelastic, tail: noTail, sigma: table(xdim, ydim), population: 1, dimer: true),
+          kind: superelastic, tail: noTail, sigma: table(xdim, ydim), population: 1,
+          dimer: true),
     Level(ein: 0.040, text: " DIMER         ELOSS=  0.040",
           sigma: table(xdim, ydim), ground: 1, dimer: true),
     Level(ein: 4.667, text: " EXC 3P0       ELOSS=  4.667",

@@ -84,7 +84,7 @@ const boronTrifluorideModel* = GasModel(
     channels: @[IonChannel(eoby: 15.56, text: " IONISATION    ELOSS= 15.56")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yatt, beyond = zero))],
   levels: @[
     Level(ein: -0.0596, text: " VIB V4        ELOSS= -0.0596",
           kind: superelastic, tail: noTail, dip: 0.018, population: 1),

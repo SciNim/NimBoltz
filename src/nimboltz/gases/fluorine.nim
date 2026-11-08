@@ -113,7 +113,7 @@ const fluorineModel* = GasModel(
     channels: @[IonChannel(eoby: 15.69, text: " IONISATION    ELOSS= 15.69")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true, openBelow: true, beforeEnd: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xatt, yatt, beyond = zero))],
   levels: @[
     Level(ein: -0.1108, text: " VIB V1        ELOSS= -0.1108",
           kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), population: 1),

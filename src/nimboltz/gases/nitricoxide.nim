@@ -85,9 +85,9 @@ const nitricOxideModel* = GasModel(
   # scaled with the density
   attachment: @[
     Attach(text: " ATTACHMENT 2-BODY", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-18.cm², beyond: zero)),
+           sigma: table(xatt, yatt, unit = 1e-18.cm², beyond = zero)),
     Attach(text: " ATTACHMENT 3-BODY", fromStart: true, threeBody: true,
-           sigma: Sigma(x: widen(xat3), y: widen(yat3), unit: 1e-16.cm², beyond: zero))],
+           sigma: table(xat3, yat3, beyond = zero))],
   levels: @[
     Level(sigma: table(xrot1, yrot1), ein: 0.100, text: " ROT           ELOSS=  0.100"),
     Level(sigma: table(xvib1, yvib1), ein: 0.2326, text: " VIB V1        ELOSS=  0.2326"),

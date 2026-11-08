@@ -116,7 +116,8 @@ func finishFlight*[G: static FieldGeometry](f: Field, fl: var Flight) {.inline.}
     fl.cwt = cos(wbt)
     fl.swt = sin(wbt)
 
-func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vector[m•ps⁻¹] {.inline.}
+func velocityAt*[G: static FieldGeometry](f: Field, el: Electron,
+                                          fl: Flight): Vector[m•ps⁻¹] {.inline.}
 func directionAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 {.inline.} =
   ## direction cosines at the end of the flight
   when G == fgElectric:
@@ -175,10 +176,12 @@ func advance*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight,
       result = (el.vel.x * el.vel.x * t2, 0.0.m²)
     else:
       pos.x = pos.x + fl.dx
-    pos.y = pos.y + f.eovb * fl.t + ((el.vel.y - f.eovb) * fl.swt + el.vel.z * (1.0 - fl.cwt)) / f.wb
+    pos.y = pos.y + f.eovb * fl.t +
+            ((el.vel.y - f.eovb) * fl.swt + el.vel.z * (1.0 - fl.cwt)) / f.wb
     pos.z = pos.z + fl.dz
 
-func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): eV•ps {.inline.} =
+func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron,
+                                              fl: Flight): eV•ps {.inline.} =
   ## ∫ e dt over the flight (fgElectric, fgParallel: exact; the energy is
   ## quadratic in t)
   static: doAssert G in {fgElectric, fgParallel}

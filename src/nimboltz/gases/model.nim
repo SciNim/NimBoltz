@@ -18,6 +18,7 @@
 ## compile time evaluation of arithmetic on them does not round as the
 ## run time does (a widened `0.9'f32` times `1e-18` comes out as 0.9e-18).
 
+import std/macros
 import common
 export common
 
@@ -499,6 +500,11 @@ type
 func widen*[T](a: openArray[T]): seq[float64] =
   for v in a: result.add float64(v)
 
+func single*(x: float32): float64 =
+  ## a single-precision constant of Magboltz, widened (not
+  ## `float64(0.2'f32)`: Nim folds that from the decimal literal, unrounded)
+  float64(x)
+
 func f64*[T](a: openArray[T], k: int): float64 =
   ## element k of a table, widened. (Not `float64(a[k])`: for a `const`
   ## float32 table Nim folds that from the decimal literal, unrounded, even
@@ -506,12 +512,19 @@ func f64*[T](a: openArray[T], k: int): float64 =
   for i, v in a:
     if i == k: return float64(v)
 
-func table*[X, Y](x: openArray[X], y: openArray[Y], unit = 1e-16.cm²,
-                  interp = linear, clamp = false, scale = 1.0'f32,
-                  zeroBelow = false): Sigma =
-  ## a table, the last interval continued above its end
-  Sigma(x: widen(x), y: widen(y), unit: unit, scale: scale, interp: interp,
-        beyond: extrapolate, clamp: clamp, zeroBelow: zeroBelow)
+macro table*(x, y: untyped, fields: varargs[untyped]): Sigma =
+  ## a table: cross sections y (in units of 1e-16 cm² unless `unit` says
+  ## otherwise) at energies x (eV), with any other field of `Sigma` as
+  ## `name = value`; by default the last interval is continued above its end
+  result = nnkObjConstr.newTree(bindSym"Sigma",
+    nnkExprColonExpr.newTree(ident"x", newCall(bindSym"widen", x)),
+    nnkExprColonExpr.newTree(ident"y", newCall(bindSym"widen", y)))
+  var unit = quote do: 1e-16.cm²
+  for f in fields:
+    expectKind f, nnkExprEqExpr
+    if f[0].eqIdent"unit": unit = f[1]
+    else: result.add nnkExprColonExpr.newTree(f[0], f[1])
+  result.add nnkExprColonExpr.newTree(ident"unit", unit)
 
 func falling*[X, Y](x: openArray[X], y: openArray[Y], n: float64,
                     unit = 1e-18.cm², scale = 1.0'f32): Sigma =

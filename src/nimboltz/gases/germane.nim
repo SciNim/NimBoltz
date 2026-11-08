@@ -74,10 +74,11 @@ const germaneModel* = GasModel(
     channels: @[IonChannel(eoby: 11.33, text: " IONISATION    ELOSS= 11.33")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-19.cm², beyond: zero))],
+           sigma: table(xatt, yatt, unit = 1e-19.cm², beyond = zero))],
   levels: @[
     Level(ein: -0.1016, text: " VIB V2+V4     ELOSS= -0.1016",
-          kind: superelastic, tail: noTail, sigma: table(xvibr, yvibr, scale = 1.5, zeroBelow = true), dip: 0.825, population: 1),
+          kind: superelastic, tail: noTail,
+          sigma: table(xvibr, yvibr, scale = 1.5, zeroBelow = true), dip: 0.825, population: 1),
     Level(ein: 0.1016, text: " VIB V2+V4     ELOSS=  0.1016",
           sigma: table(xvibr, yvibr, scale = 1.5, zeroBelow = true), dip: 0.825, ground: 1),
     Level(ein: 0.2611, text: " VIB V1+V3     ELOSS=  0.2611",

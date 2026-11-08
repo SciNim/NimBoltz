@@ -399,8 +399,9 @@ func timeOfFlight*[G: static FieldGeometry](s: TimeSums, pt: PulsedTownsend, tst
       result.att = ar.ratio * pt.plane[2].rate / (1.0 - ar.ratio)
       result.attErr = 100.0 * sqrt(anst8*anst8 + ar.attErr*ar.attErr)
   else:
-    let ater = float64(when G == fgCrossed: abs((pt.plane[i1].rate - pt.plane[i2].rate) / pt.plane[i1].rate)
-                       else: abs((pt.plane[i1].rate - pt.plane[i2].rate) / (2.0 * pt.plane[i1].rate)))
+    let d = pt.plane[i1].rate - pt.plane[i2].rate
+    let ater = float64(when G == fgCrossed: abs(d / pt.plane[i1].rate)
+                       else: abs(d / (2.0 * pt.plane[i1].rate)))
     result.alpha = pt.plane[i1].rate / (1.0 - ar.ratio)
     result.alphaErr = 100.0 * sqrt(ater*ater + ar.ionErr*ar.ionErr)
     result.att = ar.ratio * pt.plane[i1].rate / (1.0 - ar.ratio)

@@ -126,10 +126,11 @@ const deuteratedMethaneModel* = GasModel(
     channels: @[IonChannel(eoby: 7.3, text: " IONISATION    ELOSS= 12.99")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-19.cm², beyond: zero))],
+           sigma: table(xatt, yatt, unit = 1e-19.cm², beyond = zero))],
   levels: @[
     Level(ein: -0.1234, text: " VIB V2+V4     ELOSS= -0.1234",
-          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), dip: 0.059, population: 1),
+          kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), dip: 0.059,
+          population: 1),
     Level(ein: 0.1234, text: " VIB V2+V4     ELOSS=  0.1234",
           sigma: table(xvib1, yvib1), dip: 0.059, ground: 1, kin: 1, peq: peqBorn),
     Level(ein: 0.275, text: " VIB V1+V3     ELOSS=  0.275",

@@ -208,7 +208,8 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
       let swt = sin(wbt)
       p.x = c.pos.x + (el.vel.x * swt - el.vel.y * (1.0 - cwt)) / c.f.wb
       p.y = c.pos.y + (el.vel.y * swt + el.vel.x * (1.0 - cwt)) / c.f.wb
-    p.z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) + t2 * c.f.efield * c.const2
+    p.z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) +
+          t2 * c.f.efield * c.const2
     v.z = dcz2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
   else:
     let wbt = c.f.wb * tau
@@ -278,7 +279,8 @@ proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade
   let dcz2 = el.dir.z * const6 + c.f.efield * tau * c.f.const5 / sqrt(e)
   let x = c.pos.x + el.dir.x * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
   let y = c.pos.y + el.dir.y * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
-  let z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) + t2 * c.f.efield * c.const2
+  let z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) +
+          t2 * c.f.efield * c.const2
   let vz = dcz2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
   let w = abs(1.0 / vz)
   let r = sqrt(x*x + y*y)
@@ -300,7 +302,8 @@ proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade
   s.w[k] = s.w[k] + w
   s.w2[k] = s.w2[k] + w * w
 
-proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T]): bool =
+proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](
+    c: var Cascade[G, P, T]): bool =
   ## TCALC: the next space plane and the flight time to it (assuming no
   ## collision); false if the electron cannot reach a plane. With isol = 2
   ## the electron first falls back through the plane below (tzstop) and
@@ -363,7 +366,8 @@ func slice(planes: Planes, z: m): int =
 
 # --- electrons ---------------------------------------------------------------
 
-proc finishElectron[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T]) {.inline.} =
+proc finishElectron[G: static FieldGeometry; P: static PlaneKind; T](
+    c: var Cascade[G, P, T]) {.inline.} =
   c.ztot = c.ztot + c.pos.z
   c.ttot = c.ttot + c.st
   c.ztots = c.ztots + c.pos.z - c.zstrt
@@ -379,7 +383,8 @@ proc push[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, 
   c.stack.add Pending(pos: pos, st: st, e: e, dir: dir, plane: plane)
   true
 
-proc count[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T], gas, kind, i: int) {.inline.} =
+proc count[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
+                                                           gas, kind, i: int) {.inline.} =
   when T is ColdBound:
     inc c.tally.kinds[kind]
     inc c.tally.processes[i]
@@ -387,8 +392,8 @@ proc count[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P,
     inc c.tally[gas].kinds[kind]
     inc c.tally[gas].processes[i]
 
-func hitVelocity[G: static FieldGeometry; P: static PlaneKind](f: Field, el: Electron,
-                                                               fl: Flight): Vector[m•ps⁻¹] {.inline.} =
+func hitVelocity[G: static FieldGeometry; P: static PlaneKind](
+    f: Field, el: Electron, fl: Flight): Vector[m•ps⁻¹] {.inline.} =
   ## lab velocity at the end of the flight (thermal motion)
   when G == fgElectric and P == pkSpace:
     # as MONTEFDT: the direction is renormalised through its z component

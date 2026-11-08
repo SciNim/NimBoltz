@@ -80,9 +80,9 @@ const carbonDisulphideModel* = GasModel(
     channels: @[IonChannel(eoby: 10.07, text: " IONISATION    ELOSS= 10.07")]),
   attachment: @[
     Attach(text: " ATTACHMENT 3-BODY AT 40TORR", fromStart: true,
-           sigma: Sigma(x: widen(xat1), y: widen(yat1), unit: 1e-16.cm², beyond: zero, scale: 1.3)),
+           sigma: table(xat1, yat1, beyond = zero, scale = 1.3)),
     Attach(text: " ATTACHMENT 2-BODY", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-19.cm², beyond: zero))],
+           sigma: table(xatt, yatt, unit = 1e-19.cm², beyond = zero))],
   levels: @[
     Level(ein: -0.049, text: " VIB V2        ELOSS= -0.049",
           kind: superelastic, tail: noTail, sigma: table(xvib1, yvib1), population: 1),

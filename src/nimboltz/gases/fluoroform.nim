@@ -75,7 +75,7 @@ const fluoroformModel* = GasModel(
     channels: @[IonChannel(eoby: 13.86, text: " IONISATION    ELOSS= 13.86")]),
   attachment: @[
     Attach(text: " ATTACHMENT", fromStart: true,
-           sigma: Sigma(x: widen(xatt), y: widen(yatt), unit: 1e-19.cm², beyond: zero))],
+           sigma: table(xatt, yatt, unit = 1e-19.cm², beyond = zero))],
   levels: @[
     Level(ein: -0.035, text: " ROT           ELOSS= -0.035",
           kind: superelastic, tail: noTail, dip: 0.100, population: 1),
