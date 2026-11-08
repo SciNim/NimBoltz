@@ -25,7 +25,7 @@ type
     countingBethe: bool  ## qcount is Born-Bethe (above its table)
     density: float64     ## gas density relative to 760 Torr and 0 °C
     bb: cm²•eV           ## Born-Bethe constant
-    torr: float64
+    torr, tempc: float64
 
 proc betheIonisation(c: Context, fraction = 1.0'f32): cm² =
   ## Bethe's ionisation cross section times a share of it
@@ -53,6 +53,7 @@ func interpolate(s: Sigma, en: eV): float64 {.inline.} =
   case s.interp
   of linear: lin(s.x, s.y, en.float)
   of logLog: logLog(s.x, s.y, en.float)
+  of logLin: logLin(s.x, s.y, en.float)
   of linLog:
     if en.float <= s.switchAt: lin(s.x, s.y, en.float) else: logLog(s.x, s.y, en.float)
 
@@ -75,11 +76,11 @@ proc at(s: Sigma, en: eV, ein: eV, c: Context): cm² =
               s.y[^1] * power(s.x[^1] / x, s.n)
             else: s.interpolate(en)
     if s.clamp and v < 0.0: v = 0.0
-    return v * s.unit * float64(s.scale)
+    return v * s.unit * (if s.scaleD != 0.0: s.scaleD else: float64(s.scale))
   case s.beyond
   of born:
     c.bornExcitation(if s.fd != 0.0: s.fd else: float64(s.f), ein, en, s.bornForm) *
-      float64(s.tailScale)
+      float64(s.tailScale) * float64(s.tailScale2)
   of bethe: c.betheIonisation(s.fraction) * float64(s.tailScale)
   of countingShare:
     let f = if c.countingBethe and s.betheFraction != 0.0: s.betheFraction else: s.fraction
@@ -175,6 +176,8 @@ proc describe(m: static GasModel, inp: GasInput, g: var GasXsec) =
   ## names, energies and descriptions of the processes
   let aniso = inp.naniso != 0
   g.name = if aniso: m.name.anisotropic else: m.name.isotropic
+  when m.unnamedModel1:
+    if inp.naniso == 1: g.name = ""
   g.scrp[2] = if aniso: m.elasticText.anisotropic else: m.elasticText.isotropic
   g.e[2] = 2.0 * emass / (float64(m.mass) * amu)
   g.e[3] = m.e3
@@ -257,7 +260,9 @@ proc ionisation(m: static Ionisation, g: var GasXsec, i: int, en: eV,
           when m.stopAtClosed: break
           else: continue
       else:
-        if (if ch.openInclusive: en < eion else: en <= eion): continue
+        if (if ch.openInclusive: en < eion else: en <= eion):
+          when m.stopAtClosed: break
+          else: continue
       var q = 0.0.cm²
       for n, t in ch.terms:
         if n == 1: firstTerm[k] = q.float
@@ -328,9 +333,12 @@ type
     iso: float64
     naniso: int
 
-func inside(w: Sigma, x: float64, open: bool): bool {.inline.} =
-  ## x inside the table's range (ends excluded if open)
-  if open: x > w.x[0] and x < w.x[^1] else: x >= w.x[0] and x <= w.x[^1]
+func inside(w: Sigma, x: float64, open, lowOpen: bool): bool {.inline.} =
+  ## x inside the table's range (ends excluded if open, the lower one if
+  ## lowOpen)
+  if open: x > w.x[0] and x < w.x[^1]
+  elif lowOpen: x > w.x[0] and x <= w.x[^1]
+  else: x >= w.x[0] and x <= w.x[^1]
 
 proc vibrationalDipole(lv: Level, en, ein: eV): cm² =
   ## Born cross section of a dipole active vibration
@@ -359,9 +367,9 @@ proc populations(m: static GasModel, g: GasXsec, kT: float64): Populations =
   var sums: seq[float64]
   for k, p in ps:
     while sums.len <= p.group: sums.add 1.0
-    sums[p.group] = sums[p.group] + result.excited[k]
+    if not p.unnormalised: sums[p.group] = sums[p.group] + result.excited[k]
   for k, p in ps:
-    result.excited[k] = result.excited[k] / sums[p.group]
+    if not p.unnormalised: result.excited[k] = result.excited[k] / sums[p.group]
     result.ground.add 1.0 / sums[p.group]
   for k in m.elastic.bend.populations: result.bend = result.bend + result.excited[k - 1]
   when m.rotor.ladder.len > 0:
@@ -428,9 +436,10 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
       const fold = false
     if lv.windows.len > 0:
       # (dipole term and windows summed before the unit)
-      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float)
+      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float) * lv.dipFactor
       for w in lv.windows:
-        if inside(w, en.float, lv.windowOpen): t = t + float64(w.scale) * w.interpolate(en)
+        if inside(w, en.float, lv.windowOpen, lv.windowLowOpen):
+          t = t + (if w.scaleD != 0.0: w.scaleD else: float64(w.scale)) * w.interpolate(en)
       q = s.at(en, ein, b.c) + t * lv.windows[0].unit
     elif fold and lv.dip != 0.0 and lv.peq != peqBorn and s.x.len > 0 and
        s.beyond == extrapolate:
@@ -464,10 +473,11 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
       q = q * float64(s.scale)
     if lv.dip != 0.0: dip = lv.vibrationalDipole(en, ein)
     if lv.windows.len > 0:
-      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float)
+      var t = vibrationalDipole(float64(lv.dip), ein.float, en.float) * lv.dipFactor
       for w in lv.windows:
-        if inside(w, e2.float, lv.windowOpen):
-          t = t + float64(w.scale) * float(e2) * w.interpolate(e2) / en.float
+        if inside(w, e2.float, lv.windowOpen, lv.windowLowOpen):
+          t = t + (if w.scaleD != 0.0: w.scaleD else: float64(w.scale)) * float(e2) *
+                  w.interpolate(e2) / en.float
       q = q + t * lv.windows[0].unit
       dip = 0.0.cm²
     when m.stepped:
@@ -583,7 +593,13 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
     if b.naniso == 2 and en.float >= lv.gate * abs(ein.float):
       g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
   of peqDipole:
-    if lv.gateEnergy <= 0.0 or en.float >= lv.gateEnergy:
+    if lv.elasticAbove > 0.0:
+      let e0 = abs(ein.float)
+      if en.float > lv.elasticAbove * e0:
+        g.peqin[j, i] = g.peqel[2, i - ioffn[j - 1]]
+      elif en.float < lv.dipoleUpTo * e0:
+        g.peqin[j, i] = 1.0 - lin(m.dipoleAngles.xUp, m.dipoleAngles.eps, en.float / e0)
+    elif lv.gateEnergy <= 0.0 or en.float >= lv.gateEnergy:
       let ratio = en.float / abs(ein.float)
       g.peqin[j, i] =
         if ratio > lv.dipoleUpTo: g.peqel[2, i - ioffn[j - 1]]
@@ -608,6 +624,7 @@ proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
     g.peqin[j, i] = 0.5 + (1.0 - float64(m.momentumRatio))
   if lv.peq in {peqHalf, peqBorn, peqRatio} and en.float > lv.pq1Above:
     g.peqin[j, i] = b.pq1
+  if en.float > lv.peqUpTo: g.peqin[j, i] = 0.0
 
 proc h2Attachment(a: Attach, en: eV, c: Context, pops: Populations): float64 =
   let h = a.h2
@@ -648,7 +665,11 @@ proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context,
         if s.x.len > 0 and
            (a.openBelow or (if a.fromStart: x >= s.x[0] else: x > s.x[0])) and
            (s.beyond != zero or (if a.beforeEnd: x < s.x[^1] else: x <= s.x[^1])):
-          var v = float(s.at(en, 0.0.eV, c)) * (if a.threeBody: c.density else: 1.0)
+          var v = float(s.at(en, 0.0.eV, c)) *
+            (if not a.threeBody: 1.0
+             elif a.densityRef > 0.0:
+               a.densityRef * c.torr / ((c.tempc + 273.1499938964844) * 760.0)
+             else: c.density)
           if a.saturation > 0.0: v = v * (1.0 / (a.saturation / c.torr + 1.0))
           for f in a.factors: v = v * float64(f)
           v
@@ -684,6 +705,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
       (float64(m.dimer.temperature) / (273.1499938964844 + inp.tempc)) * inp.torr / 760.0
     b.dimer = b.dimer * float64(m.dimer.fraction)
   b.c.torr = inp.torr
+  b.c.tempc = inp.tempc
   # (273.15 single precision in Magboltz)
   b.c.density = 273.1499938964844 * inp.torr / ((inp.tempc + 273.1499938964844) * 760.0)
   iterator energies(inp: GasInput): (int, float64) =
@@ -731,11 +753,16 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     for j in 1 .. m.levels.len:
       level(m, j, b, g.ei[j].eV, pops, g, i, ioffn)
     when m.elastic.minusLevels.b > 0:
-      var sum = 0.0
-      for j in m.elastic.minusLevels: sum = sum + g.qin[j, i]
-      g.q[2, i] = g.q[2, i] - sum
+      when m.elastic.minusEach:
+        for j in m.elastic.minusLevels: g.q[2, i] = g.q[2, i] - g.qin[j, i]
+      else:
+        var sum = 0.0
+        for j in m.elastic.minusLevels: sum = sum + g.qin[j, i]
+        g.q[2, i] = g.q[2, i] - sum
       when m.elastic.minusFloor > 0.0:
         if g.q[2, i] <= 0.0: g.q[2, i] = m.elastic.minusFloor
+  when m.appended.n > 0:
+    g.nin = m.levels.len - m.appended.n
   when m.ninBy.len > 0:
     for (e, n) in m.ninBy:
       if inp.efinal > e:
@@ -751,3 +778,5 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
   else: g.dropLevelsAbove(inp.efinal, m.firstCut)
   when m.minLevels > 0:
     if g.nin < m.minLevels: g.nin = m.minLevels
+  when m.appended.n > 0:
+    if inp.efinal > m.appended.above: g.nin = g.nin + m.appended.n

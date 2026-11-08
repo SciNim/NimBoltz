@@ -29,6 +29,7 @@ type
     linear       ## linear in y over x
     logLog       ## linear in log y over log x
     linLog       ## linear up to `switchAt` (Elastic, Sigma), log-log above
+    logLin       ## linear in log y over x (bremsstrahlung tables)
 
   Beyond* = enum
     ## what a cross section does above the end of its table
@@ -50,12 +51,14 @@ type
     x*, y*: seq[float64]   ## eV, and y in units of `unit`
     unit*: cm²
     scale*: float32 = 1.0  ## factor of the table values
+    scaleD*: float64       ## if not 0, the factor (double precision)
     interp*: Interp
     beyond*: Beyond
     n*: float64            ## `power`: the exponent
     f*: float32            ## `born`: oscillator strength
     fd*: float64           ## `born`: if not 0, the strength in double precision
     tailScale*: float32 = 1.0  ## `born`, `bethe`: factor of the continuation
+    tailScale2*: float32 = 1.0 ## `born`: a second one
     fraction*: float32     ## `bethe`: share of the total
     betheFraction*: float32
       ## `countingShare`: if not 0, the share while the counting ionisation
@@ -104,6 +107,7 @@ type
     minusLevels*: Slice[int]
       ## levels (rotations) whose sum is taken out of the elastic cross
       ## section
+    minusEach*: bool    ## one by one (not their sum)
     minusFloor*: float64
       ## cm²; > 0: the elastic cross section if not above 0 after that
 
@@ -173,8 +177,8 @@ type
     subtract*: seq[Subtraction]  ## after the renormalisation, in order
     fromTables*: bool        ## channels open above their table's first
                              ## energy (not their ionisation energy)
-    stopAtClosed*: bool      ## `fromTables`: and the first one closed
-                             ## closes the following ones
+    stopAtClosed*: bool      ## the first closed channel closes the following
+                             ## ones
     peqZero*: bool           ## anisotropy parameter 0 (not isotropic)
                              ## below the gates
     counting*: Sigma         ## counting (or, for helium, gross) cross section
@@ -297,6 +301,9 @@ type
       ## included), each times its scale, at the energy after the gain for
       ## a superelastic level (E' y(E') / E): resonances (N2O, C2H4)
     windowOpen*: bool       ## the ends of the windows excluded
+    windowLowOpen*: bool    ## the lower ends excluded (the upper included)
+    dipFactor*: float64 = 1.0  ## windows: the dipole term times this
+    peqUpTo*: float64 = Inf ## eV; above, the anisotropy parameter is 0
     rotState*: int = -1     ## >= 0: times the population of rotational
                             ## state J = rotState (`GasModel.rotor`) and
                             ## `weight`
@@ -305,6 +312,9 @@ type
     ratio*: seq[float64]    ## `peqMomentumRatio`
     peqValue*: float64      ## `peqFixed`
     dipoleUpTo*: float64 = Inf  ## `peqDipole`
+    elasticAbove*: float64  ## `peqDipole`, > 0: as elastic above this times
+                            ## the loss, the dipole shape below `dipoleUpTo`
+                            ## times it, unchanged between (SiH4)
     eloss*: float64         ## != 0: energy loss in double precision
     j*: int                 ## `rotation`, `dipoleRotation`: initial J
     up*: bool               ## `rotation`, `dipoleRotation`: J up (else down)
@@ -330,6 +340,7 @@ type
     deg*: float64 = 1.0
     group*: int
     ladder*: int = 1
+    unnormalised*: bool     ## the Boltzmann factors themselves (C2H2F4)
 
   AttachFormula* = enum
     attachTable
@@ -363,6 +374,8 @@ type
     fromStart*: bool        ## open at the table's first energy already
     beforeEnd*: bool        ## `zero`: closed at the table's last energy
     threeBody*: bool        ## table for 760 Torr, 20 °C: times the density
+    densityRef*: float64    ## > 0: the density relative to this temperature
+                            ## (K) instead of 0 °C
     openBelow*: bool        ## not closed below the table (extrapolated)
     formula*: AttachFormula
     saturation*: float64    ## > 0: times 1 / (saturation / TORR + 1) (three-
@@ -458,6 +471,8 @@ type
     stepped*: bool
       ## an old routine: energies summed up bin by bin (EN = EN + ESTEP)
       ## instead of the grid's
+    unnamedModel1*: bool
+      ## NAME is not set for NANISO 1 (stays empty; TMA)
     alwaysModel2*: bool
       ## NANISO taken as 2 whatever the input (C2H4)
     forceModel2*: bool
@@ -475,6 +490,9 @@ type
     cutStrict*: bool         ## EFINAL cuts the levels strictly above it
     keepLastAt*: bool        ## no cut if EFINAL is the last level's energy
     dimer*: Dimer
+    appended*: tuple[n: int, above: float64]
+      ## the last n levels (bremsstrahlung) are not cut by EFINAL, and used
+      ## only for EFINAL above `above` (eV)
     ninBy*: seq[tuple[efinal: float64, nin: int]]
       ## instead of the cut: the number of levels used, the first one whose
       ## EFINAL is below the input's
@@ -545,5 +563,5 @@ func shell*(eion, eoby: float32, nc0: int, ec0: float32, text: string,
   IonChannel(eion: eion, eoby: eoby, nc0: nc0, ec0: ec0, text: text,
              terms: @[term(s)], shell: true, gate: gate)
 
-func pop*(level: int, deg = 1.0, group = 0, ladder = 1): Population =
-  Population(level: level, deg: deg, group: group, ladder: ladder)
+func pop*(level: int, deg = 1.0, group = 0, ladder = 1, unnormalised = false): Population =
+  Population(level: level, deg: deg, group: group, ladder: ladder, unnormalised: unnormalised)

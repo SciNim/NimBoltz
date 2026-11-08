@@ -9,9 +9,9 @@
 ## triplets (falloff 1/E²) and 25 Born dipole Rydberg levels, each with its
 ## own scale; bremsstrahlung on H, C and N (levels 38..40, beyond NIN).
 
-import common
+import engine
 
-let xen: array[130, float32] = [
+const xen: array[130, float32] = [
   0.0, 0.001, 0.01, 0.02, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0,
   4.0, 5.0, 7.0, 8.0, 10.0, 12.0, 15.0, 20.0, 30.0, 60.0, 100.0, 125.0, 150.0,
   175.0, 200.0, 250.0, 300.0, 350.0, 400.0, 450.0, 500.0, 600.0, 700.0, 800.0,
@@ -29,25 +29,30 @@ let xen: array[130, float32] = [
   175000000.0, 200000000.0, 250000000.0, 300000000.0, 350000000.0,
   400000000.0, 450000000.0, 500000000.0, 600000000.0, 700000000.0,
   800000000.0, 900000000.0, 1e+9]
-let yelm: array[130, float64] = [
+const yelm: array[130, float64] = [
   400.0, 390.0, 280.0, 190.0, 38.0, 19.5, 15.0, 13.0, 12.5, 13.0, 14.0, 15.5,
   17.0, 21.0, 26.0, 31.0, 38.0, 38.0, 37.0, 33.0, 29.0, 24.0, 18.0, 11.0,
-  6.09'f32, 4.5, 3.5, 2.81'f32, 2.32'f32, 1.67'f32, 1.26'f32, 0.998'f32,
-  0.81'f32, 0.672'f32, 0.568'f32, 0.423'f32, 0.328'f32, 0.263'f32, 0.216'f32,
-  0.18'f32, 0.123'f32, 0.0899'f32, 0.0687'f32, 0.0544'f32, 0.0367'f32,
-  0.0265'f32, 0.0202'f32, 0.0159'f32, 0.0128'f32, 0.0106'f32, 0.00765'f32,
-  0.00579'f32, 0.00455'f32, 0.00367'f32, 0.00304'f32, 0.00203'f32,
-  0.00146'f32, 0.0011'f32, 0.000863, 0.000577, 0.000414, 0.000314, 0.000247,
-  0.0002, 0.000166, 0.00012, 0.000091, 0.0000719, 0.0000585, 0.0000487,
-  0.0000332, 0.0000243, 0.0000188, 0.000015, 0.0000104, 7.76e-6, 6.07e-6,
-  4.92e-6, 4.09e-6, 3.47e-6, 2.62e-6, 2.07e-6, 1.69e-6, 1.41e-6, 1.2e-6,
-  8.6e-7, 6.48e-7, 5.1e-7, 4.13e-7, 2.89e-7, 2.15e-7, 1.67e-7, 1.33e-7,
-  1.09e-7, 9.15e-8, 6.69e-8, 5.13e-8, 4.06e-8, 3.3e-8, 2.74e-8, 1.84e-8,
-  1.32e-8, 9.99e-9, 7.83e-9, 5.19e-9, 3.71e-9, 2.78e-9, 2.17e-9, 1.74e-9,
-  1.42e-9, 1.01e-9, 7.49e-10, 5.79e-10, 4.61e-10, 3.75e-10, 2.42e-10,
-  1.69e-10, 1.25e-10, 9.57e-11, 6.14e-11, 4.27e-11, 3.14e-11, 2.4e-11,
-  1.9e-11, 1.54e-11, 1.07e-11, 7.86e-12, 6.02e-12, 4.76e-12, 3.85e-12]
-let yelt: array[130, float32] = [
+  6.090000152587891, 4.5, 3.5, 2.809999942779541, 2.319999933242798,
+  1.6699999570846558, 1.2599999904632568, 0.9980000257492065,
+  0.8100000023841858, 0.671999990940094, 0.5680000185966492,
+  0.4230000078678131, 0.328000009059906, 0.2630000114440918,
+  0.2160000056028366, 0.18000000715255737, 0.12300000339746475,
+  0.08990000188350677, 0.06870000064373016, 0.0544000007212162,
+  0.03669999912381172, 0.026499999687075615, 0.02019999921321869,
+  0.01590000092983246, 0.012799999676644802, 0.010599999688565731,
+  0.0076500000432133675, 0.005789999850094318, 0.004550000187009573,
+  0.0036700000055134296, 0.0030400000978261232, 0.00203000009059906,
+  0.0014600000577047467, 0.0010999999940395355, 0.000863, 0.000577, 0.000414,
+  0.000314, 0.000247, 0.0002, 0.000166, 0.00012, 0.000091, 0.0000719,
+  0.0000585, 0.0000487, 0.0000332, 0.0000243, 0.0000188, 0.000015, 0.0000104,
+  7.76e-6, 6.07e-6, 4.92e-6, 4.09e-6, 3.47e-6, 2.62e-6, 2.07e-6, 1.69e-6,
+  1.41e-6, 1.2e-6, 8.6e-7, 6.48e-7, 5.1e-7, 4.13e-7, 2.89e-7, 2.15e-7, 1.67e-7,
+  1.33e-7, 1.09e-7, 9.15e-8, 6.69e-8, 5.13e-8, 4.06e-8, 3.3e-8, 2.74e-8,
+  1.84e-8, 1.32e-8, 9.99e-9, 7.83e-9, 5.19e-9, 3.71e-9, 2.78e-9, 2.17e-9,
+  1.74e-9, 1.42e-9, 1.01e-9, 7.49e-10, 5.79e-10, 4.61e-10, 3.75e-10, 2.42e-10,
+  1.69e-10, 1.25e-10, 9.57e-11, 6.14e-11, 4.27e-11, 3.14e-11, 2.4e-11, 1.9e-11,
+  1.54e-11, 1.07e-11, 7.86e-12, 6.02e-12, 4.76e-12, 3.85e-12]
+const yelt: array[130, float32] = [
   400.0, 390.0, 280.0, 190.0, 38.0, 19.5, 15.0, 14.5, 15.0, 15.7, 17.0, 19.0,
   21.4, 26.5, 34.5, 41.3, 51.3, 54.0, 56.0, 52.2, 46.2, 39.7, 33.0, 22.3,
   16.2, 13.2, 11.8, 10.2, 8.76, 7.44, 6.49, 5.78, 5.21, 4.75, 4.37, 3.77,
@@ -61,39 +66,45 @@ let yelt: array[130, float32] = [
   0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109,
   0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109, 0.0109,
   0.0109, 0.0109, 0.0109, 0.0109, 0.0109]
-let yeps: array[130, float64] = [
-  1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.84557'f32, 0.75309'f32, 0.74543'f32,
-  0.73896'f32, 0.72785'f32, 0.69736'f32, 0.69462'f32, 0.6403'f32, 0.63613'f32,
-  0.62258'f32, 0.57254'f32, 0.51632'f32, 0.48021'f32, 0.47463'f32,
-  0.44619'f32, 0.37693'f32, 0.3199'f32, 0.20687'f32, 0.1774'f32, 0.14298'f32,
-  0.1277'f32, 0.12028'f32, 0.09386'f32, 0.076184'f32, 0.063994'f32,
-  0.055018'f32, 0.048145'f32, 0.042751'f32, 0.034829'f32, 0.029328'f32,
-  0.025289'f32, 0.022205'f32, 0.01978'f32, 0.015515'f32, 0.012745'f32,
-  0.01001'f32, 0.009377'f32, 0.007412'f32, 0.006122'f32, 0.005213'f32,
-  0.004539'f32, 0.00402'f32, 0.003604'f32, 0.002989'f32, 0.002552'f32,
-  0.002225'f32, 0.001973'f32, 0.001771'f32, 0.00141'f32, 0.00117'f32,
+const yeps: array[130, float64] = [
+  1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.8455700278282166, 0.7530900239944458,
+  0.7454299926757812, 0.7389600276947021, 0.7278500199317932,
+  0.6973599791526794, 0.6946200132369995, 0.6402999758720398,
+  0.6361299753189087, 0.6225799918174744, 0.5725399851799011,
+  0.516319990158081, 0.48021000623703003, 0.4746299982070923,
+  0.4461899995803833, 0.37692999839782715, 0.3199000060558319,
+  0.20687000453472137, 0.17739999294281006, 0.14297999441623688,
+  0.12770000100135803, 0.12027999758720398, 0.09386000037193298,
+  0.0761839970946312, 0.06399399787187576, 0.055018000304698944,
+  0.048144999891519547, 0.042750999331474304, 0.034828998148441315,
+  0.02932799980044365, 0.02528899908065796, 0.02220500074326992,
+  0.019780000671744347, 0.015514999628067017, 0.012745000422000885,
+  0.010010000318288803, 0.00937699992209673, 0.007412000093609095,
+  0.006122000049799681, 0.005212999880313873, 0.004538999870419502,
+  0.004019999876618385, 0.0036039999686181545, 0.002988999942317605,
+  0.002552000107243657, 0.0022249999456107616, 0.0019729998894035816,
+  0.0017709999810904264, 0.0014100000262260437, 0.0011699999449774623,
   0.0009991, 0.0008715, 0.0006926, 0.0005734, 0.0004886, 0.000425, 0.0003755,
   0.0003361, 0.0002768, 0.0002346, 0.0001978, 0.0001785, 0.000159, 0.0001239,
   0.0001007, 0.00008425, 0.00007202, 0.00005511, 0.00004405, 0.00003628,
   0.00003058, 0.00002622, 0.0000228, 0.00001781, 0.00001437, 0.00001188,
   0.00001002, 8.574e-6, 6.164e-6, 4.635e-6, 3.621e-6, 2.91e-6, 2.003e-6,
-  1.466e-6, 1.12e-6, 8.84e-7, 7.159e-7, 5.917e-7, 4.239e-7, 3.186e-7,
-  2.484e-7, 1.991e-7, 1.631e-7, 1.066e-7, 7.51e-8, 5.58e-8, 4.3e-8, 2.78e-8,
-  1.94e-8, 1.43e-8, 1.1e-8, 8.7e-9, 7.1e-9, 4.89e-9, 3.58e-9, 2.73e-9,
-  2.15e-9, 1.73e-9, 1.09e-9, 7.48e-10, 5.43e-10, 4.11e-10, 2.58e-10, 1.76e-10,
-  1.28e-10, 9.7e-11, 7.5e-11, 6e-11, 4.1e-11, 3e-11, 2.3e-11, 1.8e-11,
-  1.4e-11]
-let xion: array[42, float32] = [
+  1.466e-6, 1.12e-6, 8.84e-7, 7.159e-7, 5.917e-7, 4.239e-7, 3.186e-7, 2.484e-7,
+  1.991e-7, 1.631e-7, 1.066e-7, 7.51e-8, 5.58e-8, 4.3e-8, 2.78e-8, 1.94e-8,
+  1.43e-8, 1.1e-8, 8.7e-9, 7.1e-9, 4.89e-9, 3.58e-9, 2.73e-9, 2.15e-9, 1.73e-9,
+  1.09e-9, 7.48e-10, 5.43e-10, 4.11e-10, 2.58e-10, 1.76e-10, 1.28e-10, 9.7e-11,
+  7.5e-11, 6e-11, 4.1e-11, 3e-11, 2.3e-11, 1.8e-11, 1.4e-11]
+const xion: array[42, float32] = [
   8.4, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0,
   22.5, 25.0, 27.5, 30.0, 35.0, 40.0, 45.0, 50.0, 60.0, 70.0, 80.0, 90.0,
   100.0, 110.0, 120.0, 140.0, 160.0, 180.0, 200.0, 300.0, 400.0, 500.0, 600.0,
   700.0, 800.0, 900.0, 1000.0, 2000.0, 3000.0]
-let yion: array[42, float32] = [
+const yion: array[42, float32] = [
   0.0, 0.097, 0.267, 0.435, 0.595, 0.76, 1.08, 1.53, 2.0, 2.52, 3.06, 3.58,
   4.07, 5.18, 6.15, 7.0, 7.75, 8.93, 9.79, 10.4, 10.8, 11.3, 11.5, 11.5, 11.4,
   11.2, 11.0, 10.7, 10.2, 9.76, 9.3, 8.86, 7.16, 6.0, 5.18, 4.57, 4.09, 3.71,
   3.4, 3.13, 1.81, 1.3]
-let xkshc: array[83, float32] = [
+const xkshc: array[83, float32] = [
   285.0, 298.0, 307.0, 316.0, 325.0, 335.0, 345.0, 365.0, 398.0, 422.0, 447.0,
   473.0, 501.0, 531.0, 613.0, 668.0, 708.0, 750.0, 817.0, 917.0, 1000.0,
   1122.0, 1296.0, 1496.0, 1679.0, 1884.0, 2054.0, 2238.0, 2512.0, 2985.0,
@@ -105,7 +116,7 @@ let xkshc: array[83, float32] = [
   30700000.0, 41000000.0, 50100000.0, 61300000.0, 70800000.0, 81800000.0,
   100000000.0, 126000000.0, 150000000.0, 205000000.0, 307000000.0,
   410000000.0, 501000000.0, 613000000.0, 708000000.0, 818000000.0, 1e+9]
-let ykshc: array[83, float64] = [
+const ykshc: array[83, float64] = [
   0.0, 0.000166, 0.000348, 0.000525, 0.000696, 0.000863, 0.00102, 0.00133,
   0.00175, 0.00201, 0.00224, 0.00246, 0.00266, 0.00284, 0.00321, 0.00338,
   0.00347, 0.00355, 0.00365, 0.00372, 0.00375, 0.00374, 0.00368, 0.00357,
@@ -118,7 +129,7 @@ let ykshc: array[83, float64] = [
   0.00015, 0.000154, 0.000158, 0.00016, 0.000163, 0.000167, 0.000171,
   0.000174, 0.00018, 0.000187, 0.000192, 0.000196, 0.0002, 0.000202, 0.000205,
   0.000209]
-let xkshn: array[89, float32] = [
+const xkshn: array[89, float32] = [
   401.6, 407.0, 419.0, 431.0, 444.0, 457.0, 471.0, 485.0, 499.0, 515.0, 530.0,
   546.0, 562.0, 596.0, 631.0, 668.0, 708.0, 750.0, 794.0, 841.0, 891.0, 944.0,
   1000.0, 1090.0, 1188.0, 1296.0, 1496.0, 1679.0, 1884.0, 2054.0, 2238.0,
@@ -131,7 +142,7 @@ let xkshn: array[89, float32] = [
   37600000.0, 48700000.0, 63100000.0, 86600000.0, 100000000.0, 122000000.0,
   150000000.0, 188000000.0, 224000000.0, 282000000.0, 376000000.0,
   487000000.0, 631000000.0, 866000000.0, 1e+9]
-let ykshn: array[89, float64] = [
+const ykshn: array[89, float64] = [
   0.0, 0.0000411, 0.000138, 0.000232, 0.000323, 0.000412, 0.000498, 0.000581,
   0.000661, 0.000738, 0.000813, 0.000885, 0.000954, 0.00108, 0.0012, 0.00131,
   0.00141, 0.0015, 0.00158, 0.00165, 0.00172, 0.00177, 0.00182, 0.00187,
@@ -144,284 +155,179 @@ let ykshn: array[89, float64] = [
   0.0000875, 0.00009, 0.0000925, 0.0000954, 0.0000976, 0.000101, 0.000104,
   0.000108, 0.000111, 0.000115, 0.000117, 0.00012, 0.000122, 0.000125,
   0.000127, 0.000131, 0.000134, 0.000138, 0.000141, 0.000145, 0.000147]
-let xtors: array[32, float32] = [
+const xtors: array[32, float32] = [
   0.0334, 0.034, 0.035, 0.036, 0.038, 0.04, 0.045, 0.05, 0.055, 0.06, 0.07,
   0.08, 0.1, 0.12, 0.14, 0.17, 0.2, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0, 1.5, 2.0,
   3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0]
-let ytors: array[32, float32] = [
+const ytors: array[32, float32] = [
   0.0, 0.068, 0.072, 0.09, 0.114, 0.132, 0.15, 0.156, 0.162, 0.162, 0.156,
   0.15, 0.138, 0.126, 0.114, 0.102, 0.0932, 0.0798, 0.0702, 0.0576, 0.0486,
   0.0378, 0.0288, 0.021, 0.0162, 0.012, 0.009, 0.0078, 0.0066, 0.00576,
   0.00516, 0.0042]
-let xvib1: array[25, float32] = [
+const xvib1: array[25, float32] = [
   0.103, 0.12, 0.13, 0.15, 0.2, 0.23, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0, 1.5, 2.0,
   3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0]
-let yvib1: array[25, float32] = [
+const yvib1: array[25, float32] = [
   0.0, 0.51, 0.9, 1.2, 1.3, 1.26, 1.18, 1.06, 0.9, 0.79, 0.66, 0.51, 0.43,
   0.57, 0.92, 1.21, 1.56, 2.03, 2.03, 1.67, 0.99, 0.66, 0.35, 0.22, 0.16]
-let xvib2: array[24, float32] = [
+const xvib2: array[24, float32] = [
   0.179, 0.185, 0.19, 0.2, 0.23, 0.25, 0.3, 0.4, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0,
   4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 30.0, 40.0]
-let yvib2: array[24, float32] = [
+const yvib2: array[24, float32] = [
   0.0, 0.23, 0.48, 0.68, 0.88, 0.95, 1.01, 0.95, 0.88, 0.76, 0.61, 0.53, 0.53,
   0.79, 1.03, 1.33, 1.75, 1.75, 1.48, 0.88, 0.57, 0.31, 0.193, 0.145]
-let xvib3: array[28, float32] = [
+const xvib3: array[28, float32] = [
   0.366, 0.373, 0.38, 0.39, 0.4, 0.42, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9,
   1.0, 1.2, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 30.0,
   40.0]
-let yvib3: array[28, float32] = [
+const yvib3: array[28, float32] = [
   0.0, 0.224, 0.339, 0.415, 0.472, 0.553, 0.63, 0.7, 0.73, 0.74, 0.74, 0.71,
   0.65, 0.66, 0.65, 0.65, 0.73, 1.04, 1.39, 1.7, 1.87, 1.87, 1.46, 0.8, 0.53,
   0.29, 0.19, 0.14]
-let xvhar: array[15, float32] = [
+const xvhar: array[15, float32] = [
   0.48, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0, 15.0, 20.0, 30.0,
   40.0]
-let yvhar: array[15, float32] = [
+const yvhar: array[15, float32] = [
   0.0, 0.001, 0.033, 0.085, 0.16, 0.2, 0.27, 0.3, 0.3, 0.23, 0.125, 0.085,
   0.047, 0.032, 0.024]
-let xtrp1: array[12, float32] = [
+const xtrp1: array[12, float32] = [
   4.6, 5.5, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 17.0, 20.0, 24.0, 27.0]
-let ytrp1: array[12, float32] = [
+const ytrp1: array[12, float32] = [
   0.0, 0.015, 0.05, 0.075, 0.084, 0.09, 0.098, 0.1, 0.09, 0.075, 0.055, 0.043]
-let xtrp2: array[11, float32] = [
+const xtrp2: array[11, float32] = [
   5.7, 7.2, 8.2, 9.2, 10.2, 12.2, 14.2, 17.2, 20.2, 24.2, 27.2]
-let ytrp2: array[11, float32] = [
+const ytrp2: array[11, float32] = [
   0.0, 0.088, 0.161, 0.185, 0.198, 0.216, 0.22, 0.198, 0.165, 0.121, 0.095]
-let xtrp3: array[11, float32] = [
+const xtrp3: array[11, float32] = [
   7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 17.0, 20.0, 24.0, 27.0, 32.0]
-let ytrp3: array[11, float32] = [
+const ytrp3: array[11, float32] = [
   0.0, 0.245, 0.504, 0.588, 0.665, 0.7, 0.7, 0.665, 0.525, 0.406, 0.301]
-let z6t: array[25, float32] = [
+const z6t: array[25, float32] = [
   298.0, 178.0, 85.2, 47.5, 26.3, 12.2, 7.06, 4.45, 3.06, 2.82, 2.89, 2.99,
   3.08, 3.13, 3.18, 3.25, 3.31, 3.39, 3.44, 3.49, 3.52, 3.54, 3.55, 3.57,
   3.57]
-let z7t: array[25, float32] = [
+const z7t: array[25, float32] = [
   385.0, 234.0, 113.0, 63.5, 35.5, 16.4, 9.48, 5.96, 4.07, 3.73, 3.81, 3.93,
   4.04, 4.11, 4.18, 4.26, 4.33, 4.42, 4.48, 4.55, 4.59, 4.61, 4.63, 4.64,
   4.65]
-let z1t: array[25, float32] = [
+const z1t: array[25, float32] = [
   11.3, 6.18, 2.8, 1.54, 0.858, 0.407, 0.251, 0.176, 0.145, 0.15, 0.167,
   0.178, 0.187, 0.193, 0.198, 0.205, 0.21, 0.218, 0.222, 0.228, 0.231, 0.233,
   0.234, 0.235, 0.235]
-let ebrm: array[25, float32] = [
+const ebrm: array[25, float32] = [
   1000.0, 2000.0, 5000.0, 10000.0, 20000.0, 50000.0, 100000.0, 200000.0,
   500000.0, 1000000.0, 2000000.0, 3000000.0, 4000000.0, 5000000.0, 6000000.0,
   8000000.0, 10000000.0, 15000000.0, 20000000.0, 30000000.0, 40000000.0,
   50000000.0, 60000000.0, 80000000.0, 100000000.0]
 
-proc trimethylamine*(inp: GasInput, g: var GasXsec) =
-  # (NAME is only set for NANISO 0 and 2)
-  if inp.naniso != 1:
-    g.describe(inp, " N(CH3)3 2015  ISOTROPIC", " N(CH3)3 2015 ANISOTROPIC",
-               mass = 59.11026)
-  else:
-    let name = g.name
-    g.describe(inp, "", "", mass = 59.11026)
-    g.name = name
-  g.scrp[2] = " ELASTIC  N-(CH3)3 TRIMETHYL AMINE"
-  g.e[3] = 8.40'f32
-  g.shells [
-    (8.40'f32, 0.0'f32, 0, 0.0'f32, " IONISATION                         ELOSS=   8.40"),
-    (285.0, 210.0, 2, 253.0, " IONISATION   CARBON K-SHELL        ELOSS= 285.0"),
-    (401.6, 260.0, 2, 358.6, " IONISATION NITROGEN K-SHELL        ELOSS= 401.6")]
-  g.attachment [" ATTACHMENT"]
-  g.levels(inp, [
-    (-0.025'f32, " ROTATION                           ELOSS= -0.025"),
-    (0.025, " ROTATION                           ELOSS=  0.025"),
-    (-0.0334, " TORSION + ROTATION                 ELOSS= -0.0334"),
-    (0.0334, " TORSION + ROTATION                 ELOSS=  0.0334"),
-    (-0.103, " VIBRATION V1                       ELOSS= -0.103"),
-    (0.103, " VIBRATION V1                       ELOSS=  0.103"),
-    (0.179, " VIBRATION V2                       ELOSS=  0.179"),
-    (0.366, " VIBRATION V3                       ELOSS=  0.366"),
-    (0.480, " VIBRATION HARMONICS                ELOSS=  0.480"),
-    (4.6, " EXC TRIPLET                        ELOSS=  4.6"),
-    (4.65, " EXC DIPOLE   3S RYDBERG  F=.00047  ELOSS=  4.65"),
-    (4.95, " EXC DIPOLE   3S RYDBERG  F=.00384  ELOSS=  4.95"),
-    (5.25, " EXC DIPOLE   3S RYDBERG  F=.00828  ELOSS=  5.25"),
-    (5.55, " EXC DIPOLE   3S RYDBERG  F=.00974  ELOSS=  5.55"),
-    (5.7, " EXC TRIPLET                        ELOSS=  5.70"),
-    (5.85, " EXC DIPOLE   3P RYDBERG  F=.02635  ELOSS=  5.85"),
-    (6.15, " EXC DIPOLE   3P RYDBERG  F=.03621  ELOSS=  6.15"),
-    (6.45, " EXC DIPOLE   3P RYDBERG  F=.02819  ELOSS=  6.45"),
-    (6.75, " EXC DIPOLE   3P RYDBERG  F=.02325  ELOSS=  6.75"),
-    (7.0, " EXC TRIPLET                        ELOSS=  7.00"),
-    (7.05, " EXC DIPOLE HIGH RYDBERG  F=.02271  ELOSS=  7.05"),
-    (7.35, " EXC DIPOLE HIGH RYDBERG  F=.02561  ELOSS=  7.35"),
-    (7.65, " EXC DIPOLE HIGH RYDBERG  F=.02641  ELOSS=  7.65"),
-    (7.95, " EXC DIPOLE HIGH RYDBERG  F=.02625  ELOSS=  7.95"),
-    (8.25, " EXC DIPOLE HIGH RYDBERG  F=.02671  ELOSS=  8.25"),
-    (8.55, " EXC DIPOLE HIGH RYDBERG  F=.04342  ELOSS=  8.55"),
-    (8.85, " EXC DIPOLE HIGH RYDBERG  F=.06804  ELOSS=  8.85"),
-    (9.15, " EXC DIPOLE HIGH RYDBERG  F=.07186  ELOSS=  9.15"),
-    (9.45, " EXC DIPOLE HIGH RYDBERG  F=.07346  ELOSS=  9.45"),
-    (9.75, " EXC DIPOLE HIGH RYDBERG  F=.08795  ELOSS=  9.75"),
-    (10.05, " EXC DIPOLE HIGH RYDBERG  F=.11445  ELOSS= 10.05"),
-    (10.35, " EXC DIPOLE HIGH RYDBERG  F=.12904  ELOSS= 10.35"),
-    (10.65, " EXC DIPOLE HIGH RYDBERG  F=.13512  ELOSS= 10.65"),
-    (10.95, " EXC DIPOLE HIGH RYDBERG  F=.14497  ELOSS= 10.95"),
-    (11.25, " EXC DIPOLE HIGH RYDBERG  F=.15169  ELOSS= 11.25"),
-    (11.55, " EXC DIPOLE HIGH RYDBERG  F=.15328  ELOSS= 11.55"),
-    (11.85, " EXC DIPOLE HIGH RYDBERG  F=.15788  ELOSS= 11.85")])
-  g.eb[1] = g.eion[1] * 0.85'f32
-  let ioffion = inp.offsets(g.eion[1 .. g.nion])
-  let ioffn = inp.offsets(g.ei[1 .. g.nin], magnitude = true)
-  for k in 1 .. g.nin:
-    for l in 1 .. 3: g.penfra[l, k] = 0.0
 
-  let bethe = bornBethe(15.2, 142.1)
-  let augkc = float64(2.00'f32)
-  let augkn = float64(1.99'f32)
-  let apop1 = exp(g.ei[1] / inp.kT)
-  let apop2 = exp(g.ei[3] / inp.kT)
-  let apop3 = exp(g.ei[5] / inp.kT)
-  # superelastic (from the excited state) and inelastic pairs on one table,
-  # falling off as 1/E above it: (level, curve, population, angular
-  # distribution threshold in units of the energy loss)
-  let pairs = [(3, curve(xtors, ytors), apop2, 10.0),
-               (5, curve(xvib1, yvib1), apop3, 10.0)]
-  # inelastic vibrations (falloff 1/E) and triplets (falloff 1/E²)
-  let tabs = [(7, curve(xvib2, yvib2), 1.0, 5.0), (8, curve(xvib3, yvib3), 1.0, 5.0),
-              (9, curve(xvhar, yvhar), 1.0, 5.0), (10, curve(xtrp1, ytrp1), 2.0, 5.0),
-              (15, curve(xtrp2, ytrp2), 2.0, 5.0), (20, curve(xtrp3, ytrp3), 2.0, 4.0)]
-  # Born dipole levels: oscillator strength, scale, second scale, angular
-  # distribution threshold
-  let dipoles = [
-    (11, 0.0004779'f32, 1.0323'f32, 1.0'f32, 5.0),
-    (12, 0.0039141'f32, 1.0303'f32, 1.0'f32, 5.0),
-    (13, 0.0084476'f32, 1.0286'f32, 1.0'f32, 5.0),
-    (14, 0.0102610'f32, 1.0270'f32, 1.0'f32, 5.0),
-    (16, 0.028163'f32, 1.0256'f32, 1.0'f32, 4.0),
-    (17, 0.038700'f32, 1.0244'f32, 1.0'f32, 4.0),
-    (18, 0.030128'f32, 1.0233'f32, 1.0'f32, 4.0),
-    (19, 0.024852'f32, 1.0222'f32, 1.0'f32, 4.0),
-    (21, 0.023943'f32, 1.0213'f32, 1.0'f32, 4.0),
-    (22, 0.026992'f32, 1.0204'f32, 1.0'f32, 4.0),
-    (23, 0.027837'f32, 1.0196'f32, 1.0'f32, 4.0),
-    (24, 0.027667'f32, 1.0189'f32, 1.0'f32, 4.0),
-    (25, 0.028156'f32, 1.0182'f32, 1.0'f32, 3.0),
-    (26, 0.045773'f32, 1.0175'f32, 0.9324'f32, 3.0),
-    (27, 0.071724'f32, 1.0169'f32, 0.8514'f32, 3.0),
-    (28, 0.075742'f32, 1.0164'f32, 0.7703'f32, 3.0),
-    (29, 0.077213'f32, 1.0159'f32, 0.6892'f32, 3.0),
-    (30, 0.092447'f32, 1.0154'f32, 0.6081'f32, 3.0),
-    (31, 0.12030'f32, 1.0149'f32, 0.527'f32, 3.0),
-    (32, 0.13563'f32, 1.0145'f32, 0.4459'f32, 3.0),
-    (33, 0.14202'f32, 1.0141'f32, 0.3649'f32, 3.0),
-    (34, 0.15238'f32, 1.0137'f32, 0.2838'f32, 3.0),
-    (35, 0.15903'f32, 1.0133'f32, 0.2027'f32, 3.0),
-    (36, 0.16048'f32, 1.0130'f32, 0.1216'f32, 3.0),
-    (37, 0.16530'f32, 1.0127'f32, 0.0405'f32, 3.0),
-  ]
+const trimethylamineModel* = GasModel(
+  name: (" N(CH3)3 2015  ISOTROPIC", " N(CH3)3 2015 ANISOTROPIC"),
+  elasticText: (" ELASTIC  N-(CH3)3 TRIMETHYL AMINE", " ELASTIC  N-(CH3)3 TRIMETHYL AMINE"),
+  mass: 59.11026, e3: 8.40,
+  elastic: Elastic(interp: logLog, xTotal: widen(xen), total: widen(yelt),
+                   xMomentum: widen(xen), momentum: widen(yelm),
+                   xEps: widen(xen), eps: widen(yeps),
+                   low: constant, lowBelow: f64(xen, 1), lowQ: f64(yelm, 1) * 1e-16,
+                   lowIsotropic: true, minusLevels: 1 .. 2, minusEach: true),
+  # counting ionisation (Born-Bethe above its table) with the K shells
+  # (carbon three times) taken out of it with their Auger electrons
+  ionisation: Ionisation(
+    scheme: channels, am2: 15.2, c: 142.1,
+    subtract: @[Subtraction(target: 1, channel: 2, factor: 2.0),
+                Subtraction(target: 1, channel: 3, factor: f64([1.99'f32], 0))],
+    channels: @[
+      IonChannel(eion: 8.40, nc0: 0, ec0: 0.0, eobyScale: @[0.85'f32], openInclusive: true,
+                 text: " IONISATION                         ELOSS=   8.40", terms: @[term(withBethe(xion, yion, 1.0))]),
+      IonChannel(eion: 285.0, eoby: 210.0, nc0: 2, ec0: 253.0, shell: true,
+                 text: " IONISATION   CARBON K-SHELL        ELOSS= 285.0", terms: @[term(table(xkshc, ykshc, scale = 3.0))]),
+      IonChannel(eion: 401.6, eoby: 260.0, nc0: 2, ec0: 358.6, shell: true,
+                 text: " IONISATION NITROGEN K-SHELL        ELOSS= 401.6", terms: @[term(table(xkshn, ykshn, scale = 1.0))])]),
+  attachment: @[attach(" ATTACHMENT")],
+  # rotation (Born dipole), torsion and V1 with superelastic levels by
+  # detailed balance, weighted by the populations; vibrations, triplets
+  # and Born dipole levels; bremsstrahlung lies beyond the levels used
+  levels: @[
+    Level(ein: -0.025, text: " ROTATION                           ELOSS= -0.025",
+          kind: superelastic, dip: 0.27, population: 1, peq: peqElastic, gate: 20.0, gateAbs: true, peqBelow: belowZero),
+    Level(ein: 0.025, text: " ROTATION                           ELOSS=  0.025",
+          dip: 0.27, ground: 1, peq: peqElastic, gate: 20.0, peqBelow: belowZero),
+    Level(ein: -0.0334, text: " TORSION + ROTATION                 ELOSS= -0.0334",
+          kind: superelastic, sigma: table(xtors, ytors), tail: inverseTail, population: 2,
+          peq: peqElastic, gate: 10.0, gateAbs: true, peqBelow: belowZero),
+    Level(ein: 0.0334, text: " TORSION + ROTATION                 ELOSS=  0.0334",
+          sigma: falling(xtors, ytors, 1.0, unit = 1e-16.cm²), ground: 2, peq: peqElastic, gate: 10.0, peqBelow: belowZero),
+    Level(ein: -0.103, text: " VIBRATION V1                       ELOSS= -0.103",
+          kind: superelastic, sigma: table(xvib1, yvib1), tail: inverseTail, population: 3,
+          peq: peqElastic, gate: 10.0, gateAbs: true, peqBelow: belowZero),
+    Level(ein: 0.103, text: " VIBRATION V1                       ELOSS=  0.103",
+          sigma: falling(xvib1, yvib1, 1.0, unit = 1e-16.cm²), ground: 3, peq: peqElastic, gate: 10.0, peqBelow: belowZero),
+    Level(ein: 0.179, text: " VIBRATION V2                       ELOSS=  0.179",
+          sigma: falling(xvib2, yvib2, 1.0, unit = 1e-16.cm²), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 0.366, text: " VIBRATION V3                       ELOSS=  0.366",
+          sigma: falling(xvib3, yvib3, 1.0, unit = 1e-16.cm²), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 0.480, text: " VIBRATION HARMONICS                ELOSS=  0.480",
+          sigma: falling(xvhar, yvhar, 1.0, unit = 1e-16.cm²), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 4.6, text: " EXC TRIPLET                        ELOSS=  4.6",
+          sigma: falling(xtrp1, ytrp1, 2.0, unit = 1e-16.cm²), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 4.65, text: " EXC DIPOLE   3S RYDBERG  F=.00047  ELOSS=  4.65",
+          sigma: Sigma(beyond: born, f: 0.0004779, tailScale: 1.0323), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 4.95, text: " EXC DIPOLE   3S RYDBERG  F=.00384  ELOSS=  4.95",
+          sigma: Sigma(beyond: born, f: 0.0039141, tailScale: 1.0303), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 5.25, text: " EXC DIPOLE   3S RYDBERG  F=.00828  ELOSS=  5.25",
+          sigma: Sigma(beyond: born, f: 0.0084476, tailScale: 1.0286), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 5.55, text: " EXC DIPOLE   3S RYDBERG  F=.00974  ELOSS=  5.55",
+          sigma: Sigma(beyond: born, f: 0.0102610, tailScale: 1.0270), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 5.7, text: " EXC TRIPLET                        ELOSS=  5.70",
+          sigma: falling(xtrp2, ytrp2, 2.0, unit = 1e-16.cm²), peq: peqElastic, gate: 5.0, peqBelow: belowZero),
+    Level(ein: 5.85, text: " EXC DIPOLE   3P RYDBERG  F=.02635  ELOSS=  5.85",
+          sigma: Sigma(beyond: born, f: 0.028163, tailScale: 1.0256), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 6.15, text: " EXC DIPOLE   3P RYDBERG  F=.03621  ELOSS=  6.15",
+          sigma: Sigma(beyond: born, f: 0.038700, tailScale: 1.0244), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 6.45, text: " EXC DIPOLE   3P RYDBERG  F=.02819  ELOSS=  6.45",
+          sigma: Sigma(beyond: born, f: 0.030128, tailScale: 1.0233), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 6.75, text: " EXC DIPOLE   3P RYDBERG  F=.02325  ELOSS=  6.75",
+          sigma: Sigma(beyond: born, f: 0.024852, tailScale: 1.0222), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 7.0, text: " EXC TRIPLET                        ELOSS=  7.00",
+          sigma: falling(xtrp3, ytrp3, 2.0, unit = 1e-16.cm²), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 7.05, text: " EXC DIPOLE HIGH RYDBERG  F=.02271  ELOSS=  7.05",
+          sigma: Sigma(beyond: born, f: 0.023943, tailScale: 1.0213), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 7.35, text: " EXC DIPOLE HIGH RYDBERG  F=.02561  ELOSS=  7.35",
+          sigma: Sigma(beyond: born, f: 0.026992, tailScale: 1.0204), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 7.65, text: " EXC DIPOLE HIGH RYDBERG  F=.02641  ELOSS=  7.65",
+          sigma: Sigma(beyond: born, f: 0.027837, tailScale: 1.0196), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 7.95, text: " EXC DIPOLE HIGH RYDBERG  F=.02625  ELOSS=  7.95",
+          sigma: Sigma(beyond: born, f: 0.027667, tailScale: 1.0189), peq: peqElastic, gate: 4.0, peqBelow: belowZero),
+    Level(ein: 8.25, text: " EXC DIPOLE HIGH RYDBERG  F=.02671  ELOSS=  8.25",
+          sigma: Sigma(beyond: born, f: 0.028156, tailScale: 1.0182), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 8.55, text: " EXC DIPOLE HIGH RYDBERG  F=.04342  ELOSS=  8.55",
+          sigma: Sigma(beyond: born, f: 0.045773, tailScale: 1.0175, tailScale2: 0.9324), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 8.85, text: " EXC DIPOLE HIGH RYDBERG  F=.06804  ELOSS=  8.85",
+          sigma: Sigma(beyond: born, f: 0.071724, tailScale: 1.0169, tailScale2: 0.8514), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 9.15, text: " EXC DIPOLE HIGH RYDBERG  F=.07186  ELOSS=  9.15",
+          sigma: Sigma(beyond: born, f: 0.075742, tailScale: 1.0164, tailScale2: 0.7703), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 9.45, text: " EXC DIPOLE HIGH RYDBERG  F=.07346  ELOSS=  9.45",
+          sigma: Sigma(beyond: born, f: 0.077213, tailScale: 1.0159, tailScale2: 0.6892), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 9.75, text: " EXC DIPOLE HIGH RYDBERG  F=.08795  ELOSS=  9.75",
+          sigma: Sigma(beyond: born, f: 0.092447, tailScale: 1.0154, tailScale2: 0.6081), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 10.05, text: " EXC DIPOLE HIGH RYDBERG  F=.11445  ELOSS= 10.05",
+          sigma: Sigma(beyond: born, f: 0.12030, tailScale: 1.0149, tailScale2: 0.527), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 10.35, text: " EXC DIPOLE HIGH RYDBERG  F=.12904  ELOSS= 10.35",
+          sigma: Sigma(beyond: born, f: 0.13563, tailScale: 1.0145, tailScale2: 0.4459), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 10.65, text: " EXC DIPOLE HIGH RYDBERG  F=.13512  ELOSS= 10.65",
+          sigma: Sigma(beyond: born, f: 0.14202, tailScale: 1.0141, tailScale2: 0.3649), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 10.95, text: " EXC DIPOLE HIGH RYDBERG  F=.14497  ELOSS= 10.95",
+          sigma: Sigma(beyond: born, f: 0.15238, tailScale: 1.0137, tailScale2: 0.2838), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 11.25, text: " EXC DIPOLE HIGH RYDBERG  F=.15169  ELOSS= 11.25",
+          sigma: Sigma(beyond: born, f: 0.15903, tailScale: 1.0133, tailScale2: 0.2027), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 11.55, text: " EXC DIPOLE HIGH RYDBERG  F=.15328  ELOSS= 11.55",
+          sigma: Sigma(beyond: born, f: 0.16048, tailScale: 1.0130, tailScale2: 0.1216), peq: peqElastic, gate: 3.0, peqBelow: belowZero),
+    Level(ein: 11.85, text: " EXC DIPOLE HIGH RYDBERG  F=.15788  ELOSS= 11.85",
+          sigma: Sigma(beyond: born, f: 0.16530, tailScale: 1.0127, tailScale2: 0.0405), peq: peqElastic, gate: 3.0, peqBelow: belowZero)],
+  populations: @[pop(1, group = 1), pop(3, group = 2), pop(5, group = 3)],
+  magnitudeOffsets: true,
+  negative: clampNegative,
+  unnamedModel1: true,
+  minLevels: 9)
 
-  for i, en in inp.bins:
-    let r = relativistic(en)
-    var pq1, pq2: float64
-    g.q[2, i] = 0.0
-    if en <= float64(xen[1]):
-      g.q[2, i] = yelm[1] * 1e-16
-      pq1 = 0.5
-      pq2 = 0.0
-    else:
-      let qmom = logLog(xen, yelm, en) * 1e-16
-      let qela = logLog(xen, yelt, en) * 1e-16
-      pq2 = 1.0 - lin(xen, yeps, en)
-      pq1 = 0.5 + (qela - qmom) / qela
-      g.q[2, i] = if inp.naniso == 0: qmom else: qela
-    if inp.naniso == 0: g.peqel[2, i] = 0.5
-    if inp.naniso == 1: g.peqel[2, i] = pq1
-    if inp.naniso == 2: g.peqel[2, i] = pq2
-    g.q[3, i] = 0.0
-
-    let peq0 = if inp.naniso == 2: 0.0 else: 0.5
-    g.qion[1, i] = 0.0
-    g.peqion[1, i] = peq0
-    if en >= g.eion[1]:
-      g.qion[1, i] = if en > float64(xion[^1]): bethe.ionisation(r)
-                     else: lin(xion, yion, en) * 1e-16
-      if en > 2.0 * g.eion[1]: g.peqion[1, i] = g.peqel[2, i - ioffion[0]]
-    g.qion[2, i] = 0.0
-    g.peqion[2, i] = peq0
-    if en > g.eion[2]:
-      g.qion[2, i] = 3.0 * lin(xkshc, ykshc, en) * 1e-16
-      if en > 2.0 * g.eion[2]: g.peqion[2, i] = g.peqel[2, i - ioffion[1]]
-    g.qion[3, i] = 0.0
-    g.peqion[3, i] = peq0
-    if en > g.eion[3]:
-      g.qion[3, i] = lin(xkshn, ykshn, en) * 1e-16
-      if en > 2.0 * g.eion[3]: g.peqion[3, i] = g.peqel[2, i - ioffion[2]]
-    # K-shells taken out of the counting ionisation (MB-48)
-    g.qion[1, i] = g.qion[1, i] - augkc * g.qion[2, i] - augkn * g.qion[3, i]
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = g.q[4, i]
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-
-    # rotation: Born dipole, superelastic and inelastic
-    let crot = float64(0.27'f32)
-    g.qin[1, i] = 0.0
-    g.peqin[1, i] = 0.0
-    if en > 0.0:
-      g.qin[1, i] = vibrationalDipole(crot, g.ei[1], en)
-      g.qin[1, i] = g.qin[1, i] * apop1 / (1.0 + apop1) * 1e-16
-      if en > abs(20.0 * g.ei[1]): g.peqin[1, i] = g.peqel[2, i - ioffn[0]]
-    g.qin[2, i] = 0.0
-    g.peqin[2, i] = 0.0
-    if en > g.ei[2]:
-      g.qin[2, i] = vibrationalDipole(crot, g.ei[2], en)
-      g.qin[2, i] = g.qin[2, i] / (1.0 + apop1) * 1e-16
-      if en > 20.0 * g.ei[2]: g.peqin[2, i] = g.peqel[2, i - ioffn[1]]
-    # torsion and V1: superelastic (detailed balance) and inelastic
-    for (l, c, apop, ang) in pairs:
-      let m = l + 1
-      g.qin[l, i] = 0.0
-      g.peqin[l, i] = 0.0
-      if en > 0.0:
-        let eup = en + g.ei[m]
-        g.qin[l, i] = if eup > c.x[^1]: c.y[^1] * c.x[^1] / en
-                      else: eup * lin(c, eup) / en
-        g.qin[l, i] = g.qin[l, i] * apop / (1.0 + apop) * 1e-16
-        if en > abs(ang * g.ei[l]): g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-      g.qin[m, i] = 0.0
-      g.peqin[m, i] = 0.0
-      if en > g.ei[m]:
-        g.qin[m, i] = if en > c.x[^1]: c.y[^1] * c.x[^1] / en else: lin(c, en)
-        g.qin[m, i] = g.qin[m, i] / (1.0 + apop) * 1e-16
-        if en > ang * g.ei[m]: g.peqin[m, i] = g.peqel[2, i - ioffn[m - 1]]
-    for (l, c, falloff, ang) in tabs:
-      g.qin[l, i] = 0.0
-      g.peqin[l, i] = 0.0
-      if en <= g.ei[l]: continue
-      g.qin[l, i] =
-        if en > c.x[^1]:
-          if falloff == 1.0: c.y[^1] * c.x[^1] / en * 1e-16
-          else: c.y[^1] * pow2(c.x[^1] / en) * 1e-16
-        else: lin(c, en) * 1e-16
-      if en > ang * g.ei[l]: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-    for (l, f, scale, scale2, ang) in dipoles:
-      g.qin[l, i] = 0.0
-      g.peqin[l, i] = 0.0
-      if en <= g.ei[l]: continue
-      g.qin[l, i] = dipole(f, g.ei[l], r, en) / (en + g.ei[l] + g.e[3]) * scale
-      if l >= 26: g.qin[l, i] = g.qin[l, i] * scale2
-      if g.qin[l, i] < 0.0: g.qin[l, i] = 0.0
-      if en > ang * g.ei[l]: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-    # bremsstrahlung on H (9 atoms), C (3) and N (beyond NIN)
-    for l in 38 .. 40: g.qin[l, i] = 0.0
-    if en > 1000.0:
-      g.qin[38, i] = logLin(ebrm, z1t, en) * 9.0 * 1e-24
-      g.qin[39, i] = logLin(ebrm, z6t, en) * 3.0 * 1e-24
-      g.qin[40, i] = logLin(ebrm, z7t, en) * 1e-24
-
-    g.q[2, i] = g.q[2, i] - g.qin[1, i] - g.qin[2, i]
-    let rsum = g.qin[1, i] + g.qin[2, i]
-    var vsum = 0.0
-    for j in 3 .. 9: vsum = vsum + g.qin[j, i]
-    let trpsum = g.qin[10, i] + g.qin[15, i] + g.qin[20, i]
-    var sngsum = 0.0
-    for j in 10 .. 37: sngsum = sngsum + g.qin[j, i]
-    sngsum = sngsum - trpsum
-    let sumion = g.qion[1, i] + g.qion[2, i] + g.qion[3, i]
-    g.q[1, i] = g.q[2, i] + sumion + g.q[4, i] + sngsum + trpsum + vsum + rsum
-  g.dropLevelsAbove(inp.efinal)
-  if g.nin <= 9: g.nin = 9
+proc trimethylamine*(inp: GasInput, g: var GasXsec) = fill(trimethylamineModel, inp, g)

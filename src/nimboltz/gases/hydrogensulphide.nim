@@ -76,7 +76,7 @@ const hydrogenSulphideModel* = GasModel(
   mass: 34.08088, e3: 10.48,
   elastic: Elastic(interp: logLog, xMomentum: widen(xel), momentum: widen(yel),
                    low: constant, lowBelow: f64(xel, 1), lowQ: f64(yel, 1) * 1e-16,
-                   minusLevels: 1 .. 4),
+                   minusLevels: 1 .. 4, minusEach: true),
   ionisation: Ionisation(
     scheme: single, counting: table(xion, yion), countingFrom: 10.48,
     channels: @[IonChannel(eoby: 10.48, text: " IONISATION    ELOSS= 10.48")]),

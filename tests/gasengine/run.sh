@@ -1,7 +1,8 @@
 #!/bin/sh
 # Compares the generic gas engine (src/nimboltz/gases) with the per-gas
 # modules of commit $REF, which match the Magboltz fork bit for bit
-# (tests/gasdump), on the 72 gasdump cases of each gas.
+# (tests/gasdump), on 96 cases per gas (the 72 of tests/gasdump plus
+# EFINAL 1 and 15 eV).
 #   tests/gasengine/run.sh [-t tol] [gas...]    (default: all gases, 1e-12)
 # env: REF (default f336489), WORK (/tmp/gasengine)
 set -e

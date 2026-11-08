@@ -4,9 +4,9 @@ Every gas routine (GAS1..GAS80 of Magboltz 11.21) computes the same things on th
 energy grid: elastic (total, momentum transfer, angular parameter), ionisation
 channels, attachment, inelastic levels, null collisions. The physics is shared
 (`gases/common.nim`); the gases differ in which of the variants below they use.
-The per-gas modules in `gases/` (all 80 routines; 62-80 are one `dummy`)
-reproduce Fortran bit for bit. Next, these columns become the fields of one
-compile-time configuration and a single generic routine replaces the modules.
+The hand-written per-gas modules (commit f336489) reproduce Fortran bit for
+bit. These columns are now the fields of `GasModel` (`gases/model.nim`), one
+compile-time description per gas, evaluated by `gases/engine.nim`.
 
 Legend: `x` used, `-` not used, numbers are counts or factors.
 

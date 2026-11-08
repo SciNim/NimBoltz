@@ -56,10 +56,6 @@ type
   Relativistic* = object
     gamma2*, beta2*: float64
 
-  BornBethe* = object
-    ## parameters of the Bethe formula of the ionisation cross section
-    am2*, c*: float64
-
 func mixtureOf*(gas: array[1..6, int], percent: array[1..6, float64]):
     array[1..6, tuple[gas: int, percent: float64]] =
   for k in 1 .. 6: result[k] = (gas[k], percent[k])
@@ -88,29 +84,6 @@ proc relativistic*(en: float64): Relativistic =
   let beta = sqrt(1.0 - 1.0 / result.gamma2)
   result.beta2 = beta * beta
 
-func bornBethe*(am2, c: float32): BornBethe = BornBethe(am2: am2, c: c)
-
-proc ionisation*(b: BornBethe, r: Relativistic, fraction: float32 = 1.0): float64 =
-  ## Bethe's ionisation cross section (cm²) times the fraction of a channel
-  let x2 = 1.0 / r.beta2
-  let x1 = x2 * ln(r.beta2 / (1.0 - r.beta2)) - 1.0
-  bornConst * (b.am2 * x1 + b.c * x2) * fraction
-
-proc dipoleD*(f: float64, eloss: float64, r: Relativistic, en: float64,
-              bb = bbconst): float64 =
-  ## Born-Bethe cross section of an optically allowed excitation with
-  ## oscillator strength f, times en; divide by (en + eloss + ionisation
-  ## energy), in the order Magboltz adds them (`bb`: a routine's own
-  ## 16 π a₀² Ry² / (2 m c²))
-  f / (eloss * r.beta2) * (ln(r.beta2 * r.gamma2 * emass2 / (4.0 * eloss)) -
-    r.beta2) * bb * en
-
-proc dipole*(f: float32, eloss: float64, r: Relativistic, en: float64,
-             bb = bbconst): float64 {.inline.} =
-  ## the same, with the oscillator strength a single precision literal (as
-  ## nearly always in Magboltz)
-  dipoleD(float64(f), eloss, r, en, bb)
-
 proc vibrationalDipole*(c: float64, eloss, en: float64): float64 =
   ## Born approximation of a dipole active vibration (excitation or, with
   ## eloss < 0, de-excitation); c in units of 10⁻¹⁶ cm² eV
@@ -125,9 +98,6 @@ proc momentumFactor*(en, eloss: float64): float64 =
   let fwd = ln((en + elf) / (en + elf - 2.0 * sqrt(en * elf)))
   let bck = ln((en + elf + 2.0 * sqrt(en * elf)) / (en + elf))
   1.5 - fwd / (fwd + bck)
-
-func nonNegative*(x: float64): float64 {.inline.} =
-  if x < 0.0: 0.0 else: x
 
 proc power*(x: float64, p: float64): float64 {.inline.} =
   ## x**p as gfortran evaluates it (integer powers by multiplication or
@@ -181,59 +151,9 @@ func logLin*[X, Y](x: openArray[X], y: openArray[Y], en: float64): float64 =
   exp(a * en + b)
 
 type
-  Curve* = object
-    ## a tabulated cross section, widened to double precision, and what
-    ## the gas does beyond it: cm² in units of `unit`, times `scale`; above
-    ## the table it falls off as en^-falloff or, if f > 0, it follows the
-    ## Born-Bethe formula of an allowed transition with oscillator strength
-    ## f. Without a table (`born`), the Born-Bethe formula alone.
-    x*, y*: seq[float64]
-    unit*, scale*: float64
-    falloff*: float64
-    f*: float32
-
-func widen[T](a: openArray[T]): seq[float64] =
-  for v in a: result.add float64(v)
-
-func curve*[X, Y](x: openArray[X], y: openArray[Y], unit = 1e-16): Curve =
-  Curve(x: widen(x), y: widen(y), unit: unit, scale: 1.0)
-
-func tab*[X, Y](x: openArray[X], y: openArray[Y], falloff: float64,
-                unit = 1e-18, scale = 1.0): Curve =
-  Curve(x: widen(x), y: widen(y), unit: unit, scale: scale, falloff: falloff)
-
-func tab*[X, Y](x: openArray[X], y: openArray[Y], falloff: int, unit = 1e-18,
-                scale = 1.0): Curve =
-  tab(x, y, float64(falloff), unit, scale)
-
-func tab*[X, Y](x: openArray[X], y: openArray[Y], f: float32,
-                unit = 1e-18, scale = 1.0): Curve =
-  Curve(x: widen(x), y: widen(y), unit: unit, scale: scale, f: f)
-
-func born*(f: float32): Curve = Curve(f: f)
-
-func lin*(c: Curve, en: float64): float64 {.inline.} = lin(c.x, c.y, en)
-
-func logLog*(c: Curve, en: float64): float64 {.inline.} = logLog(c.x, c.y, en)
-
-type
   Negative* = enum
     ## what a gas does with Born-Bethe values below zero (near threshold)
     keepNegative, clampNegative, absNegative
-
-proc excitation*(c: Curve, ein, eion: float64, r: Relativistic, en: float64,
-                 negative = clampNegative, ionFirst = true): float64 =
-  ## cross section of a level with energy loss ein: the table, or the
-  ## Born-Bethe formula above it (or without table), divided by en + eion
-  ## + ein (in that order of summation, or en + ein + eion)
-  if c.x.len > 0 and (c.f == 0.0 or en <= c.x[^1]):
-    return lin(c.x, c.y, en, c.falloff) * c.unit * c.scale
-  let d = dipole(c.f, ein, r, en) /
-          (if ionFirst: en + eion + ein else: en + ein + eion)
-  case negative
-  of keepNegative: d
-  of clampNegative: nonNegative(d)
-  of absNegative: abs(d)
 
 func offsets*(inp: GasInput, e: openArray[float64], magnitude = false): seq[int] =
   ## IOFF of each energy loss: number of grid bins at or below it (or its

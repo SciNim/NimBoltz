@@ -28,8 +28,17 @@ comparison keeps holding.
    their analyses (the eight ALPCALC drivers, SST, PT, TOF, FRIEDLAND;
    `townsend.nim`, driven by `analyses.nim`).
 4. Gas cross sections (95 kLOC): first every GASn by hand, bit for bit
-   (`gases/`, done), then one generic engine with a compile-time
-   description per gas.
+   (2026-11-06), then one generic engine (2026-11-08): `gases/model.nim`
+   defines the description of a gas, `GasModel`, whose fields are the
+   variants of `docs/gas-features.md`; each gas module is its tables plus
+   one `const GasModel`, and `engine.fill`, instantiated per model,
+   computes the cross sections. All 61 real gases use it; the three model
+   gases (26–28) and the empty slots (62–80) stay small hand-written
+   routines in `gases/models.nim`. `tests/gasengine` compares the engine
+   with the hand-written modules (commit 9e63630) on 96 cases per gas:
+   largest relative difference 2.5e-13 (most gases below 1e-15); 15–40% of
+   the values differ in the last bits, from a different order of
+   operations, so MC decks stay byte-identical only by luck.
 
 COMMON blocks were replaced family by family, with small bridges in
 `legacy/` while old and new code coexisted. Now the state of a run is a

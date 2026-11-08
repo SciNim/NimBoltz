@@ -10,9 +10,9 @@
 ## distributions near threshold; bremsstrahlung on Si and H (levels 50, 51,
 ## beyond NIN). No total cross section (Q(1) is not set).
 
-import common
+import engine
 
-let xen: array[165, float32] = [
+const xen: array[165, float32] = [
   0.00001, 0.001, 0.004, 0.01, 0.014, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
   0.08, 0.09, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
   0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.15, 2.65, 3.0,
@@ -33,7 +33,7 @@ let xen: array[165, float32] = [
   200000000.0, 250000000.0, 300000000.0, 350000000.0, 400000000.0,
   450000000.0, 500000000.0, 600000000.0, 700000000.0, 800000000.0,
   900000000.0, 1e+9]
-let yel: array[165, float32] = [
+const yel: array[165, float32] = [
   45.0, 45.0, 43.7, 42.3, 40.1, 37.3, 32.4, 26.1, 21.0, 16.5, 13.1, 10.5, 8.3,
   6.6, 3.8, 2.35, 1.55, 1.12, 0.86, 0.43, 0.2, 0.13, 0.11, 0.12, 0.14, 0.19,
   0.3, 0.7, 1.3, 2.3, 3.4, 7.7, 16.0, 24.0, 28.0, 32.9, 37.3, 41.2, 44.0,
@@ -50,105 +50,125 @@ let yel: array[165, float32] = [
   0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939,
   0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939,
   0.00939, 0.00939, 0.00939, 0.00939, 0.00939, 0.00939]
-let ymt: array[165, float64] = [
-  45.0, 45.0, 43.7'f32, 42.3'f32, 40.1'f32, 37.3'f32, 32.4'f32, 26.1'f32,
-  21.0, 16.5, 13.1'f32, 10.5, 8.3'f32, 6.6'f32, 3.8'f32, 2.35'f32, 1.55'f32,
-  1.12'f32, 0.86'f32, 0.43'f32, 0.2'f32, 0.13'f32, 0.11'f32, 0.12'f32,
-  0.14'f32, 0.19'f32, 0.3'f32, 0.7'f32, 1.3'f32, 2.3'f32, 3.4'f32, 7.7'f32,
-  16.0, 24.0, 28.0, 30.0, 29.5, 29.0, 27.0, 25.0, 24.0, 23.0, 21.2'f32,
-  19.8'f32, 19.0, 17.9'f32, 16.7'f32, 15.5, 13.5, 11.5, 9.0, 7.6'f32, 6.4'f32,
-  5.15'f32, 4.3'f32, 3.85'f32, 3.4'f32, 3.05'f32, 2.8'f32, 2.65'f32, 2.11'f32,
-  1.74'f32, 1.46'f32, 1.25, 0.951'f32, 0.755'f32, 0.617'f32, 0.516'f32,
-  0.44'f32, 0.381'f32, 0.295'f32, 0.236'f32, 0.195'f32, 0.164'f32, 0.14'f32,
-  0.0998'f32, 0.0753'f32, 0.0592'f32, 0.0479'f32, 0.0335'f32, 0.0248'f32,
-  0.0192'f32, 0.0154'f32, 0.0126'f32, 0.0106'f32, 0.00772'f32, 0.00591'f32,
-  0.00469'f32, 0.00382'f32, 0.00317, 0.00214, 0.00155, 0.00118, 0.00093,
-  0.000625, 0.000452, 0.000343, 0.000271, 0.00022, 0.000182, 0.000132,
-  0.000101, 0.00008, 0.0000652, 0.0000543, 0.0000371, 0.0000273, 0.0000211,
-  0.0000169, 0.0000118, 8.78e-6, 6.88e-6, 5.58e-6, 4.65e-8, 3.95e-6, 2.99e-6,
-  2.36e-6, 1.93e-6, 1.61e-6, 1.38e-6, 9.72e-7, 7.35e-7, 5.78e-7, 4.69e-7,
-  3.29e-7, 2.45e-7, 1.9e-7, 1.52e-7, 1.25e-7, 1.05e-7, 7.68e-8, 5.88e-8,
-  4.66e-8, 3.79e-8, 3.15e-8, 2.14e-8, 1.52e-8, 1.15e-8, 9.03e-9, 5.99e-9,
-  4.27e-9, 3.21e-9, 2.5e-9, 2e-9, 1.64e-9, 1.15e-9, 8.57e-10, 6.61e-10,
-  5.25e-10, 4.27e-10, 2.75e-10, 1.91e-10, 1.41e-10, 1.08e-10, 6.93e-11,
-  4.8e-11, 3.53e-11, 2.7e-11, 2.14e-11, 1.73e-11, 1.2e-11, 8.82e-12, 6.76e-12,
-  5.34e-12, 4.32e-12]
-let yeps: array[165, float64] = [
+const ymt: array[165, float64] = [
+  45.0, 45.0, 43.70000076293945, 42.29999923706055, 40.099998474121094,
+  37.29999923706055, 32.400001525878906, 26.100000381469727, 21.0, 16.5,
+  13.100000381469727, 10.5, 8.300000190734863, 6.599999904632568,
+  3.799999952316284, 2.3499999046325684, 1.5499999523162842,
+  1.1200000047683716, 0.8600000143051147, 0.4300000071525574,
+  0.20000000298023224, 0.12999999523162842, 0.10999999940395355,
+  0.11999999731779099, 0.14000000059604645, 0.1899999976158142,
+  0.30000001192092896, 0.699999988079071, 1.2999999523162842,
+  2.299999952316284, 3.4000000953674316, 7.699999809265137, 16.0, 24.0, 28.0,
+  30.0, 29.5, 29.0, 27.0, 25.0, 24.0, 23.0, 21.200000762939453,
+  19.799999237060547, 19.0, 17.899999618530273, 16.700000762939453, 15.5, 13.5,
+  11.5, 9.0, 7.599999904632568, 6.400000095367432, 5.150000095367432,
+  4.300000190734863, 3.8499999046325684, 3.4000000953674316, 3.049999952316284,
+  2.799999952316284, 2.6500000953674316, 2.109999895095825, 1.7400000095367432,
+  1.4600000381469727, 1.25, 0.9509999752044678, 0.7549999952316284,
+  0.6169999837875366, 0.515999972820282, 0.4399999976158142,
+  0.38100001215934753, 0.29499998688697815, 0.23600000143051147,
+  0.19499999284744263, 0.164000004529953, 0.14000000059604645,
+  0.0997999981045723, 0.07530000060796738, 0.05920000001788139,
+  0.0478999987244606, 0.03350000083446503, 0.024800000712275505,
+  0.019200000911951065, 0.015399999916553497, 0.012600000016391277,
+  0.010599999688565731, 0.007720000110566616, 0.005909999832510948,
+  0.004689999856054783, 0.003819999983534217, 0.00317, 0.00214, 0.00155,
+  0.00118, 0.00093, 0.000625, 0.000452, 0.000343, 0.000271, 0.00022, 0.000182,
+  0.000132, 0.000101, 0.00008, 0.0000652, 0.0000543, 0.0000371, 0.0000273,
+  0.0000211, 0.0000169, 0.0000118, 8.78e-6, 6.88e-6, 5.58e-6, 4.65e-8, 3.95e-6,
+  2.99e-6, 2.36e-6, 1.93e-6, 1.61e-6, 1.38e-6, 9.72e-7, 7.35e-7, 5.78e-7,
+  4.69e-7, 3.29e-7, 2.45e-7, 1.9e-7, 1.52e-7, 1.25e-7, 1.05e-7, 7.68e-8,
+  5.88e-8, 4.66e-8, 3.79e-8, 3.15e-8, 2.14e-8, 1.52e-8, 1.15e-8, 9.03e-9,
+  5.99e-9, 4.27e-9, 3.21e-9, 2.5e-9, 2e-9, 1.64e-9, 1.15e-9, 8.57e-10,
+  6.61e-10, 5.25e-10, 4.27e-10, 2.75e-10, 1.91e-10, 1.41e-10, 1.08e-10,
+  6.93e-11, 4.8e-11, 3.53e-11, 2.7e-11, 2.14e-11, 1.73e-11, 1.2e-11, 8.82e-12,
+  6.76e-12, 5.34e-12, 4.32e-12]
+const yeps: array[165, float64] = [
   1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
   1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-  1.0, 1.0, 1.0, 1.0, 1.0, 0.86824'f32, 0.69239'f32, 0.5278'f32, 0.45728'f32,
-  0.37337'f32, 0.33844'f32, 0.31579'f32, 0.29166'f32, 0.27981'f32,
-  0.26975'f32, 0.25361'f32, 0.25456'f32, 0.24577'f32, 0.27571'f32,
-  0.28567'f32, 0.28252'f32, 0.28628'f32, 0.26432'f32, 0.25548'f32,
-  0.24826'f32, 0.26591'f32, 0.27546'f32, 0.27041'f32, 0.27516'f32,
-  0.28257'f32, 0.23373'f32, 0.20101'f32, 0.1823'f32, 0.16716'f32, 0.13358'f32,
-  0.11125'f32, 0.09642'f32, 0.08299'f32, 0.07192'f32, 0.06629'f32,
-  0.05286'f32, 0.04403'f32, 0.03833'f32, 0.03355'f32, 0.02977'f32,
-  0.02323'f32, 0.01839'f32, 0.01463'f32, 0.01314'f32, 0.01038'f32,
-  0.008565'f32, 0.007283'f32, 0.006328'f32, 0.00559'f32, 0.005009'f32,
-  0.004137'f32, 0.003521'f32, 0.003063'f32, 0.00271'f32, 0.002428'f32,
-  0.001926'f32, 0.001594'f32, 0.00136'f32, 0.001184'f32, 0.0009392, 0.0007768,
-  0.0006614, 0.000575, 0.000508, 0.0004545, 0.0003745, 0.0003174, 0.0002747,
-  0.0002416, 0.0002152, 0.0001678, 0.0001366, 0.0001143, 0.00009781,
-  0.00007495, 0.00005997, 0.00004946, 0.0000417, 0.00003578, 0.00003112,
-  0.00002434, 0.00001966, 0.00001627, 0.00001373, 0.00001175, 8.329e-6,
-  6.271e-6, 4.904e-6, 3.946e-6, 2.721e-6, 1.993e-6, 1.524e-6, 1.204e-6,
-  9.751e-7, 8.065e-7, 5.783e-7, 4.351e-7, 3.392e-7, 2.72e-7, 2.229e-7,
-  1.472e-7, 1.027e-7, 7.624e-8, 5.883e-8, 3.803e-8, 2.657e-8, 1.958e-8,
-  1.501e-8, 1.185e-8, 9.592e-9, 6.63e-9, 4.844e-9, 3.683e-9, 2.889e-9,
-  2.323e-9, 1.46e-9, 9.98e-10, 7.23e-10, 5.47e-10, 3.42e-10, 2.34e-10,
-  1.69e-10, 1.28e-10, 1e-10, 8e-11, 5.5e-11, 4e-11, 3e-11, 2.3e-11, 1.9e-11]
-let xionc: array[35, float32] = [
+  1.0, 1.0, 1.0, 1.0, 1.0, 0.8682399988174438, 0.6923900246620178,
+  0.5278000235557556, 0.4572800099849701, 0.3733699917793274,
+  0.3384400010108948, 0.31578999757766724, 0.29166001081466675,
+  0.27981001138687134, 0.2697499990463257, 0.2536099851131439,
+  0.2545599937438965, 0.24577000737190247, 0.27570998668670654,
+  0.2856700122356415, 0.28251999616622925, 0.2862800061702728,
+  0.2643199861049652, 0.25547999143600464, 0.2482600063085556,
+  0.26590999960899353, 0.27546000480651855, 0.2704100012779236,
+  0.275160014629364, 0.2825700044631958, 0.2337300032377243,
+  0.20101000368595123, 0.18230000138282776, 0.1671600043773651,
+  0.13357999920845032, 0.11124999821186066, 0.09641999751329422,
+  0.08298999816179276, 0.0719200000166893, 0.0662899985909462,
+  0.05285999923944473, 0.044029999524354935, 0.03832999989390373,
+  0.03355000168085098, 0.029769999906420708, 0.023229999467730522,
+  0.018389999866485596, 0.014630000106990337, 0.013140000402927399,
+  0.010379999876022339, 0.008565000258386135, 0.007282999809831381,
+  0.006328000221401453, 0.005590000189840794, 0.005009000189602375,
+  0.004137000069022179, 0.0035210000351071358, 0.003063000040128827,
+  0.0027099999133497477, 0.002428000094369054, 0.0019259999971836805,
+  0.0015940000303089619, 0.0013599999947473407, 0.0011840000515803695,
+  0.0009392, 0.0007768, 0.0006614, 0.000575, 0.000508, 0.0004545, 0.0003745,
+  0.0003174, 0.0002747, 0.0002416, 0.0002152, 0.0001678, 0.0001366, 0.0001143,
+  0.00009781, 0.00007495, 0.00005997, 0.00004946, 0.0000417, 0.00003578,
+  0.00003112, 0.00002434, 0.00001966, 0.00001627, 0.00001373, 0.00001175,
+  8.329e-6, 6.271e-6, 4.904e-6, 3.946e-6, 2.721e-6, 1.993e-6, 1.524e-6,
+  1.204e-6, 9.751e-7, 8.065e-7, 5.783e-7, 4.351e-7, 3.392e-7, 2.72e-7,
+  2.229e-7, 1.472e-7, 1.027e-7, 7.624e-8, 5.883e-8, 3.803e-8, 2.657e-8,
+  1.958e-8, 1.501e-8, 1.185e-8, 9.592e-9, 6.63e-9, 4.844e-9, 3.683e-9,
+  2.889e-9, 2.323e-9, 1.46e-9, 9.98e-10, 7.23e-10, 5.47e-10, 3.42e-10,
+  2.34e-10, 1.69e-10, 1.28e-10, 1e-10, 8e-11, 5.5e-11, 4e-11, 3e-11, 2.3e-11,
+  1.9e-11]
+const xionc: array[35, float32] = [
   11.54, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0,
   26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0,
   70.0, 80.0, 90.0, 100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 750.0, 1000.0]
-let yionc: array[35, float32] = [
+const yionc: array[35, float32] = [
   0.0, 0.06, 0.22, 0.52, 0.94, 1.49, 1.98, 2.44, 2.89, 3.19, 3.65, 3.93, 4.18,
   4.39, 4.54, 4.7, 4.81, 4.89, 4.97, 5.01, 5.09, 5.19, 5.27, 5.31, 5.4, 5.34,
   5.19, 5.08, 4.2, 3.65, 2.9, 2.4, 2.0, 1.45, 1.1]
-let xion1: array[28, float32] = [
+const xion1: array[28, float32] = [
   11.54, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0,
   26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0,
   70.0, 80.0, 90.0, 100.0]
-let yion1: array[28, float32] = [
+const yion1: array[28, float32] = [
   0.0, 0.06, 0.15, 0.31, 0.55, 0.86, 1.09, 1.35, 1.58, 1.69, 1.87, 1.93, 1.97,
   2.0, 2.03, 2.06, 2.07, 2.08, 2.09, 2.09, 2.08, 2.11, 2.14, 2.16, 2.18, 2.14,
   2.08, 2.05]
-let xion2: array[27, float32] = [
+const xion2: array[27, float32] = [
   12.09, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0, 26.0,
   28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0, 70.0,
   80.0, 90.0, 100.0]
-let yion2: array[27, float32] = [
+const yion2: array[27, float32] = [
   0.0, 0.07, 0.2, 0.36, 0.57, 0.81, 0.96, 1.11, 1.22, 1.36, 1.4, 1.41, 1.44,
   1.46, 1.48, 1.49, 1.51, 1.51, 1.52, 1.54, 1.56, 1.59, 1.61, 1.67, 1.66,
   1.63, 1.59]
-let xion3: array[26, float32] = [
+const xion3: array[26, float32] = [
   12.65, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0, 26.0, 28.0,
   30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0, 70.0, 80.0,
   90.0, 100.0]
-let yion3: array[26, float32] = [
+const yion3: array[26, float32] = [
   0.0, 0.01, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.14, 0.19, 0.27, 0.33, 0.39,
   0.43, 0.47, 0.49, 0.51, 0.52, 0.54, 0.56, 0.58, 0.58, 0.59, 0.59, 0.57,
   0.55]
-let xion4: array[24, float32] = [
+const xion4: array[24, float32] = [
   14.4, 16.0, 17.0, 18.0, 19.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 32.0,
   34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0, 60.0, 70.0, 80.0, 90.0, 100.0]
-let yion4: array[24, float32] = [
+const yion4: array[24, float32] = [
   0.0, 0.02, 0.03, 0.07, 0.12, 0.18, 0.28, 0.41, 0.51, 0.55, 0.57, 0.59, 0.61,
   0.61, 0.62, 0.62, 0.64, 0.65, 0.65, 0.65, 0.64, 0.63, 0.6, 0.58]
-let xion5: array[17, float32] = [
+const xion5: array[17, float32] = [
   24.5, 26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0,
   60.0, 70.0, 80.0, 90.0, 100.0]
-let yion5: array[17, float32] = [
+const yion5: array[17, float32] = [
   0.0, 0.02, 0.06, 0.08, 0.13, 0.17, 0.19, 0.22, 0.24, 0.27, 0.28, 0.28, 0.28,
   0.28, 0.28, 0.27, 0.27]
-let xion6: array[17, float32] = [
+const xion6: array[17, float32] = [
   24.55, 26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 45.0, 50.0, 55.0,
   60.0, 70.0, 80.0, 90.0, 100.0]
-let yion6: array[17, float32] = [
+const yion6: array[17, float32] = [
   0.0, 0.003, 0.005, 0.007, 0.009, 0.011, 0.014, 0.017, 0.02, 0.024, 0.028,
   0.031, 0.033, 0.035, 0.035, 0.035, 0.035]
-let xion7: array[55, float32] = [
+const xion7: array[55, float32] = [
   1839.0, 1860.2, 1883.7, 1938.6, 1995.3, 2053.5, 2175.0, 2304.0, 2512.0,
   2661.0, 2901.0, 3447.0, 4097.0, 4870.0, 5623.0, 6494.0, 7499.0, 8913.0,
   10000.0, 12960.0, 15400.0, 18300.0, 21100.0, 25100.0, 30700.0, 41000.0,
@@ -157,7 +177,7 @@ let xion7: array[55, float32] = [
   6120000.0, 8180000.0, 10000000.0, 20000000.0, 30700000.0, 44700000.0,
   68800000.0, 100000000.0, 205000000.0, 307000000.0, 410000000.0, 613000000.0,
   818000000.0, 1e+9]
-let yion7: array[55, float64] = [
+const yion7: array[55, float64] = [
   0.0, 1.82e-7, 5.69e-6, 0.000011, 0.0000161, 0.000021, 0.0000302, 0.0000386,
   0.0000499, 0.0000566, 0.0000655, 0.0000764, 0.0000893, 0.0000952, 0.0000975,
   0.0000979, 0.0000967, 0.0000934, 0.0000904, 0.000082, 0.0000758, 0.0000694,
@@ -166,56 +186,56 @@ let yion7: array[55, float64] = [
   0.0000122, 0.0000124, 0.0000128, 0.0000134, 0.000014, 0.0000149, 0.0000156,
   0.0000161, 0.0000178, 0.0000189, 0.0000199, 0.000021, 0.000022, 0.0000239,
   0.0000249, 0.0000257, 0.0000268, 0.0000275, 0.0000281]
-let xatt1: array[10, float32] = [
+const xatt1: array[10, float32] = [
   7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5]
-let yatt1: array[10, float32] = [
+const yatt1: array[10, float32] = [
   0.0, 0.28, 0.54, 0.78, 0.76, 0.58, 0.32, 0.13, 0.02, 0.0]
-let xatt2: array[10, float32] = [
+const xatt2: array[10, float32] = [
   7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5]
-let yatt2: array[10, float32] = [
+const yatt2: array[10, float32] = [
   0.0, 0.04, 0.1, 0.22, 0.34, 0.4, 0.34, 0.19, 0.06, 0.0]
-let xatt3: array[10, float32] = [
+const xatt3: array[10, float32] = [
   7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5]
-let yatt3: array[10, float32] = [
+const yatt3: array[10, float32] = [
   0.0, 0.028, 0.08, 0.18, 0.3, 0.32, 0.29, 0.15, 0.06, 0.0]
-let xatt4: array[10, float32] = [
+const xatt4: array[10, float32] = [
   7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5]
-let yatt4: array[10, float32] = [
+const yatt4: array[10, float32] = [
   0.0, 0.01, 0.02, 0.028, 0.056, 0.08, 0.08, 0.06, 0.034, 0.0]
-let xvibr: array[54, float32] = [
+const xvibr: array[54, float32] = [
   0.7837, 1.0565, 1.1973, 1.2897, 1.3618, 1.4217, 1.4751, 1.5229, 1.5675,
   1.6093, 1.65, 1.6885, 1.7275, 1.766, 1.8051, 1.8452, 1.8876, 1.9338, 1.9849,
   2.0504, 2.2, 2.608, 2.7865, 2.926, 3.052, 3.1675, 3.277, 3.3835, 3.4885,
   3.595, 3.7, 3.811, 3.925, 4.0465, 4.177, 4.3225, 4.486, 4.6825, 4.9345,
   5.3185, 6.0625, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5,
   12.0, 12.6]
-let yvibr: array[54, float32] = [
+const yvibr: array[54, float32] = [
   0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6,
   0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 0.9508, 0.901, 0.8512, 0.8015,
   0.7516, 0.7017, 0.6521, 0.6024, 0.5528, 0.5032, 0.4536, 0.4042, 0.3548,
   0.3056, 0.2566, 0.2078, 0.1597, 0.1122, 0.0665, 0.0366, 0.0319, 0.0361,
   0.048, 0.0362, 0.0319, 0.0257, 0.019, 0.0128, 0.008, 0.0046, 0.0025, 0.0014,
   0.00048]
-let xtrp1: array[12, float32] = [
+const xtrp1: array[12, float32] = [
   7.5, 8.5, 10.0, 11.0, 12.0, 13.0, 15.0, 17.0, 20.0, 23.0, 27.0, 30.0]
-let ytrp1: array[12, float32] = [
+const ytrp1: array[12, float32] = [
   0.00095, 0.143, 0.476, 0.714, 0.8, 0.857, 0.933, 0.952, 0.857, 0.714, 0.524,
   0.409]
-let xtrp2: array[11, float32] = [
+const xtrp2: array[11, float32] = [
   8.7, 10.0, 11.0, 12.0, 13.0, 15.0, 17.0, 20.0, 23.0, 27.0, 30.0]
-let ytrp2: array[11, float32] = [
+const ytrp2: array[11, float32] = [
   0.00056, 0.493, 0.902, 1.04, 1.11, 1.21, 1.23, 1.11, 0.924, 0.678, 0.532]
-let xtrp3: array[11, float32] = [
+const xtrp3: array[11, float32] = [
   10.0, 11.0, 12.0, 13.0, 15.0, 17.0, 20.0, 23.0, 27.0, 30.0, 35.0]
-let ytrp3: array[11, float32] = [
+const ytrp3: array[11, float32] = [
   0.00032, 0.784, 1.61, 1.88, 2.13, 2.24, 2.24, 2.13, 1.68, 1.3, 0.963]
-let xvib2: array[21, float32] = [
+const xvib2: array[21, float32] = [
   0.12084, 0.125, 0.13, 0.15, 0.17, 0.19, 0.21, 0.23, 0.25, 0.27, 0.3, 0.5,
   1.0, 2.0, 3.0, 6.0, 10.0, 15.0, 20.0, 30.0, 40.0]
-let yvib2: array[21, float32] = [
+const yvib2: array[21, float32] = [
   0.00008, 0.224, 0.304, 0.48, 0.568, 0.608, 0.616, 0.624, 0.632, 0.64, 0.64,
   0.648, 0.64, 0.608, 0.56, 0.4, 0.36, 0.28, 0.208, 0.128, 0.072]
-let enrot: array[145, float32] = [
+const enrot: array[145, float32] = [
   1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.1, 1.11, 1.12,
   1.13, 1.14, 1.16, 1.18, 1.2, 1.22, 1.25, 1.28, 1.31, 1.34, 1.37, 1.4, 1.44,
   1.48, 1.52, 1.56, 1.6, 1.65, 1.7, 1.75, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4,
@@ -231,7 +251,7 @@ let enrot: array[145, float32] = [
   1200000.0, 1400000.0, 1600000.0, 1800000.0, 2000000.0, 2500000.0, 3000000.0,
   3500000.0, 4000000.0, 5000000.0, 6000000.0, 7000000.0, 8000000.0, 9000000.0,
   10000000.0]
-let yepsr: array[145, float32] = [
+const yepsr: array[145, float32] = [
   1.0, 0.99009, 0.98037, 0.97082, 0.96145, 0.95245, 0.94321, 0.93434, 0.92563,
   0.91707, 0.90866, 0.90041, 0.8923, 0.88433, 0.8765, 0.86124, 0.8465,
   0.83225, 0.81848, 0.79867, 0.77981, 0.76185, 0.74471, 0.72837, 0.72175,
@@ -250,7 +270,7 @@ let yepsr: array[145, float32] = [
   0.0187, 0.01847, 0.0181, 0.0178, 0.01756, 0.01735, 0.01718, 0.01702,
   0.01675, 0.01654, 0.01635, 0.0162, 0.01606, 0.01576, 0.01553, 0.01534,
   0.01518, 0.0149, 0.01472, 0.01456, 0.0144, 0.01427, 0.01418]
-let ymtrt: array[145, float32] = [
+const ymtrt: array[145, float32] = [
   1.0, 0.9934, 0.9869, 0.9805, 0.9743, 0.9682, 0.9621, 0.9562, 0.9504, 0.9446,
   0.939, 0.9335, 0.928, 0.9227, 0.9174, 0.9071, 0.8972, 0.8875, 0.8782,
   0.8647, 0.8518, 0.8394, 0.8275, 0.8162, 0.8052, 0.7913, 0.7781, 0.7655,
@@ -268,289 +288,230 @@ let ymtrt: array[145, float32] = [
   0.06892, 0.06807, 0.06736, 0.06676, 0.06624, 0.06578, 0.065, 0.06436,
   0.06381, 0.06334, 0.06292, 0.06204, 0.06133, 0.06078, 0.06027, 0.05944,
   0.05889, 0.05839, 0.0579, 0.05749, 0.05723]
-let z1t: array[25, float32] = [
+const z1t: array[25, float32] = [
   11.3, 6.18, 2.8, 1.54, 0.858, 0.407, 0.251, 0.176, 0.145, 0.15, 0.167,
   0.178, 0.187, 0.193, 0.198, 0.205, 0.21, 0.218, 0.222, 0.228, 0.231, 0.233,
   0.234, 0.235, 0.235]
-let z14t: array[25, float32] = [
+const z14t: array[25, float32] = [
   1084.0, 712.0, 382.0, 226.0, 130.0, 61.6, 36.1, 22.6, 15.1, 13.5, 13.6,
   13.8, 14.1, 14.4, 14.5, 14.7, 14.9, 15.1, 15.2, 15.4, 15.5, 15.6, 15.6,
   15.7, 15.7]
-let ebrm: array[25, float32] = [
+const ebrm: array[25, float32] = [
   1000.0, 2000.0, 5000.0, 10000.0, 20000.0, 50000.0, 100000.0, 200000.0,
   500000.0, 1000000.0, 2000000.0, 3000000.0, 4000000.0, 5000000.0, 6000000.0,
   8000000.0, 10000000.0, 15000000.0, 20000000.0, 30000000.0, 40000000.0,
   50000000.0, 60000000.0, 80000000.0, 100000000.0]
 
-proc silane*(inp: GasInput, g: var GasXsec) =
-  var inp = inp
-  inp.naniso = 2
-  g.describe(inp, " SIH4 2022   ISOTROPIC", " SIH4 2022  ANISOTROPIC",
-             mass = 32.11726)
-  g.scrp[2] = " ELASTIC       ANISOTROPIC SILANE"
-  g.e[3] = 11.54'f32
-  g.shells [
-    (11.54'f32, 0.0'f32, 0, 0.0'f32, " IONISATION  SIH2 +               ELOSS=  11.54"),
-    (12.09, 0.0, 0, 0.0, " IONISATION  SIH3 +               ELOSS=  12.09"),
-    (12.65, 0.0, 0, 0.0, " IONISATION  SI   +               ELOSS=  12.65"),
-    (14.4, 0.0, 0, 0.0, " IONISATION  SIH  +               ELOSS=  14.4"),
-    (24.5, 0.0, 0, 0.0, " IONISATION  H    +               ELOSS=  24.5"),
-    (24.6, 0.0, 0, 0.0, " IONISATION  H2   +               ELOSS=  24.6"),
-    (1839.0, 0.0, 4, 1740.0, " SILICON K-SHELL                  ELOSS=1839.0")]
-  g.attachment [" ATTACHMENT    SIH3 -", " ATTACHMENT    SIH2 -",
-                " ATTACHMENT    SIH -", " ATTACHMENT    SI -"]
-  g.levels(inp, [
-    (-0.11335'f32, " VIB V4 SUPERELASTIC              ELOSS= -0.11335"),
-    (-0.12084, " VIB V2 SUPERELASTIC              ELOSS= -0.12084"),
-    (0.11335, " VIB V4                           ELOSS=  0.11335"),
-    (0.12084, " VIB V2                           ELOSS=  0.12084"),
-    (0.2713, " VIB V13                          ELOSS=  0.2713"),
-    (0.2884, " VIB V13 +V24                     ELOSS=  0.3884"),
-    (0.543, " VIB 2V13                         ELOSS=  0.543"),
-    (0.66, " VIB HIGHER HARMONICS             ELOSS=  0.66"),
-    (7.50, " EXCITATION TRIPLET               ELOSS=  7.50"),
-    (7.78, " EXCITATION DIPOLE  F=.0004784    ELOSS=  7.78"),
-    (7.99, " EXCITATION DIPOLE  F=.002708     ELOSS=  7.99"),
-    (8.20, " EXCITATION DIPOLE  F=.010461     ELOSS=  8.20"),
-    (8.40, " EXCITATION DIPOLE  F=.029921     ELOSS=  8.40"),
-    (8.60, " EXCITATION DIPOLE  F=.056648     ELOSS=  8.60"),
-    (8.70, " EXCITATION TRIPLET               ELOSS=  8.70"),
-    (8.80, " EXCITATION DIPOLE  F=.078097     ELOSS=  8.80"),
-    (9.00, " EXCITATION DIPOLE  F=.092012     ELOSS=  9.00"),
-    (9.20, " EXCITATION DIPOLE  F=.10557      ELOSS=  9.20"),
-    (9.40, " EXCITATION DIPOLE  F=.12427      ELOSS=  9.40"),
-    (9.60, " EXCITATION DIPOLE  F=.13943      ELOSS=  9.60"),
-    (9.825, " EXCITATION DIPOLE  F=.17930      ELOSS=  9.825"),
-    (10.0, " EXCITATION TRIPLET               ELOSS= 10.0"),
-    (10.075, " EXCITATION DIPOLE  F=.18354      ELOSS= 10.075"),
-    (10.325, " EXCITATION DIPOLE  F=.21103      ELOSS= 10.325"),
-    (10.575, " EXCITATION DIPOLE  F=.26216      ELOSS= 10.575"),
-    (10.85, " EXCITATION DIPOLE  F=.31267      ELOSS= 10.850"),
-    (11.25, " EXCITATION DIPOLE  F=.47953      ELOSS= 11.25"),
-    (11.75, " DISSOCIATION NEUT  F=.38110      ELOSS= 11.75"),
-    (12.25, " DISSOCIATION NEUT  F=.26497      ELOSS= 12.25"),
-    (12.75, " DISSOCIATION NEUT  F=.12981      ELOSS= 12.750"),
-    (13.25, " DISSOCIATION NEUT  F=.042465     ELOSS= 13.25"),
-    (13.75, " DISSOCIATION NEUT  F=.012080     ELOSS= 13.75"),
-    (14.25, " DISSOCIATION NEUT  F=.016504     ELOSS= 14.25"),
-    (14.75, " DISSOCIATION NEUT  F=.024239     ELOSS= 14.75"),
-    (15.25, " DISSOCIATION NEUT  F=.010527     ELOSS= 15.25"),
-    (15.75, " DISSOCIATION NEUT  F=.0008411    ELOSS= 15.75"),
-    (16.25, " DISSOCIATION NEUT  F=.000000065  ELOSS= 16.25"),
-    (16.75, " DISSOCIATION NEUT  F=.0006659    ELOSS= 16.75"),
-    (17.25, " DISSOCIATION NEUT  F=.0017415    ELOSS= 17.25"),
-    (17.75, " DISSOCIATION NEUT  F=.0028946    ELOSS= 17.75"),
-    (18.25, " DISSOCIATION NEUT  F=.0030308    ELOSS= 18.25"),
-    (18.75, " DISSOCIATION NEUT  F=.0026074    ELOSS= 18.75"),
-    (19.5, " DISSOCIATION NEUT  F=.0062259    ELOSS= 19.5"),
-    (20.5, " DISSOCIATION NEUT  F=.0058310    ELOSS= 20.5"),
-    (21.5, " DISSOCIATION NEUT  F=.0035646    ELOSS= 21.5"),
-    (22.5, " DISSOCIATION NEUT  F=.0020358    ELOSS= 22.5"),
-    (23.5, " DISSOCIATION NEUT  F=.0010359    ELOSS= 23.5"),
-    (24.5, " DISSOCIATION NEUT  F=.00029737   ELOSS= 24.5"),
-    (25.5, " DISSOCIATION NEUT  F=.000019954  ELOSS= 25.5")])
-  for j in 1 .. g.nin: g.kin[j] = 1
-  for j in [1, 2, 4, 6, 7, 8]: g.kin[j] = 0
-  let scloby = float64(1.0'f32)
-  for k in 1 .. g.nion: g.eb[k] = g.eion[1] * scloby
-  let ioffion = inp.offsets(g.eion[1 .. g.nion])
-  let ioffn = inp.offsets(g.ei[1 .. g.nin], magnitude = true)
-  for k in 1 .. g.nin:
-    for l in 1 .. 3: g.penfra[l, k] = 0.0
 
-  let bethe = bornBethe(3.982, 45.0)
-  let ampresv4 = float64(4.2'f32)
-  let ampresv2 = float64(4.2'f32)
-  let ampresv13 = float64(4.2'f32)
-  let ampresv1324 = float64(0.672'f32)
-  let ampres2v13 = float64(0.378'f32)
-  let ampreshigh = float64(0.1512'f32)
-  let degv4 = float64(3.0'f32)
-  let degv2 = float64(2.0'f32)
-  # populations of the degenerate V4 and V2 relative to the sum with the
-  # ground state
-  var apopv4 = degv4 * exp(g.ei[1] / inp.kT)
-  var apopv2 = degv2 * exp(g.ei[2] / inp.kT)
-  let apopsum = 1.0 + apopv4 + apopv2
-  apopv4 = apopv4 / apopsum
-  apopv2 = apopv2 / apopsum
-  let ions = [curve(xion1, yion1), curve(xion2, yion2), curve(xion3, yion3),
-              curve(xion4, yion4), curve(xion5, yion5), curve(xion6, yion6)]
-  # shares of the counting ionisation above the channel tables
-  let shares = [0.4039'f32, 0.3133, 0.1084, 0.1143, 0.0532, 0.0069]
-  let attachments = [curve(xatt1, yatt1), curve(xatt2, yatt2), curve(xatt3, yatt3),
-                     curve(xatt4, yatt4)]
-  let vr = (float64(xvibr[0]), float64(xvibr[^1]))
-  let v2end = (float64(xvib2[^1]), float64(yvib2[^1]))
-  # Born dipole levels: level, oscillator strength
-  let dipoles = [
-    (10, 0.000478'f32),
-    (11, 0.002708'f32),
-    (12, 0.010461'f32),
-    (13, 0.029921'f32),
-    (14, 0.029921'f32),
-    (16, 0.078097'f32),
-    (17, 0.092012'f32),
-    (18, 0.105570'f32),
-    (19, 0.124270'f32),
-    (20, 0.139430'f32),
-    (21, 0.179300'f32),
-    (23, 0.183540'f32),
-    (24, 0.211030'f32),
-    (25, 0.262160'f32),
-    (26, 0.312670'f32),
-    (27, 0.479530'f32),
-    (28, 0.381100'f32),
-    (29, 0.264970'f32),
-    (30, 0.129810'f32),
-    (31, 0.042465'f32),
-    (32, 0.012080'f32),
-    (33, 0.016504'f32),
-    (34, 0.024239'f32),
-    (35, 0.010527'f32),
-    (36, 0.0008411'f32),
-    (37, 0.00000065'f32),
-    (38, 0.0006659'f32),
-    (39, 0.0017415'f32),
-    (40, 0.0028946'f32),
-    (41, 0.0030308'f32),
-    (42, 0.0026074'f32),
-    (43, 0.0062259'f32),
-    (44, 0.0058310'f32),
-    (45, 0.0035646'f32),
-    (46, 0.0020358'f32),
-    (47, 0.0010359'f32),
-    (48, 0.00029737'f32),
-    (49, 0.00001995'f32),
-  ]
-  # triplets: level, curve, log-log, angular distribution threshold
-  let triplets = [(9, curve(xtrp1, ytrp1), true, 50.0),
-                  (15, curve(xtrp2, ytrp2), false, 100.0),
-                  (22, curve(xtrp3, ytrp3), false, 100.0)]
+const silaneModel* = GasModel(
+  name: (" SIH4 2022   ISOTROPIC", " SIH4 2022  ANISOTROPIC"),
+  elasticText: (" ELASTIC       ANISOTROPIC SILANE", " ELASTIC       ANISOTROPIC SILANE"),
+  mass: 32.11726, e3: 11.54,
+  elastic: Elastic(interp: logLog, xTotal: widen(xen), total: widen(yel),
+                   xMomentum: widen(xen), momentum: widen(ymt),
+                   xEps: widen(xen), eps: widen(yeps), epsInterp: logLog),
+  # six channels from tables up to 100 eV, then shares of the counting
+  # ionisation (Born-Bethe above 1 keV); the silicon K shell
+  ionisation: Ionisation(
+    scheme: channels, am2: 3.982, c: 45.0, peqZero: true,
+    counting: Sigma(x: widen(xionc), y: widen(yionc), unit: 1e-16.cm², interp: logLog,
+                    beyond: bethe, fraction: 1.0),
+    channels: @[
+      IonChannel(eion: 11.54, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  SIH2 +               ELOSS=  11.54",
+                 terms: @[term(Sigma(x: widen(xion1), y: widen(yion1), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.4039))]),
+      IonChannel(eion: 12.09, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  SIH3 +               ELOSS=  12.09",
+                 terms: @[term(Sigma(x: widen(xion2), y: widen(yion2), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.3133))]),
+      IonChannel(eion: 12.65, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  SI   +               ELOSS=  12.65",
+                 terms: @[term(Sigma(x: widen(xion3), y: widen(yion3), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.1084))]),
+      IonChannel(eion: 14.4, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  SIH  +               ELOSS=  14.4",
+                 terms: @[term(Sigma(x: widen(xion4), y: widen(yion4), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.1143))]),
+      IonChannel(eion: 24.5, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  H    +               ELOSS=  24.5",
+                 terms: @[term(Sigma(x: widen(xion5), y: widen(yion5), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.0532))]),
+      IonChannel(eion: 24.6, eoby: 11.54, nc0: 0, ec0: 0.0,
+                 text: " IONISATION  H2   +               ELOSS=  24.6",
+                 terms: @[term(Sigma(x: widen(xion6), y: widen(yion6), unit: 1e-16.cm²,
+                                     beyond: countingShare, fraction: 0.0069))]),
+      IonChannel(eion: 1839.0, eoby: 11.54, nc0: 4, ec0: 1740.0, shell: true,
+                 text: " SILICON K-SHELL                  ELOSS=1839.0", terms: @[term(table(xion7, yion7))])]),
+  attachment: @[
+    Attach(text: " ATTACHMENT    SIH3 -",
+           sigma: Sigma(x: widen(xatt1), y: widen(yatt1), unit: 1e-18.cm², beyond: zero)),
+    Attach(text: " ATTACHMENT    SIH2 -",
+           sigma: Sigma(x: widen(xatt2), y: widen(yatt2), unit: 1e-18.cm², beyond: zero)),
+    Attach(text: " ATTACHMENT    SIH -",
+           sigma: Sigma(x: widen(xatt3), y: widen(yatt3), unit: 1e-18.cm², beyond: zero)),
+    Attach(text: " ATTACHMENT    SI -",
+           sigma: Sigma(x: widen(xatt4), y: widen(yatt4), unit: 1e-18.cm², beyond: zero))],
+  # V4, V2 (superelastic by detailed balance, weighted by the populations of
+  # the degenerate states), V13: Born dipole or table plus the resonance;
+  # combinations and harmonics: the resonance alone; triplets; Born dipole
+  # levels with dipole angular distributions up to 20 times threshold.
+  # (Magboltz also fills bremsstrahlung on Si and H as levels 50, 51, beyond
+  # NIN, so never used.)
+  levels: @[
+    Level(ein: -0.11335, text: " VIB V4 SUPERELASTIC              ELOSS= -0.11335",
+          kind: superelastic, kin: 0, dip: 0.660, windows: @[table(xvibr, yvibr, scale = 4.2)], windowLowOpen: true,
+          population: 1, peq: peqElastic, gateEnergy: 20.0, peqBelow: belowZero),
+    Level(ein: -0.12084, text: " VIB V2 SUPERELASTIC              ELOSS= -0.12084",
+          kind: superelastic, kin: 0, sigma: Sigma(x: widen(xvib2), y: widen(yvib2), unit: 1e-16.cm²),
+          tail: squareTail, windows: @[table(xvibr, yvibr, scale = 4.2)], windowLowOpen: true,
+          population: 2, peq: peqElastic, gateEnergy: 20.0, peqBelow: belowZero),
+    Level(ein: 0.11335, text: " VIB V4                           ELOSS=  0.11335",
+          kin: 1, dip: 0.660, windows: @[table(xvibr, yvibr, scale = 4.2)], windowLowOpen: true,
+          peq: peqDipole, elasticAbove: 100.0, dipoleUpTo: 11.0, peqBelow: belowZero),
+    Level(ein: 0.12084, text: " VIB V2                           ELOSS=  0.12084",
+          kin: 0, sigma: Sigma(x: widen(xvib2), y: widen(yvib2), unit: 1e-16.cm², beyond: power, n: 2.0),
+          windows: @[table(xvibr, yvibr, scale = 4.2)], windowLowOpen: true, peq: peqElastic, gateEnergy: 20.0, peqBelow: belowZero),
+    Level(ein: 0.2713, text: " VIB V13                          ELOSS=  0.2713",
+          kin: 1, dip: 0.3344, windows: @[table(xvibr, yvibr, scale = 4.2)], windowLowOpen: true,
+          peq: peqDipole, elasticAbove: 40.0, dipoleUpTo: 4.0, peqBelow: belowZero),
+    Level(ein: 0.2884, text: " VIB V13 +V24                     ELOSS=  0.3884",
+          kin: 0, windows: @[table(xvibr, yvibr, scale = 0.672)], peq: peqFixed, peqValue: 0.0),
+    Level(ein: 0.543, text: " VIB 2V13                         ELOSS=  0.543",
+          kin: 0, windows: @[table(xvibr, yvibr, scale = 0.378)], peq: peqFixed, peqValue: 0.0),
+    Level(ein: 0.66, text: " VIB HIGHER HARMONICS             ELOSS=  0.66",
+          kin: 0, windows: @[table(xvibr, yvibr, scale = 0.1512)], peq: peqFixed, peqValue: 0.0),
+    Level(ein: 7.50, text: " EXCITATION TRIPLET               ELOSS=  7.50",
+          kin: 1, sigma: Sigma(x: widen(xtrp1), y: widen(ytrp1), unit: 1e-16.cm², interp: logLog,
+                       beyond: power, n: 2.0),
+          peq: peqElastic, gateEnergy: 50.0, peqBelow: belowZero),
+    Level(ein: 7.78, text: " EXCITATION DIPOLE  F=.0004784    ELOSS=  7.78",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.000478),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 7.99, text: " EXCITATION DIPOLE  F=.002708     ELOSS=  7.99",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.002708),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 8.20, text: " EXCITATION DIPOLE  F=.010461     ELOSS=  8.20",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.010461),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 8.40, text: " EXCITATION DIPOLE  F=.029921     ELOSS=  8.40",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.029921),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 8.60, text: " EXCITATION DIPOLE  F=.056648     ELOSS=  8.60",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.029921),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 8.70, text: " EXCITATION TRIPLET               ELOSS=  8.70",
+          kin: 1, sigma: Sigma(x: widen(xtrp2), y: widen(ytrp2), unit: 1e-16.cm², interp: linear,
+                       beyond: power, n: 2.0),
+          peq: peqElastic, gateEnergy: 100.0, peqBelow: belowZero),
+    Level(ein: 8.80, text: " EXCITATION DIPOLE  F=.078097     ELOSS=  8.80",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.078097),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 9.00, text: " EXCITATION DIPOLE  F=.092012     ELOSS=  9.00",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.092012),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 9.20, text: " EXCITATION DIPOLE  F=.10557      ELOSS=  9.20",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.105570),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 9.40, text: " EXCITATION DIPOLE  F=.12427      ELOSS=  9.40",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.124270),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 9.60, text: " EXCITATION DIPOLE  F=.13943      ELOSS=  9.60",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.139430),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 9.825, text: " EXCITATION DIPOLE  F=.17930      ELOSS=  9.825",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.179300),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 10.0, text: " EXCITATION TRIPLET               ELOSS= 10.0",
+          kin: 1, sigma: Sigma(x: widen(xtrp3), y: widen(ytrp3), unit: 1e-16.cm², interp: linear,
+                       beyond: power, n: 2.0),
+          peq: peqElastic, gateEnergy: 100.0, peqBelow: belowZero),
+    Level(ein: 10.075, text: " EXCITATION DIPOLE  F=.18354      ELOSS= 10.075",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.183540),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 10.325, text: " EXCITATION DIPOLE  F=.21103      ELOSS= 10.325",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.211030),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 10.575, text: " EXCITATION DIPOLE  F=.26216      ELOSS= 10.575",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.262160),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 10.85, text: " EXCITATION DIPOLE  F=.31267      ELOSS= 10.850",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.312670),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 11.25, text: " EXCITATION DIPOLE  F=.47953      ELOSS= 11.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.479530),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 11.75, text: " DISSOCIATION NEUT  F=.38110      ELOSS= 11.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.381100),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 12.25, text: " DISSOCIATION NEUT  F=.26497      ELOSS= 12.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.264970),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 12.75, text: " DISSOCIATION NEUT  F=.12981      ELOSS= 12.750",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.129810),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 13.25, text: " DISSOCIATION NEUT  F=.042465     ELOSS= 13.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.042465),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 13.75, text: " DISSOCIATION NEUT  F=.012080     ELOSS= 13.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.012080),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 14.25, text: " DISSOCIATION NEUT  F=.016504     ELOSS= 14.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.016504),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 14.75, text: " DISSOCIATION NEUT  F=.024239     ELOSS= 14.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.024239),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 15.25, text: " DISSOCIATION NEUT  F=.010527     ELOSS= 15.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.010527),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 15.75, text: " DISSOCIATION NEUT  F=.0008411    ELOSS= 15.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0008411),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 16.25, text: " DISSOCIATION NEUT  F=.000000065  ELOSS= 16.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.00000065),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 16.75, text: " DISSOCIATION NEUT  F=.0006659    ELOSS= 16.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0006659),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 17.25, text: " DISSOCIATION NEUT  F=.0017415    ELOSS= 17.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0017415),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 17.75, text: " DISSOCIATION NEUT  F=.0028946    ELOSS= 17.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0028946),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 18.25, text: " DISSOCIATION NEUT  F=.0030308    ELOSS= 18.25",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0030308),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 18.75, text: " DISSOCIATION NEUT  F=.0026074    ELOSS= 18.75",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0026074),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 19.5, text: " DISSOCIATION NEUT  F=.0062259    ELOSS= 19.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0062259),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 20.5, text: " DISSOCIATION NEUT  F=.0058310    ELOSS= 20.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0058310),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 21.5, text: " DISSOCIATION NEUT  F=.0035646    ELOSS= 21.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0035646),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 22.5, text: " DISSOCIATION NEUT  F=.0020358    ELOSS= 22.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0020358),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 23.5, text: " DISSOCIATION NEUT  F=.0010359    ELOSS= 23.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.0010359),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 24.5, text: " DISSOCIATION NEUT  F=.00029737   ELOSS= 24.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.00029737),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero),
+    Level(ein: 25.5, text: " DISSOCIATION NEUT  F=.000019954  ELOSS= 25.5",
+          kin: 1, sigma: Sigma(beyond: born, f: 0.00001995),
+          peq: peqDipole, dipoleUpTo: 20.0, peqBelow: belowZero)],
+  populations: @[pop(1, deg = 3.0, group = 1), pop(2, deg = 2.0, group = 1)],
+  dipoleAngles: DipoleAngles(xUp: widen(enrot), xDown: widen(enrot), eps: widen(yepsr)),
+  magnitudeOffsets: true,
+  negative: clampNegative,
+  alwaysModel2: true,
+  minLevels: 8)
 
-  for i, en in inp.bins:
-    let r = relativistic(en)
-    let qel = logLog(xen, yel, en) * 1e-16
-    let qmt = logLog(xen, ymt, en) * 1e-16
-    let pq2 = 1.00 - logLog(xen, yeps, en)
-    # (PQ1 = 0.5 - (QEL - QMT)/QEL is the NANISO=1 model, not used)
-    g.peqel[2, i] = pq2
-    g.q[2, i] = qel
-
-    var qcount, qbb: float64
-    for k in 1 .. g.nion:
-      g.qion[k, i] = 0.0
-      g.peqion[k, i] = 0.0
-    if en > g.eion[1]:
-      if en <= float64(xion1[^1]):
-        g.qion[1, i] = lin(xion1, yion1, en) * 1e-16
-      elif en <= float64(xionc[^1]):
-        qcount = logLog(xionc, yionc, en) * 1e-16
-        g.qion[1, i] = qcount * shares[0]
-      else:
-        qbb = bethe.ionisation(r)
-        g.qion[1, i] = qbb * shares[0]
-    for k in 1 ..< 6:
-      if en <= g.eion[k + 1]: continue
-      let c = ions[k]
-      g.qion[k + 1, i] =
-        if en <= c.x[^1]: lin(c, en) * 1e-16
-        elif en <= float64(xionc[^1]): qcount * shares[k]
-        else: qbb * shares[k]
-    if en > g.eion[7]: g.qion[7, i] = lin(xion7, yion7, en) * 1e-16
-    for k in 1 .. g.nion:
-      if en > 2.0 * g.eion[k]: g.peqion[k, i] = g.peqel[2, i - ioffion[k - 1]]
-
-    g.q[4, i] = 0.0
-    for k, c in attachments:
-      g.qatt[k + 1, i] = 0.0
-      if en > c.x[0] and en <= c.x[^1]: g.qatt[k + 1, i] = lin(c, en) * 1e-18
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-
-    for l in 1 .. g.nin:
-      g.qin[l, i] = 0.0
-      g.peqin[l, i] = 0.0
-    # V4 superelastic: resonance (detailed balance) plus Born dipole
-    if en > 0.0:
-      let eup = en + g.ei[3]
-      var qres = 0.0
-      if eup > vr[0] and eup <= vr[1]:
-        qres = (eup * lin(xvibr, yvibr, eup) / en) * ampresv4
-      let qvib4 = vibrationalDipole(float64(0.660'f32), g.ei[1], en)
-      g.qin[1, i] = (qres + qvib4) * 1e-16
-      g.qin[1, i] = g.qin[1, i] * apopv4 / degv4
-      if en > 20.0: g.peqin[1, i] = g.peqel[2, i - ioffn[0]]
-    # V2 superelastic: resonance and table (detailed balance; falloff 1/E²
-    # above the table, without the balance factor)
-    if en > 0.0:
-      let eup = en + g.ei[4]
-      var qres = 0.0
-      if eup > vr[0] and eup <= vr[1]:
-        qres = (eup * lin(xvibr, yvibr, eup) / en) * ampresv2
-      let qvib2 = if eup > v2end[0]: v2end[1] * pow2(v2end[0] / eup)
-                  else: (eup * lin(xvib2, yvib2, eup) / en)
-      g.qin[2, i] = (qvib2 + qres) * 1e-16
-      g.qin[2, i] = g.qin[2, i] * apopv2 / degv2
-      if en > 20.0: g.peqin[2, i] = g.peqel[2, i - ioffn[1]]
-    # V4: Born dipole plus resonance, dipole angular distribution near
-    # threshold
-    if en > g.ei[3]:
-      var qres = 0.0
-      if en > vr[0] and en <= vr[1]: qres = lin(xvibr, yvibr, en) * ampresv4
-      let qvib4 = vibrationalDipole(float64(0.660'f32), g.ei[3], en)
-      g.qin[3, i] = (qvib4 + qres) * 1e-16
-      if en > 100.0 * g.ei[3]: g.peqin[3, i] = g.peqel[2, i - ioffn[2]]
-      if en < 11.0 * g.ei[3]:
-        g.peqin[3, i] = 1.0 - lin(enrot, yepsr, en / g.ei[3])
-    # V2: table plus resonance
-    if en > g.ei[4]:
-      var qres = 0.0
-      if en > vr[0] and en <= vr[1]: qres = lin(xvibr, yvibr, en) * ampresv2
-      let qvib2 = if en > v2end[0]: v2end[1] * pow2(v2end[0] / en)
-                  else: lin(xvib2, yvib2, en)
-      g.qin[4, i] = (qvib2 + qres) * 1e-16
-      if en > 20.0: g.peqin[4, i] = g.peqel[2, i - ioffn[3]]
-    # V13: Born dipole plus resonance
-    if en > g.ei[5]:
-      var qres = 0.0
-      if en > vr[0] and en <= vr[1]: qres = lin(xvibr, yvibr, en) * ampresv13
-      let qvib13 = vibrationalDipole(float64(0.3344'f32), g.ei[5], en)
-      g.qin[5, i] = (qvib13 + qres) * 1e-16
-      if en > 40.0 * g.ei[5]: g.peqin[5, i] = g.peqel[2, i - ioffn[4]]
-      if en < 4.0 * g.ei[5]:
-        g.peqin[5, i] = 1.0 - lin(enrot, yepsr, en / g.ei[5])
-    # V13+V24, 2V13, higher harmonics: resonance only
-    for (l, amp) in [(6, ampresv1324), (7, ampres2v13), (8, ampreshigh)]:
-      if en <= g.ei[l]: continue
-      var qres = 0.0
-      if en <= vr[1] and en >= vr[0]: qres = lin(xvibr, yvibr, en)
-      g.qin[l, i] = qres * 1e-16 * amp
-
-    for (l, c, loglog, ang) in triplets:
-      if en <= g.ei[l]: continue
-      g.qin[l, i] =
-        if en > c.x[^1]: c.y[^1] * pow2(c.x[^1] / en) * 1e-16
-        elif loglog: logLog(c, en) * 1e-16
-        else: lin(c, en) * 1e-16
-      if en > ang: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-    for (l, f) in dipoles:
-      if en <= g.ei[l]: continue
-      g.qin[l, i] = dipole(f, g.ei[l], r, en) / (en + g.ei[l] + g.e[3])
-      if g.qin[l, i] < 0.0: g.qin[l, i] = 0.0
-      if en > 3.0 * g.ei[l]: g.peqin[l, i] = g.peqel[2, i - ioffn[l - 1]]
-    # dipole angular distributions of the singlets up to 20 times threshold
-    for j in 9 .. 49:
-      if j in [9, 15, 22]: continue
-      let epoint = en / g.ei[j]
-      if epoint < 1.0 or epoint > 20.0: continue
-      g.peqin[j, i] = 1.0 - lin(enrot, yepsr, epoint)
-
-    # bremsstrahlung on Si and H (4 atoms), beyond NIN
-    g.qin[50, i] = 0.0
-    g.qin[51, i] = 0.0
-    if en > 1000.0:
-      g.qin[50, i] = logLin(ebrm, z14t, en) * 1e-24
-      g.qin[51, i] = logLin(ebrm, z1t, en) * 4e-24
-  g.dropLevelsAbove(inp.efinal)
-  if g.nin <= 8: g.nin = 8
+proc silane*(inp: GasInput, g: var GasXsec) = fill(silaneModel, inp, g)
