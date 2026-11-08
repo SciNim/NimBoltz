@@ -18,12 +18,8 @@
 ## compile time evaluation of arithmetic on them does not round as the
 ## run time does (a widened `0.9'f32` times `1e-18` comes out as 0.9e-18).
 
-import unchained
 import common
-export unchained, common
-
-defUnit(cm², toExport = true)
-defUnit(cm²•eV, toExport = true)
+export common
 
 type
   Interp* = enum

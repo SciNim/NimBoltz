@@ -2,20 +2,25 @@
 ## Build: nim c -d:release --path:../../port gasdmp.nim
 
 import std/[os, strutils]
-import nimboltz/[frt, deck, conditions, tables, mixture, gases]
+import nimboltz/[frt, units, deck, conditions, tables, mixture, gases]
 
+# (the arrays with units have the layout of Magboltz's REAL*8 arrays)
 var
-  q, peqel: Arr2[float64, 6, 4000]
-  qin, peqin: Arr2[float64, 250, 4000]
-  qion, peqion: Arr2[float64, 30, 4000]
-  qatt: Arr2[float64, 8, 4000]
+  q: Arr2[cm², 6, 4000]
+  peqel: Arr2[float64, 6, 4000]
+  qin: Arr2[cm², 250, 4000]
+  peqin: Arr2[float64, 250, 4000]
+  qion: Arr2[cm², 30, 4000]
+  peqion: Arr2[float64, 30, 4000]
+  qatt: Arr2[cm², 8, 4000]
   qnull: Arr2[float64, 10, 4000]
   penfra: Arr2[float64, 3, 250]
   ev: array[1..6, float64]
-  ei: array[1..250, float64]
+  ei: array[1..250, eV]
   kin: array[1..250, int]
   kel: array[1..6, int]
-  eb, eion, ec0, wk, efl, eg1, eg2: array[1..30, float64]
+  eb, eion, ec0: array[1..30, eV]
+  wk, efl, eg1, eg2: array[1..30, float64]
   nc0, ng1, ng2: array[1..30, int]
   scln: array[1..10, float64]
   scrpt: array[1..300, string]
@@ -42,8 +47,9 @@ for line in stdin.lines:
   if w.len == 0: continue
   let ngs = parseInt(w[0])
   let fracg = parseFloat(w[5])
-  var d = Deck(ngas: 2, nmax: 1, ithrm: 1, efinal: parseFloat(w[2]),
-               tempc: parseFloat(w[3]), torr: parseFloat(w[4]), efield: 1000.0)
+  var d = Deck(ngas: 2, nmax: 1, ithrm: 1, efinal: parseFloat(w[2]).eV,
+               tempc: parseFloat(w[3]), torr: parseFloat(w[4]).Torr,
+               efield: 1000.0.V•cm⁻¹)
   d.gas[1] = ngs
   d.percent[1] = fracg
   d.gas[2] = 2
@@ -70,9 +76,14 @@ for line in stdin.lines:
                      mixture: mixtureOf(d.gas, d.percent))
   crossSections(ngs, inp, x)
   # (fields Magboltz does not use stay zero: dumpdiff -u skips them)
-  q = x.q; qin = x.qin; nin = x.nin; ev = x.e; ei = x.ei
+  q = x.q; qin = x.qin; nin = x.nin; ei = x.ei
+  ev[2] = x.massRatio; ev[3] = x.ionThreshold.float; ev[4] = x.attachThreshold.float
   name = fstr(x.name, 25); eb = x.eb; peqel = x.peqel; peqin = x.peqin
-  penfra = x.penfra; kel = x.kel; kin = x.kin; qion = x.qion
+  for j in 1 .. 250:
+    penfra[1, j] = x.penningFraction[j]
+    penfra[2, j] = x.penningRange[j].float
+    penfra[3, j] = x.penningTime[j].float
+  kel = x.kel; kin = x.kin; qion = x.qion
   peqion = x.peqion; eion = x.eion; nion = x.nion; qatt = x.qatt
   natt = x.natt; nc0 = x.nc0; ec0 = x.ec0
   for k in 1 .. 300: scrpt[k] = fstr(x.scrp[k], 50)

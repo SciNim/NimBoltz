@@ -2,7 +2,7 @@
 ## collisions.nim, thermal.nim) that must survive any rewrite.
 
 import std/[unittest, math, random]
-import nimboltz/[vec3, tables, fields, collisions, thermal, rm48]
+import nimboltz/[units, vec3, tables, fields, collisions, thermal, rm48, deck, conditions]
 
 proc unitRandom(r: var Rand): Vec3 =
   let ct = r.rand(-1.0 .. 1.0)
@@ -12,18 +12,14 @@ proc unitRandom(r: var Rand): Vec3 =
 
 func dot(a, b: Vec3): float64 = a.x * b.x + a.y * b.y + a.z * b.z
 
-# constants as in SETUP
-const
-  awb = 17588200880.0
-  const1 = awb / 2.0 * 1e-19
-  const2 = const1 * 0.01
-  const3 = sqrt(0.2 * awb) * 1e-9
-  const5 = const3 / 2.0
-
 proc field(g: FieldGeometry, efield, bmag, btheta: float64): Field =
-  initField(g, efield, const1, const2, const3, const5,
-            wb = awb * bmag * 1e-12, eovb = if bmag == 0: 0.0 else: efield * 1e-9 / bmag,
-            btheta = btheta)
+  ## (V/cm, kG, degrees) with the conditions of SETUP
+  var d = Deck(efield: efield.V•cm⁻¹, bmag: bmag.kGauss, btheta: btheta,
+               torr: 760.0.Torr, ngas: 1)
+  d.gas[1] = 2
+  d.percent[1] = 100.0
+  let c = conditions(d)
+  initField(g, d.efield, const1, const2, const3, const5, c.wb, c.eovb, btheta)
 
 suite "collisions":
   test "rotate keeps unit length and turns by theta":
@@ -37,7 +33,7 @@ suite "collisions":
       check abs(dot(d, din) - cos(theta)) < 1e-12
 
   test "rotate around the z axis":
-    let d = rotate(vec3(0, 0, 1), cos(0.3), sin(0.3), cos(1.1), sin(1.1))
+    let d = rotate(vec3(0.0, 0.0, 1.0), cos(0.3), sin(0.3), cos(1.1), sin(1.1))
     check d == vec3(cos(1.1) * sin(0.3), sin(1.1) * sin(0.3), cos(0.3))
 
   test "findProcess is the first process with cf >= r":
@@ -63,8 +59,8 @@ suite "collisions":
 suite "fields":
   test "E only: unit direction, transverse velocity conserved":
     let f = field(fgElectric, 1000.0, 0, 0)
-    let el = initElectron[fgElectric](f, 2.0, 0.7, 0.4)
-    let fl = fly[fgElectric](f, el, 3.0)
+    let el = initElectron[fgElectric](f, 2.0.eV, 0.7, 0.4)
+    let fl = fly[fgElectric](f, el, 3.0.ps)
     let d = directionAt[fgElectric](f, el, fl)
     check abs(norm2(d) - 1) < 1e-12
     # transverse momentum is conserved
@@ -73,13 +69,27 @@ suite "fields":
     check abs(v1.x - v0.x) < 1e-12 * abs(v0.x)
     check abs(v1.y - v0.y) < 1e-12 * abs(v0.y)
 
+  test "E only: the energy gained is the potential the electron falls through":
+    let f = field(fgElectric, 1000.0, 0, 0)
+    let el = initElectron[fgElectric](f, 2.0.eV, 0.7, 0.4)
+    let fl = fly[fgElectric](f, el, 3.0.ps)
+    var pos: Vector[m]
+    discard advance[fgElectric](f, el, fl, pos)
+    let gain = f.efield * pos.z * perElectron
+    check abs(float64((fl.e - el.e - gain) / gain)) < 1e-12
+
   test "B ⊥ E: E×B motion leaves the energy unchanged after a full turn":
     let f = field(fgCrossed, 1000.0, 10.0, 90)
-    var el = initElectron[fgCrossed](f, 1.0, 1.0, 0.5)
+    var el = initElectron[fgCrossed](f, 1.0.eV, 1.0, 0.5)
     let fl = fly[fgCrossed](f, el, 2 * PI / f.wb)
-    check abs(fl.e - el.e) < 1e-9
+    check abs(fl.e - el.e) < 1e-9.eV
     let v = velocityAt[fgCrossed](f, el, fl)
-    check abs(v.y - el.vel.y) < 1e-15 and abs(v.z - el.vel.z) < 1e-15
+    check abs(v.y - el.vel.y) < 1e-15.m•ps⁻¹ and abs(v.z - el.vel.z) < 1e-15.m•ps⁻¹
+
+  test "B ⊥ E: the drift averages to E/B":
+    let f = field(fgCrossed, 1000.0, 10.0, 90)
+    # 1000 V/cm across 10 kG = 1 T: 1e5 m/s
+    check abs(f.eovb.to(m•s⁻¹).float - 1e5) < 1e-9
 
 suite "thermal":
   test "pickGas follows the cumulative shares":
@@ -95,8 +105,8 @@ suite "thermal":
     var s, s2: array[3, float64]
     const n = 300_000
     for _ in 1 .. n:
-      let v = m.velocity(1.0, rng)
-      for k, c in [v.x, v.y, v.z]:
+      let v = m.velocity(1.0.m•ps⁻¹, rng)
+      for k, c in [v.x.float, v.y.float, v.z.float]:
         s[k] += c
         s2[k] += c * c
     for k in 0 .. 2:

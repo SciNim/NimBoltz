@@ -16,13 +16,13 @@
 ## The random numbers are drawn in the same order as in Magboltz.
 
 import std/math
-import rm48, tables, vec3, fields, collisions, thermal
+import units, rm48, tables, vec3, fields, collisions, thermal
 
 type
   ColdGas* = object
     ## walker state of the null-collision method at 0 K
     bounds*: NullBounds
-    bandWidth*: float64   ## width of the 8 bands of starting energy (EFINAL/8)
+    bandWidth*: eV        ## width of the 8 bands of starting energy (EFINAL/8)
 
   WarmGas* = object
     ## thermal motion: per-gas bounds and speeds, and the walker's Maxwell numbers
@@ -36,15 +36,15 @@ type
     ## a real collision
     fl*: Flight
     ie*: int        ## energy bin in the frame of the target
-    e*: float64     ## energy in the frame of the target (eV)
+    e*: eV          ## energy in the frame of the target
     din*: Vec3      ## direction in the frame of the target
     gas*: int       ## gas hit (WarmGas; 1 for ColdGas)
-    vgas*: Vec3     ## velocity of the molecule hit (WarmGas)
+    vgas*: Vector[m•ps⁻¹]  ## velocity of the molecule hit (WarmGas)
 
-func energyBin*(e, estep: float64): int {.inline.} =
+func energyBin*(e, estep: eV): int {.inline.} =
   clamp(int(trunc(e / estep) + 1.0), 1, nEnergyBins)
 
-func initColdGas*(bounds: NullBounds, efinal: float64): ColdGas =
+func initColdGas*(bounds: NullBounds, efinal: eV): ColdGas =
   ColdGas(bounds: bounds, bandWidth: efinal / float64(bounds.len))
 
 proc initWarmGas*(gas: ThermalGas, rng: var MagRng): WarmGas =
@@ -54,10 +54,10 @@ template tableOf*(tab: MixtureTable, h: Hit): untyped = tab
 template tableOf*(tabs: GasTables, h: Hit): untyped = tabs[h.gas]
 
 proc nextHit*[G: static FieldGeometry](f: Field, tab: MixtureTable, target: var ColdGas,
-                                       estep: float64, el: Electron, rng: var MagRng,
+                                       estep: eV, el: Electron, rng: var MagRng,
                                        nnull: var int): Hit =
   ## Gas at 0 K: next real collision of an electron leaving `el`.
-  var tdash = 0.0
+  var tdash = 0.0.ps
   while true:
     let r1 = drand48(rng)
     let band = clamp(int(trunc(el.e / target.bandWidth) + 1.0), 1, target.bounds.len)
@@ -79,12 +79,12 @@ proc nextHit*[G: static FieldGeometry](f: Field, tab: MixtureTable, target: var 
   result.gas = 1
 
 proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var WarmGas,
-                                       estep: float64, el: Electron, rng: var MagRng,
+                                       estep: eV, el: Electron, rng: var MagRng,
                                        nnull: var int): Hit =
   ## Thermal motion: next real collision; energy and direction in the rest
   ## frame of the molecule hit.
-  var tdash = 0.0
-  var vrel: Vec3
+  var tdash = 0.0.ps
+  var vrel: Vector[m•ps⁻¹]
   while true:
     let r1 = drand48(rng)
     tdash = -(ln(r1) / target.gas.tcfmx) + tdash

@@ -27,7 +27,7 @@
 ## times in ps, energies in eV.
 
 import std/math
-import rm48, tables, vec3, fields, collisions, thermal, freeflight, drift
+import units, rm48, tables, vec3, fields, collisions, thermal, freeflight, drift
 
 const
   nPlanes* = 8               ## planes of either kind
@@ -42,38 +42,46 @@ type
   ColdBound* = object
     ## gas at 0 K: one upper bound of the collision frequency for all
     ## energies, the largest of the 8 bands of MONTE
-    tlim*: float64
+    tlim*: ps⁻¹
 
   Planes* = object
     ## where the electrons are sampled (/CION/, /CTCALC/ from ALPCALC)
-    tstep*, tfinal*: float64     ## pkTime: time between planes, last plane (ps)
+    tstep*, tfinal*: ps          ## pkTime: time between planes, last plane
     itfinal*: int                ## pkTime: number of planes
-    zstep*, zfinal*: float64     ## pkSpace: distance between planes, last plane (m)
-    zplane*: array[1..nPlanes, float64]
+    zstep*, zfinal*: m           ## pkSpace: distance between planes, last plane
+    zplane*: array[1..nPlanes, m]
     izfinal*: int                ## pkSpace: number of planes
 
   TimeSums* = object
     ## sums over the electrons crossing each time plane (TPLOUT, TPLOUTG,
     ## TPLOUTH); fgOblique: positions and velocities in the frame of E
-    x*, y*, z*, xx*, yy*, zz*, yz*, xz*, xy*: array[1..nPlanes, float64]
-    e*, t*, vx*, vy*, vz*: array[1..nPlanes, float64]
+    x*, y*, z*: array[1..nPlanes, m]
+    xx*, yy*, zz*, yz*, xz*, xy*: array[1..nPlanes, m²]
+    e*: array[1..nPlanes, eV]
+    t*: array[1..nPlanes, ps]
+    vx*, vy*, vz*: array[1..nPlanes, m•ps⁻¹]
     n*: array[1..nPlanes, int]
 
   SpaceSums* = object
     ## sums over the electrons crossing each space plane, weighted by
     ## w = 1/|vz| (SPLOUT, SPL1)
-    x*, y*, r*, z*, xx*, yy*, rr*, zz*: array[1..nPlanes, float64]
-    t*, tt*: array[1..nPlanes, float64]  ## w·t, w·t²
-    rate*: array[1..nPlanes, float64]    ## w/t
-    e*, vz*, w*, w2*: array[1..nPlanes, float64]
+    x*, y*, r*, z*: array[1..nPlanes, ps]       ## w·x, ...
+    xx*, yy*, rr*, zz*: array[1..nPlanes, m•ps]  ## w·x², ...
+    t*: array[1..nPlanes, ps²•m⁻¹]       ## w·t
+    tt*: array[1..nPlanes, ps³•m⁻¹]      ## w·t²
+    rate*: array[1..nPlanes, m⁻¹]        ## w/t
+    e*: array[1..nPlanes, eV•ps•m⁻¹]
+    vz*: array[1..nPlanes, float64]      ## w·vz
+    w*: array[1..nPlanes, ps•m⁻¹]
+    w2*: array[1..nPlanes, ps²•m⁻²]
     born*: array[1..nPlanes + 1, int]
       ## per ZSTEP slice: electrons created minus electrons attached (NESST)
 
   Pending = object
     ## an electron waiting on the stack
-    pos: Vec3
-    st: float64
-    e: float64
+    pos: Vector[m]
+    st: ps
+    e: eV
     dir: Vec3
     plane: int  ## pkTime: time planes passed; pkSpace: slice of the creation point
 
@@ -92,21 +100,23 @@ type
   Cascade*[G: static FieldGeometry; P: static PlaneKind; T] = object
     ## The state of a run; T is `ColdBound` or `WarmGas`.
     f: Field
-    const2, const3: float64  ## CONST2, CONST3 of SETUP (plane formulas)
+    const2: m•cm•V⁻¹•ps⁻²    ## CONST2, CONST3 of SETUP (plane formulas)
+    const3: cm•ps⁻¹•eV⁻¹ᐟ²
     target*: T
-    estep: float64
+    estep: eV
     nmax: int
     penning: bool
     planes: Planes
     rcs, rsn: float64        ## fgOblique: rotation to the frame of E
     # the electron followed
     el: Electron
-    pos*: Vec3
-    st*: float64             ## time since its primary started (ps)
-    zstrt, tsstrt: float64   ## where and when it started
+    pos*: Vector[m]
+    st*: ps                  ## time since its primary started
+    zstrt: m                 ## where and when it started
+    tsstrt: ps
     plane: int               ## pkTime: planes passed; pkSpace: next plane (IZPLANE)
-    tstop: float64           ## pkTime: time of the next plane
-    tzstop, tzstop1: float64 ## pkSpace: flight times to the next plane (TCALC)
+    tstop: ps                ## pkTime: time of the next plane
+    tzstop, tzstop1: ps      ## pkSpace: flight times to the next plane (TCALC)
     isol: int                ## pkSpace: 2 if it crosses the plane below first
     stack: seq[Pending]
     next: Electron           ## start of the next primary
@@ -120,16 +130,19 @@ type
     iprint, jprint: int
     j1*: int                 ## 1 + number of times NMAX/10 collisions passed
     nnull*: int
-    tmax*: float64           ## longest flight (ps)
+    tmax*: ps                ## longest flight
     times*: array[1..nTimeBins, float64]       ## flights per 1 ps bin
     spectrum*: array[1..nEnergyBins, float64]  ## real collisions per energy bin
     when T is ColdBound:
       tally*: Tally[maxMixProcesses]
     else:
       tally*: GasTallies
-    ztot*, ttot*: float64    ## sums of the end position and time of the electrons
-    ztots*, ttots*: float64  ## same, from where each electron started (TTRM)
-    primaryE*, primaryE2*: float64  ## sums of the start energies of the primaries
+    ztot*: m                 ## sums of the end position and time of the electrons
+    ttot*: ps
+    ztots*: m                ## same, from where each electron started (TTRM)
+    ttots*: ps
+    primaryE*: eV            ## sums of the start energies of the primaries
+    primaryE2*: eV²
     theta*: float64          ## polar angle of the last scattering (THETA)
     when P == pkTime:
       sums*: TimeSums
@@ -141,7 +154,8 @@ type
                              ## share of a walker)
 
 func initCascade*[G: static FieldGeometry; P: static PlaneKind; T](
-    f: Field, const2, const3: float64, start: Electron, target: T, estep: float64,
+    f: Field, const2: m•cm•V⁻¹•ps⁻², const3: cm•ps⁻¹•eV⁻¹ᐟ², start: Electron, target: T,
+    estep: eV,
     nmax: int, penning: bool, planes: Planes, btheta: float64,
     primaryLimit = maxPrimaries): Cascade[G, P, T] =
   ## `start`: the first primary; `primaryLimit`: of this run (a walker gets
@@ -175,8 +189,9 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
   let el = c.el
   let tau = float64(k) * c.planes.tstep - c.st
   let t2 = tau * tau
-  var p, v: Vec3
-  var e: float64
+  var p: Vector[m]
+  var v: Vector[m•ps⁻¹]
+  var e: eV
   when G in {fgElectric, fgParallel}:
     let ap = el.dir.z * c.f.f2 * sqrt(el.e)
     let a = ap * tau
@@ -185,16 +200,16 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
     let const6 = sqrt(el.e / e)
     let dcz2 = el.dir.z * const6 + c.f.efield * tau * c.f.const5 / sqrt(e)
     when G == fgElectric:
-      p.x = c.pos.x + el.dir.x * tau * sqrt(el.e) * c.const3 * 0.01
-      p.y = c.pos.y + el.dir.y * tau * sqrt(el.e) * c.const3 * 0.01
+      p.x = c.pos.x + el.dir.x * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
+      p.y = c.pos.y + el.dir.y * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
     else:
       let wbt = c.f.wb * tau
       let cwt = cos(wbt)
       let swt = sin(wbt)
       p.x = c.pos.x + (el.vel.x * swt - el.vel.y * (1.0 - cwt)) / c.f.wb
       p.y = c.pos.y + (el.vel.y * swt + el.vel.x * (1.0 - cwt)) / c.f.wb
-    p.z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * 0.01 + t2 * c.f.efield * c.const2
-    v.z = dcz2 * sqrt(e) * c.const3 * 0.01
+    p.z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) + t2 * c.f.efield * c.const2
+    v.z = dcz2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
   else:
     let wbt = c.f.wb * tau
     let cwt = cos(wbt)
@@ -206,8 +221,8 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
     let cy2 = (el.vel.y - eovb) * cwt + el.vel.z * swt + eovb
     let cz2 = el.vel.z * cwt - (el.vel.y - eovb) * swt
     let vtot = sqrt(cx2 * cx2 + cy2 * cy2 + cz2 * cz2)
-    let dcz2 = cz2 / vtot
-    let dcy2 = cy2 / vtot
+    let dcz2 = float64(cz2 / vtot)
+    let dcy2 = float64(cy2 / vtot)
     when G == fgCrossed:
       p.x = c.pos.x + el.vel.x * tau
     else:
@@ -217,14 +232,14 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
     let dz = (el.vel.z * swt + (eovb - el.vel.y) * (1.0 - cwt)) / c.f.wb
     p.z = c.pos.z + dz
     when G == fgCrossed:
-      e = el.e + dz * c.f.efield * 100.0
+      e = el.e + dz * c.f.efield * perElectron  # as Magboltz: (dz·E)·100
     else:
       e = el.e + dz * c.f.ez100 + dx * c.f.ex100
-    v.z = dcz2 * sqrt(e) * c.const3 * 0.01
-    v.y = dcy2 * sqrt(e) * c.const3 * 0.01
+    v.z = dcz2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
+    v.y = dcy2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
     when G == fgOblique:
-      let dcx2 = cx2 / vtot
-      v.x = dcx2 * sqrt(e) * c.const3 * 0.01
+      let dcx2 = float64(cx2 / vtot)
+      v.x = dcx2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
       # to the frame of E
       p = vec3(p.z * c.rsn + p.x * c.rcs, p.y, p.z * c.rcs - p.x * c.rsn)
       v = vec3(v.z * c.rsn + v.x * c.rcs, v.y, v.z * c.rcs - v.x * c.rsn)
@@ -250,7 +265,7 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
   inc s.n[k]
 
 proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
-                                                                  tau: float64, k: int) =
+                                                                  tau: ps, k: int) =
   ## SPLANE: the electron crosses space plane k at the flight time tau
   if k > nPlanes: return
   let el = c.el
@@ -261,10 +276,10 @@ proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade
   let e = el.e + a + b
   let const6 = sqrt(el.e / e)
   let dcz2 = el.dir.z * const6 + c.f.efield * tau * c.f.const5 / sqrt(e)
-  let x = c.pos.x + el.dir.x * tau * sqrt(el.e) * c.const3 * 0.01
-  let y = c.pos.y + el.dir.y * tau * sqrt(el.e) * c.const3 * 0.01
-  let z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * 0.01 + t2 * c.f.efield * c.const2
-  let vz = dcz2 * sqrt(e) * c.const3 * 0.01
+  let x = c.pos.x + el.dir.x * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
+  let y = c.pos.y + el.dir.y * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹)
+  let z = c.pos.z + el.dir.z * tau * sqrt(el.e) * c.const3 * unity(m•cm⁻¹) + t2 * c.f.efield * c.const2
+  let vz = dcz2 * sqrt(e) * c.const3 * unity(m•cm⁻¹)
   let w = abs(1.0 / vz)
   let r = sqrt(x*x + y*y)
   let t = c.st + tau
@@ -292,14 +307,14 @@ proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](c: var Casc
   ## crosses it again on the way up (tzstop1).
   c.isol = 1
   let a = c.f.efield * c.const2
-  let b = sqrt(c.el.e) * c.const3 * 0.01 * c.el.dir.z
+  let b = sqrt(c.el.e) * c.const3 * unity(m•cm⁻¹) * c.el.dir.z
   let b2 = b * b
   let z = c.pos.z
   let zp = c.planes.zplane
   var k = 1
   while k <= nPlanes and not (z < zp[k]): inc k
   c.plane = k
-  var c1, c2: float64
+  var c1, c2: m
   if k == 1:
     c1 = z - zp[1]
   elif k <= nPlanes:
@@ -309,21 +324,21 @@ proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](c: var Casc
     c1 = z - zp[nPlanes] - 10.0 * c.planes.zstep
     c2 = z - zp[nPlanes]
   var fac = b2 - 4.0 * a * c1
-  if fac < 0.0:
-    c.tzstop = -99.0
+  if fac < 0.0.m²•ps⁻²:
+    c.tzstop = -99.0.ps
     return false
   var tstop1 = (-b + sqrt(b2 - 4.0 * a * c1)) / (2.0 * a)
   var tstop2 = (-b - sqrt(b2 - 4.0 * a * c1)) / (2.0 * a)
   if tstop1 < tstop2:
-    c.tzstop = (if tstop1 >= 0.0: tstop1 else: tstop2)
+    c.tzstop = (if tstop1 >= 0.0.ps: tstop1 else: tstop2)
   else:
-    c.tzstop = (if tstop2 >= 0.0: tstop2 else: tstop1)
+    c.tzstop = (if tstop2 >= 0.0.ps: tstop2 else: tstop1)
   if k == 1: return true
   fac = b2 - 4.0 * a * c2
-  if fac < 0.0: return true
+  if fac < 0.0.m²•ps⁻²: return true
   tstop1 = (-b + sqrt(fac)) / (2.0 * a)
   tstop2 = (-b - sqrt(fac)) / (2.0 * a)
-  if tstop1 < 0.0: return true
+  if tstop1 < 0.0.ps: return true
   c.isol = 2
   dec c.plane
   if tstop1 < tstop2:
@@ -338,13 +353,13 @@ proc stranded[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G,
   ## pkSpace: the electron cannot get back to the last plane, or cannot reach
   ## the next one; otherwise prepares the next plane crossing
   if c.pos.z > c.planes.zfinal:
-    let epot = c.f.efield * (c.pos.z - c.planes.zfinal) * 100.0
+    let epot = c.f.efield * (c.pos.z - c.planes.zfinal) * perElectron  # (E·Δz)·100
     if c.el.e < epot: return true
   not c.reachNextPlane()
 
-func slice(planes: Planes, z: float64): int =
+func slice(planes: Planes, z: m): int =
   ## ZSTEP slice of z (1..9)
-  clamp(int(1.0 + trunc(z / planes.zstep)), 1, nPlanes + 1)
+  clamp(int(1.0 + trunc(float64(z / planes.zstep))), 1, nPlanes + 1)
 
 # --- electrons ---------------------------------------------------------------
 
@@ -354,8 +369,8 @@ proc finishElectron[G: static FieldGeometry; P: static PlaneKind; T](c: var Casc
   c.ztots = c.ztots + c.pos.z - c.zstrt
   c.ttots = c.ttots + c.st - c.tsstrt
 
-proc push[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T], pos: Vec3,
-                                                           st, e: float64, dir: Vec3,
+proc push[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T], pos: Vector[m],
+                                                           st: ps, e: eV, dir: Vec3,
                                                            plane: int): bool {.inline.} =
   ## adds an electron to the stack; false (and stop) if the stack is full
   if c.stack.len >= stackSize:
@@ -373,7 +388,7 @@ proc count[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P,
     inc c.tally[gas].processes[i]
 
 func hitVelocity[G: static FieldGeometry; P: static PlaneKind](f: Field, el: Electron,
-                                                               fl: Flight): Vec3 {.inline.} =
+                                                               fl: Flight): Vector[m•ps⁻¹] {.inline.} =
   ## lab velocity at the end of the flight (thermal motion)
   when G == fgElectric and P == pkSpace:
     # as MONTEFDT: the direction is renormalised through its z component
@@ -387,23 +402,23 @@ func hitVelocity[G: static FieldGeometry; P: static PlaneKind](f: Field, el: Ele
   else:
     velocityAt[G](f, el, fl)
 
-func lateLossClamp[G: static FieldGeometry; P: static PlaneKind; T](ei, e: float64): float64 {.inline.} =
+func lateLossClamp[G: static FieldGeometry; P: static PlaneKind; T](ei, e: eV): eV {.inline.} =
   ## energy loss used in the kinematics when the loss (with the secondary's
   ## energy) exceeds the energy; the ten routines differ here
   result = ei
   when T is ColdBound:
     if e < ei:
-      result = (when G == fgParallel: e else: 0.0)  # as MONTEFTA / the others
+      result = (when G == fgParallel: e else: 0.0.eV)  # as MONTEFTA / the others
   elif G == fgElectric:
     if e < ei:
-      result = (when P == pkTime: e - 0.0001 else: 0.0)  # as MONTEFTT / MONTEFDT
+      result = (when P == pkTime: e - 0.0001.eV else: 0.0.eV)  # as MONTEFTT / MONTEFDT
   # MONTEFTAT, MONTEFTGT, MONTEFTHT: no clamp
 
 proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
                                                              tabs: MixtureTable | GasTables,
                                                              rng: var MagRng) =
   ## follows the current electron until it ends (or the run stops)
-  var tdash = 0.0
+  var tdash = 0.0.ps
   while true:
     let r1 = drand48(rng)
     let t = (when T is ColdBound: -(ln(r1) / c.target.tlim) + tdash
@@ -434,10 +449,10 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
         break
     var fl = fly[G](c.f, c.el, t)
     when G == fgCrossed:
-      fl.e = c.el.e + fl.dz * c.f.efield * 100.0  # as MONTEFTG
-    if fl.e < 0.0:
+      fl.e = c.el.e + fl.dz * c.f.efield * perElectron  # as MONTEFTG: (dz·E)·100
+    if fl.e < 0.0.eV:
       c.warnings.add NegativeEnergy(iter: c.id, el: c.el, fl: fl)
-      fl.e = 0.001
+      fl.e = 0.001.eV
     # real or null collision
     var h: Hit
     when T is ColdBound:
@@ -465,17 +480,17 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     # a real collision
     template tab: untyped = tableOf(tabs, h)
     if t >= c.tmax: c.tmax = t
-    tdash = 0.0
+    tdash = 0.0.ps
     discard advance[G](c.f, c.el, fl, c.pos)
     c.st = c.st + t
-    let it = min(int(trunc(t + 1.0)), nTimeBins)
+    let it = min(int(trunc(t.float + 1.0)), nTimeBins)  # 1 ps bins
     c.times[it] = c.times[it] + 1.0
     c.spectrum[h.ie] = c.spectrum[h.ie] + 1.0
     let r2 = drand48(rng)
     let i = findProcess(tab, h.ie, r2)
     var ei = tab.ein[i]
-    if h.e < ei: ei = h.e - 0.0001
-    if abs(ei - vibrationMark) <= 0.0001: ei = h.e - vibrationMark
+    if h.e < ei: ei = h.e - 0.0001.eV
+    if abs(ei - vibrationMark) <= 0.0001.eV: ei = h.e - vibrationMark
     var secondary = -1
     if tab.ipn[i] != 0:
       if tab.ipn[i] == -1:
@@ -500,7 +515,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
       if not c.push(c.pos, c.st, esec, Vec3(), plane): return  # direction set below
       secondary = c.stack.high
       when P == pkSpace: inc c.sums.born[plane]
-      if eistr > 30.0:
+      if eistr > 30.0.eV:
         # Auger electrons, isotropic
         let naug = tab.augerCount[i]
         let eavaug = tab.augerEnergy[i] / float64(naug)
@@ -520,43 +535,43 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     inc c.id
     inc c.iprint
     # Penning transfer: an electron of 1 eV, displaced in space and time
-    if c.penning and tab.penfra[1, i] != 0.0:
+    if c.penning and tab.penningFraction[i] != 0.0:
       let ran = drand48(rng)
-      if not (ran > tab.penfra[1, i]):
+      if not (ran > tab.penningFraction[i]):
         inc c.nclus
         if c.stack.len >= stackSize:
           c.stop = stStackFull
           return
         var p = c.pos
         var kept = true
-        if tab.penfra[2, i] == 0.0:
+        if tab.penningRange[i].float == 0.0:
           when P == pkSpace:
-            if p.z > c.planes.zfinal or p.z < 0.0: kept = false
+            if p.z > c.planes.zfinal or p.z < 0.0.m: kept = false
         else:
           var asign = 1.0
           var ran = drand48(rng)
           var ran1 = drand48(rng)
           if ran1 < 0.5: asign = -asign
-          p.x = c.pos.x - ln(ran) * tab.penfra[2, i] * asign
+          p.x = c.pos.x - ln(ran) * tab.penningRange[i] * asign
           ran = drand48(rng)
           ran1 = drand48(rng)
           if ran1 < 0.5: asign = -asign
-          p.y = c.pos.y - ln(ran) * tab.penfra[2, i] * asign
+          p.y = c.pos.y - ln(ran) * tab.penningRange[i] * asign
           ran = drand48(rng)
           ran1 = drand48(rng)
           if ran1 < 0.5: asign = -asign
-          p.z = c.pos.z - ln(ran) * tab.penfra[2, i] * asign
+          p.z = c.pos.z - ln(ran) * tab.penningRange[i] * asign
           when P == pkSpace:
-            if p.z < 0.0 or p.z > c.planes.zfinal: kept = false
+            if p.z < 0.0.m or p.z > c.planes.zfinal: kept = false
         if kept:
           var tpen = c.st
-          if tab.penfra[3, i] != 0.0:
+          if tab.penningTime[i].float != 0.0:
             let ran = drand48(rng)
-            tpen = c.st - ln(ran) * tab.penfra[3, i]
+            tpen = c.st - ln(ran) * tab.penningTime[i]
           var plane = 0
           when P == pkTime:
             # planes before tpen; dropped after the last
-            var tstop1 = 0.0
+            var tstop1 = 0.0.ps
             kept = false
             for _ in 1 .. c.planes.itfinal:
               tstop1 = c.planes.tstep + tstop1
@@ -567,7 +582,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
           else:
             plane = c.planes.slice(p.z)
           if kept:
-            discard c.push(p, tpen, 1.0, c.el.dir, plane)
+            discard c.push(p, tpen, 1.0.eV, c.el.dir, plane)
             when P == pkSpace: inc c.sums.born[plane]
         if not kept: dec c.nclus
     # scattering
@@ -576,7 +591,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     c.theta = s.theta
     if secondary >= 0:
       # the ionisation secondary: transverse momentum balance, opposite azimuth
-      var f5s = s.sinTheta * sqrt(s.e / c.stack[secondary].e)
+      var f5s = s.sinTheta * sqrt(float64(s.e / c.stack[secondary].e))
       if f5s > 1.0: f5s = 1.0
       let thsec = arcsin(f5s)
       f5s = sin(thsec)
@@ -630,17 +645,17 @@ proc run*[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, 
     inc c.iprim
     when P == pkSpace:
       c.plane = 0
-      c.tzstop = 1000.0
+      c.tzstop = 1000.0.ps
     if c.iprim > 1:
       if c.id > c.nmax:
         dec c.iprim
         return
-      c.pos = Vec3()
+      c.pos = Vector[m]()
       c.el = afterCollision[G](c.f, c.next.e, c.next.dir)
       inc c.nclus
-      c.st = 0.0
-      c.tsstrt = 0.0
-      c.zstrt = 0.0
+      c.st = 0.0.ps
+      c.tsstrt = 0.0.ps
+      c.zstrt = 0.0.m
       when P == pkTime: c.plane = 0
     if c.iprim > c.primaryLimit:
       c.stop = stTooManyPrimaries

@@ -193,6 +193,51 @@ including the SST cases that failed with the printed errors.
   evaluation order, as the ELIMIT rewrite does. `tests/regress` (MC decks)
   and `tests/gasdump` (every gas routine) remain the tools for that.
 
+## Units
+
+Every physical quantity has its unit in its type (Unchained, since
+2026-11-08): `eV`, `ps`, `m`, `m•ps⁻¹`, `cm²`, `V•cm⁻¹`, `kGauss`, ...
+`src/nimboltz/units.nim` defines all compound units once (a compound unit
+type defined in two modules would be two different types) and the two
+helpers that state Magboltz's conventions:
+
+- `unity(U)`: the number 1 in a dimensionless unit, e.g. `unity(m•cm⁻¹)`
+  is 0.01. Magboltz writes its conversions as literals (`*0.01D0`,
+  `*1D-9`); the code states them as units, and Unchained computes the
+  factor. `conditions.nim` asserts at compile time that each constant of
+  SETUP equals Magboltz's literal arithmetic (the 1e-19 in CONST1, for
+  instance, is T/kG · m²/cm² · ps²/s² = 10 · 1e4 · 1e-24).
+- `perElectron` = 1 eV/V: Magboltz uses a potential in V as an electron's
+  energy in eV. Unchained knows the eV as 1.602e-19 J, so the step from
+  volts to an electron's energy is written out (multiplying by 1.0 changes
+  no bit). kT in J goes through Magboltz's own e (`echarg / perElectron`),
+  not Unchained's.
+
+Speeds come from energies as v = vfac·√E, so energies appear with half
+powers (`eV¹ᐟ²`, `cm⁻²•ps⁻¹•eV⁻¹ᐟ²` for VAN); this needed rational powers
+in Unchained (branch `rational-powers` of ~/src/units, with exact
+power-of-ten conversions and `-d:unchainedImplicitScale=warn|error`).
+
+Rules that keep Magboltz's arithmetic:
+
+- The trajectory (fields, flights, tables, null-collision bounds, energy
+  loss) keeps every operation of the Fortran: all 96 decks stay
+  byte-identical. A conversion at the end of an expression is `.to(U)`
+  (Unchained multiplies last, as Magboltz does); Unchained converts on its
+  own when a product mixes prefixes of one unit (cm and m), and then
+  multiplies right after that product.
+- Results that are only printed (diffusion in cm²/s, velocities in cm/s,
+  Townsend coefficients) are written in the natural form, D = Σ/2t
+  converted at the end, where Magboltz folds its literal into the middle
+  (`5D15*SUM/T`). That changes the last bit of a printed 4-5 digit
+  number, which Magboltz's output does not show.
+- Build with `-d:unchainedImplicitScale=warn` to list every conversion
+  Unchained inserts; on 2026-11-08 these are the printed results above
+  and Magboltz's own `DZ*EFIELD*100`.
+- Unchained's `==` is approximate (`almostEqual`); exact comparisons use
+  `.float`. Logarithms of quantities that only enter through their
+  differences take `inUnits` (the value in its unit).
+
 ## Layout
 
 ```
@@ -200,7 +245,8 @@ src/nimboltz/
   frt.nim        Fortran FORMAT output, list-directed input, fstop
   farrays.nim    Fortran-style 2D arrays (collision tables, gases)
   rm48.nim       Magboltz's random numbers, bit-exact
-  vec3.nim       small 3-vector
+  vec3.nim       small 3-vector (Vec3 directions, Vector[T] with units)
+  units.nim      the units (Unchained) and Magboltz's conversions
   tables.nim     CollisionTable, NullBounds
   fields.nim     FieldGeometry, Field, Electron, free flight
   collisions.nim process choice, scattering

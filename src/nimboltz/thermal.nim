@@ -2,17 +2,17 @@
 ## its velocity for each collision.
 
 import std/math
-import rm48, tables, vec3
+import units, rm48, tables, vec3
 
 type
   ThermalGas* = object
     ## per-gas null-collision bounds and thermal speeds (/THRM/, TCFMAX of /LARGET/)
     count*: int                             ## number of gases
-    tcfmx*: float64                         ## sum of the per-gas bounds
+    tcfmx*: ps⁻¹                            ## sum of the per-gas bounds
     tcfmxg*: array[1..maxGases, float64]    ## cumulative share of each gas in tcfmx
-    tcfmax*: array[1..maxGases, float64]    ## null-collision bound of each gas
-    vtmb*: array[1..maxGases, float64]
-      ## sqrt(2kT/M) of each gas (m/ps); with MaxwellSampler's components
+    tcfmax*: array[1..maxGases, ps⁻¹]       ## null-collision bound of each gas
+    vtmb*: array[1..maxGases, m•ps⁻¹]
+      ## sqrt(2kT/M) of each gas; with MaxwellSampler's components
       ## (variance 1/2) each velocity component has the spread sqrt(kT/M)
 
   MaxwellSampler* = object
@@ -31,7 +31,7 @@ proc refill(m: var MaxwellSampler, rng: var MagRng) =
 proc initMaxwellSampler*(rng: var MagRng): MaxwellSampler =
   result.refill(rng)
 
-proc velocity*(m: var MaxwellSampler, vth: float64, rng: var MagRng): Vec3 {.inline.} =
+proc velocity*(m: var MaxwellSampler, vth: m•ps⁻¹, rng: var MagRng): Vector[m•ps⁻¹] {.inline.} =
   ## velocity of a gas molecule with thermal speed vth
   if m.used == 6: m.refill(rng)
   result = vec3(vth * m.rn[m.used + 1], vth * m.rn[m.used + 2], vth * m.rn[m.used + 3])

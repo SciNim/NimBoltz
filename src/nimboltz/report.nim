@@ -4,7 +4,7 @@
 ## thermal versions differ in a few formats.
 
 import std/math
-import frt, deck, conditions, tables, simulation
+import frt, units, deck, conditions, tables, simulation
 
 const
   fmtRule = "(\'-----------------------------------------------------------------------------\')"
@@ -81,8 +81,8 @@ proc printHeader*[M](r: Run[M]) =
     w.add toFVal(r.names[j])
     w.add toFVal(d.percent[j])
   fwrite(when thermal: fmt30t else: fmt30, w)
-  fwrite(fmt50, d.tempc, d.torr)
-  fwrite(fmt51, r.efinal, nEnergyBins)
+  fwrite(fmt50, d.tempc, d.torr.float)
+  fwrite(fmt51, r.efinal.float, nEnergyBins)
   fwrite(if d.penning: fmt53 else: fmt52)
   fwrite(case naniso
          of 0: fmt61
@@ -91,18 +91,18 @@ proc printHeader*[M](r: Run[M]) =
   if r.cond.dec.ncolm > 1000000: fwrite(fmt166, r.cond.dec.ncolm)
   else: fwrite(fmt167, r.cond.dec.ncolm)
   fwrite(when thermal: fmt66 else: fmt65)
-  fwrite(fmt90, d.efield, d.bmag, d.btheta, r.cond.wb)
-  fwrite(fmt95, r.estart)
+  fwrite(fmt90, d.efield.float, d.bmag.float, d.btheta, r.cond.wb.float)
+  fwrite(fmt95, r.estart.float)
   fwrite(fmt100, r.cond.nmax)
   w.setLen 0
   when thermal:
-    for l in 1 .. maxGases: w.add toFVal(r.mix.gas.tcfmax[l])
+    for l in 1 .. maxGases: w.add toFVal(r.mix.gas.tcfmax[l].float)
     fwrite(fmt110t, w)
   else:
-    for l in 1 .. 8: w.add toFVal(r.mix.bounds[l])
+    for l in 1 .. 8: w.add toFVal(r.mix.bounds[l].float)
     fwrite(fmt110, w)
     w.setLen 0
-    for l in countup(250, 3750, 500): w.add toFVal(r.mix.table.tcf[l])
+    for l in countup(250, 3750, 500): w.add toFVal(r.mix.table.tcf[l].float)
     fwrite(fmt111, w)
 
 proc printTransport*[M](r: Run[M]) =
@@ -111,29 +111,32 @@ proc printTransport*[M](r: Run[M]) =
   let t = r.transport
   fwrite(fmtRule)
   fwrite(fmtRule)
-  fwrite(fmt109, r.tmax, r.nnull, r.cond.nmax)
-  fwrite(fmt940, t.vel.z * 0.00001, t.velErr.z, t.vel.y * 0.00001, t.velErr.y,
-         t.vel.x * 0.00001, t.velErr.x)
-  if d.bmag > 0.0 and (d.btheta > 0.0 and d.btheta < 180.0):
+  fwrite(fmt109, r.tmax.float, r.nnull, r.cond.nmax)
+  fwrite(fmt940, t.vel.z.to(μm•ns⁻¹).float, t.velErr.z, t.vel.y.to(μm•ns⁻¹).float,
+         t.velErr.y, t.vel.x.to(μm•ns⁻¹).float, t.velErr.x)
+  if d.bmag.float > 0.0 and (d.btheta > 0.0 and d.btheta < 180.0):
     fwrite(fmt954)
-    fwrite(fmt955, t.dif.xx, t.dif.yy, t.dif.zz, t.dif.yz, t.dif.xy, t.dif.xz)
+    fwrite(fmt955, t.dif.xx.float, t.dif.yy.float, t.dif.zz.float, t.dif.yz.float,
+           t.dif.xy.float, t.dif.xz.float)
     fwrite(fmt956, t.difErr.xx, t.difErr.yy, t.difErr.zz, t.difErr.yz, t.difErr.xy,
            t.difErr.xz)
     if d.btheta == 90.0:
-      fwrite(fmt957, t.difln, t.dfler, t.diftr, t.dfter, t.dif.xx, t.difErr.xx)
+      fwrite(fmt957, t.difln.float, t.dfler, t.diftr.float, t.dfter, t.dif.xx.float,
+             t.difErr.xx)
   else:
-    let dtovmb = t.diftr * d.efield / t.vel.z
-    let dtmn = sqrt(2.0 * t.diftr / t.vel.z) * 10000.0
+    # characteristic energies D/µ, and the spread per √(drift distance)
+    let dtovmb = t.diftr * d.efield / t.vel.z * perElectron
+    let dtmn = sqrt(2.0 * t.diftr / t.vel.z).to(μm•cm⁻¹ᐟ²)
     let dfter1 = sqrt(t.dfter * t.dfter + t.velErr.z * t.velErr.z)
     fwrite(fmt954)
-    fwrite(when thermalMotion(M): fmt950t else: fmt950, t.diftr, t.dfter, dtovmb,
-           dfter1, dtmn, dfter1 / 2.0)
-    let dlovmb = t.difln * d.efield / t.vel.z
-    let dlmn = sqrt(2.0 * t.difln / t.vel.z) * 10000.0
+    fwrite(when thermalMotion(M): fmt950t else: fmt950, t.diftr.float, t.dfter,
+           dtovmb.float, dfter1, dtmn.float, dfter1 / 2.0)
+    let dlovmb = t.difln * d.efield / t.vel.z * perElectron
+    let dlmn = sqrt(2.0 * t.difln / t.vel.z).to(μm•cm⁻¹ᐟ²)
     let dfler1 = sqrt(t.dfler * t.dfler + t.velErr.z * t.velErr.z)
-    fwrite(fmt992, t.difln, t.dfler, dlovmb, dfler1, dlmn, dfler1 / 2.0)
-  fwrite(fmt333, t.alpha, t.alper, t.att, t.atter)
-  fwrite(fmt960, t.ave, t.den)
+    fwrite(fmt992, t.difln.float, t.dfler, dlovmb.float, dfler1, dlmn.float, dfler1 / 2.0)
+  fwrite(fmt333, t.alpha.float, t.alper, t.att.float, t.atter)
+  fwrite(fmt960, t.ave.float, t.den)
 
 iterator processes(r: Run[ColdMixture], gas: int): tuple[descr: string, n: int] =
   ## the processes of a gas with their real collisions in the last run
@@ -153,7 +156,7 @@ proc printProcesses[M](r: Run[M], f: Frequencies) =
     for (descr, n) in r.processes(j):
       let frelv = f.total * float64(n) / float64(f.n)
       let errfre = if n == 0: 0.0 else: 100.0 * sqrt(float64(n)) / float64(n)
-      fwrite(fmt1070, descr, frelv, errfre)
+      fwrite(fmt1070, descr, frelv.float, errfre)
   fwrite(fmtRule)
 
 proc printCollisionCounts*(r: Run[ColdMixture]) =
@@ -162,7 +165,8 @@ proc printCollisionCounts*(r: Run[ColdMixture]) =
   fwrite(fmtRule)
   fwrite(fmtLastBin, r.last.spectrum[nEnergyBins])
   let f = frequencies(r.last, r.deck.ngas)
-  fwrite(fmt220o1, f.total, f.inelastic, f.elastic, f.ionisation, f.attachment)
+  fwrite(fmt220o1, f.total.float, f.inelastic.float, f.elastic.float, f.ionisation.float,
+         f.attachment.float)
   fwrite(fmtRule)
   r.printProcesses(f)
 
@@ -173,8 +177,8 @@ proc printFrequencies*[M](r: Run[M]) =
   fwrite(fmtRule)
   fwrite(fmtLastBin, r.last.spectrum[nEnergyBins])
   let f = frequencies(r.last, r.deck.ngas)
-  fwrite(when thermalMotion(M): fmt220t else: fmt220, f.total, f.elastic, f.inelastic,
-         f.ionisation, f.attachment)
+  fwrite(when thermalMotion(M): fmt220t else: fmt220, f.total.float, f.elastic.float,
+         f.inelastic.float, f.ionisation.float, f.attachment.float)
   fwrite(fmtRule)
   r.printProcesses(f)
   # spectrum normalised to the collisions, in 40 bins of 100
@@ -189,4 +193,4 @@ proc printFrequencies*[M](r: Run[M]) =
       smspec = 0.0
   let eplt = r.efinal / 40.0
   for i in 1 .. 40:
-    fwrite(fmt302, eplt * (float64(i) - 0.5), specs[i])
+    fwrite(fmt302, (eplt * (float64(i) - 0.5)).float, specs[i])

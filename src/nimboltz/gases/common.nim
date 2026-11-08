@@ -16,8 +16,8 @@
 ## constants (`1.0D-16`) are `float64`.
 
 import std/math
-import ../frt, ../mixture, ../tables
-export math, mixture, tables, pow2
+import ../frt, ../units, ../mixture, ../tables
+export math, units, mixture, tables, pow2
 
 const
   # SETUP of Magboltz
@@ -39,16 +39,16 @@ let
 type
   GasInput* = object
     ## what a gas routine reads besides its own data
-    e*: array[1..nEnergyBins, float64]  ## energy grid (bin centres, eV)
+    e*: array[1..nEnergyBins, eV]  ## energy grid (bin centres)
     naniso*: int        ## 0 isotropic, 1 and 2 two models of anisotropy
-    kT*: float64        ## gas temperature (eV), for the populations of
-                        ## excited states
-    efinal*: float64    ## upper end of the grid (eV)
-    estep*: float64     ## bin width (eV); old gas routines step their own
+    kT*: eV             ## gas temperature, for the populations of excited
+                        ## states
+    efinal*: eV         ## upper end of the grid
+    estep*: eV          ## bin width; old gas routines step their own
                         ## energies by it
     penning*: bool      ## print the Penning transfers
-    torr*, tempc*: float64  ## gas pressure (Torr) and temperature (°C), for
-                            ## three-body attachment
+    torr*: Torr         ## gas pressure and temperature (°C), for three-body
+    tempc*: float64     ## attachment
     mixture*: array[1..6, tuple[gas: int, percent: float64]]
                         ## the gases of the mixture and their shares, for
                         ## gases that scale with their own density
@@ -66,10 +66,10 @@ func percent*(inp: GasInput, gas: int): float64 =
   for m in inp.mixture:
     if m.gas == gas: result = m.percent
 
-iterator bins*(inp: GasInput): (int, float64) =
+iterator bins*(inp: GasInput): (int, eV) =
   for i in 1 .. nEnergyBins: yield (i, inp.e[i])
 
-iterator steps*(inp: GasInput): (int, float64) =
+iterator steps*(inp: GasInput): (int, eV) =
   ## the bins with energies summed up bin by bin, as the older gas routines
   ## do (EN = -ESTEP/2, EN = EN + ESTEP), rather than the grid's
   var en = -inp.estep / 2.0
@@ -155,7 +155,7 @@ type
     ## what a gas does with Born-Bethe values below zero (near threshold)
     keepNegative, clampNegative, absNegative
 
-func offsets*(inp: GasInput, e: openArray[float64], magnitude = false): seq[int] =
+func offsets*(inp: GasInput, e: openArray[eV], magnitude = false): seq[int] =
   ## IOFF of each energy loss: number of grid bins at or below it (or its
   ## magnitude). Bin i - IOFF is where an electron of bin i ends up after
   ## the loss.
@@ -169,12 +169,12 @@ func offsets*(inp: GasInput, e: openArray[float64], magnitude = false): seq[int]
 
 # ------------------------------------------------------------ gas data
 
-proc elastic*(g: var GasXsec, inp: GasInput, i: int, qela, qmom, pq2: float64) =
+proc elastic*(g: var GasXsec, inp: GasInput, i: int, qela, qmom: cm², pq2: float64) =
   ## elastic cross section of bin i from the total elastic (qela) and the
   ## momentum transfer (qmom) cross sections. Isotropic: the momentum
   ## transfer cross section. Model 1: forward probability
   ## 0.5 + (qela - qmom) / qela; model 2: pq2.
-  let pq1 = 0.5 + (qela - qmom) / qela
+  let pq1 = 0.5 + float64((qela - qmom) / qela)
   case inp.naniso
   of 0: g.peqel[2, i] = 0.5
   of 1: g.peqel[2, i] = pq1
@@ -186,7 +186,7 @@ proc describe*(g: var GasXsec, inp: GasInput, isotropic, anisotropic: string,
   ## name (isotropic and anisotropic variant) and mass (amu); elastic and
   ## ionisation scattering anisotropic as chosen
   g.name = if inp.naniso == 0: isotropic else: anisotropic
-  g.e[2] = 2.0 * emass / (float64(mass) * amu)
+  g.massRatio = 2.0 * emass / (float64(mass) * amu)
   for k in 1 .. 6: g.kel[k] = inp.naniso
 
 type
@@ -201,10 +201,10 @@ type
 proc shells*(g: var GasXsec, s: openArray[Shell]) =
   g.nion = s.len
   for k, sh in s:
-    g.eion[k + 1] = sh.eion
-    g.eb[k + 1] = sh.eoby
+    g.eion[k + 1] = float64(sh.eion).eV
+    g.eb[k + 1] = float64(sh.eoby).eV
     g.nc0[k + 1] = sh.nc0
-    g.ec0[k + 1] = sh.ec0
+    g.ec0[k + 1] = float64(sh.ec0).eV
     g.scrp[2 + k + 1] = sh.text
 
 proc attachment*(g: var GasXsec, texts: openArray[string]) =
@@ -216,7 +216,7 @@ proc levels*(g: var GasXsec, inp: GasInput, l: openArray[(float32, string)]) =
   ## anisotropy as the elastic scattering
   g.nin = l.len
   for j, (e, text) in l:
-    g.ei[j + 1] = e
+    g.ei[j + 1] = float64(e).eV
     g.kin[j + 1] = inp.naniso
     g.scrp[4 + g.nion + g.natt + j + 1] = text
 
@@ -226,16 +226,16 @@ proc penning*(g: var GasXsec, inp: GasInput, levels: Slice[int],
   ## decay time (ps); printed in Magboltz's format when asked for (only
   ## levels with a transfer, or `all`)
   for j in levels:
-    g.penfra[1, j] = fraction
-    g.penfra[2, j] = length
-    g.penfra[3, j] = time
+    g.penningFraction[j] = fraction
+    g.penningRange[j] = float64(length).μm
+    g.penningTime[j] = float64(time).ps
   if inp.penning:
     for j in levels:
-      if all or g.penfra[1, j] != 0.0:
-        fwrite(fmt, fstr(g.name, 25), g.ei[j], g.penfra[1, j], g.penfra[2, j],
-               g.penfra[3, j])
+      if all or g.penningFraction[j] != 0.0:
+        fwrite(fmt, fstr(g.name, 25), g.ei[j].float, g.penningFraction[j],
+               g.penningRange[j].float, g.penningTime[j].float)
 
-proc dropLevelsAbove*(g: var GasXsec, efinal: float64, first = 1) =
+proc dropLevelsAbove*(g: var GasXsec, efinal: eV, first = 1) =
   ## levels from the first one at or above the end of the grid are not used
   ## (Magboltz looks from level `first`)
   for k in first .. g.nin:

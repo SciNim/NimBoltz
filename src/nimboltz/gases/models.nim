@@ -11,7 +11,7 @@ proc reidStep*(inp: GasInput, g: var GasXsec) =
   g.describe(inp, "REID STEP(ANIS)", "REID STEP(ANIS)", mass = 4.0)
   for k in 1 .. 6: g.kel[k] = 0
   g.scrp[2] = " ELASTIC       REID STEP(ANIS)"
-  g.e[3] = 15.90'f32
+  g.ionThreshold = float64(15.90'f32).eV
   g.shells [(0.0'f32, 15.90'f32, 0, 0.0'f32, " IONISATION    ELOSS= 15.90")]
   g.attachment [""]
   g.levels(inp, [(0.2'f32, " EXC (ANIS)    ELOSS=  0.20")])
@@ -20,36 +20,36 @@ proc reidStep*(inp: GasInput, g: var GasXsec) =
   for i, en in inp.steps:
     g.peqel[2, i] = 0.0
     g.peqin[1, i] = 0.0
-    g.q[2, i] = float64(1.0e-16'f32)
-    g.q[3, i] = 0.0
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = 0.0
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    g.qin[1, i] = 0.0
+    g.q[2, i] = float64(1.0e-16'f32).cm²
+    g.q[3, i] = 0.0.cm²
+    g.q[4, i] = 0.0.cm²
+    g.qatt[1, i] = 0.0.cm²
+    g.q[5, i] = 0.0.cm²
+    g.q[6, i] = 0.0.cm²
+    g.qin[1, i] = 0.0.cm²
     if en > g.ei[1]:
-      g.qin[1, i] = float64(10.0e-16'f32)
-      g.peqin[1, i] = 0.5 + (g.qin[1, i] - share * g.qin[1, i]) / g.qin[1, i]
+      g.qin[1, i] = float64(10.0e-16'f32).cm²
+      g.peqin[1, i] = 0.5 + float64((g.qin[1, i] - share * g.qin[1, i]) / g.qin[1, i])
     g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i] + share * g.qin[1, i]
   g.dropLevelsAbove(inp.efinal)
 
 proc maxwell*(inp: GasInput, g: var GasXsec) =
-  ## elastic 6e-16 cm² / sqrt(E / eV): constant collision frequency
+  ## elastic 6e-16 cm² √eV / √E: constant collision frequency
   g.describe(inp, " MAXWELL 1994--", " MAXWELL 1994--", mass = 4.0)
   for k in 1 .. 6: g.kel[k] = 0
   g.scrp[2] = " ELASTIC       MAXWELL"
-  g.e[3] = 99.0'f32
+  g.ionThreshold = float64(99.0'f32).eV
   g.shells [(0.0'f32, 99.0'f32, 0, 0.0'f32, "")]
   g.attachment [""]
   g.nin = 0
-  let sigc = float64(6.0e-16'f32)
+  let sigc = float64(6.0e-16'f32).cm²•eV¹ᐟ²
   for i, en in inp.steps:
-    g.q[2, i] = if en == 0.0: float64(100000.0e-16'f32) else: sigc / sqrt(en)
-    g.q[3, i] = 0.0
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = 0.0
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
+    g.q[2, i] = if en.float == 0.0: float64(100000.0e-16'f32).cm² else: sigc / sqrt(en)
+    g.q[3, i] = 0.0.cm²
+    g.q[4, i] = 0.0.cm²
+    g.qatt[1, i] = 0.0.cm²
+    g.q[5, i] = 0.0.cm²
+    g.q[6, i] = 0.0.cm²
     g.q[1, i] = g.q[2, i]
 
 proc reidRamp*(inp: GasInput, g: var GasXsec) =
@@ -58,20 +58,20 @@ proc reidRamp*(inp: GasInput, g: var GasXsec) =
   g.describe(inp, " REID RAMP S=10", " REID RAMP S=10", mass = 4.0)
   for k in 1 .. 6: g.kel[k] = 0
   g.scrp[2] = " ELASTIC       REID RAMP"
-  g.e[3] = 15.90'f32
+  g.ionThreshold = float64(15.90'f32).eV
   g.shells [(0.0'f32, 15.9'f32, 0, 0.0'f32, "")]
   g.attachment [""]
   g.levels(inp, [(0.2'f32, " EXC           ELOSS=  0.2")])
   g.kin[1] = 0
-  let slope = float64(10.0e-16'f32)
+  let slope = float64(10.0e-16'f32).cm²•eV⁻¹
   for i, en in inp.steps:
-    g.q[2, i] = float64(6.0e-16'f32)
-    g.q[3, i] = 0.0
-    g.q[4, i] = 0.0
-    g.qatt[1, i] = 0.0
-    g.q[5, i] = 0.0
-    g.q[6, i] = 0.0
-    g.qin[1, i] = 0.0
+    g.q[2, i] = float64(6.0e-16'f32).cm²
+    g.q[3, i] = 0.0.cm²
+    g.q[4, i] = 0.0.cm²
+    g.qatt[1, i] = 0.0.cm²
+    g.q[5, i] = 0.0.cm²
+    g.q[6, i] = 0.0.cm²
+    g.qin[1, i] = 0.0.cm²
     if en > g.ei[1]:
       g.qin[1, i] = (en - g.ei[1]) * slope
     g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i] + g.qin[1, i]
@@ -87,8 +87,8 @@ proc dummy*(inp: GasInput, g: var GasXsec) =
   g.attachment [" ATTACHMENT"]
   g.nin = 0
   for i, en in inp.steps:
-    g.q[2, i] = 0.0
-    g.q[3, i] = 0.0
-    g.q[4, i] = 0.0
+    g.q[2, i] = 0.0.cm²
+    g.q[3, i] = 0.0.cm²
+    g.q[4, i] = 0.0.cm²
     g.qatt[1, i] = g.q[4, i]
     g.q[1, i] = g.q[2, i] + g.q[3, i] + g.q[4, i]

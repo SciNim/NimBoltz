@@ -11,7 +11,7 @@
 ## value objects without references. The adaptive null-collision bounds
 ## (TCFMAX) change during the Monte Carlo and are not part of the table.
 
-import farrays
+import units, farrays
 export farrays
 
 const
@@ -24,25 +24,29 @@ type
   CollisionTable*[N: static int] = object
     ## Up to N collision processes per energy bin. Index order follows
     ## Magboltz (`cf[ie, i]`: energy bin ie, process i).
-    tcf*: array[1..nEnergyBins, float64]
+    tcf*: array[1..nEnergyBins, ps⁻¹]
       ## total collision frequency in each energy bin (real collisions)
     cf*: Arr2[float64, nEnergyBins, N]
       ## cumulative collision frequency of processes 1..i, divided by tcf
     psct*, angct*: Arr2[float64, nEnergyBins, N]
       ## anisotropic scattering parameters (meaning depends on `index`)
-    ein*: array[1..N, float64]    ## energy loss of the process (eV)
+    ein*: array[1..N, eV]         ## energy loss of the process
     rgas*: array[1..N, float64]   ## mass ratio factor of the target
-    wpl*: array[1..N, float64]    ## binding energy of the ionised shell (eV)
+    wpl*: array[1..N, eV]         ## binding energy of the ionised shell
     iarry*: array[1..N, int]      ## process kind L (1 elastic, 2 ionisation, ...)
     ipn*: array[1..N, int]        ## > 0: ionisation, energy shared with the secondary
     augerCount*: array[1..N, int]       ## ionisation: Auger electrons emitted (NC0)
-    augerEnergy*: array[1..N, float64]  ## ionisation: their total energy, eV (EC0)
+    augerEnergy*: array[1..N, eV]       ## ionisation: their total energy (EC0)
     index*: array[1..N, int]      ## 0 isotropic, 1 forward/backward cut, 2 screened
-    penfra*: Arr2[float64, 3, N]  ## Penning transfer fraction, distance, time
+    # Penning transfer (PENFRA): an excitation ionises another gas
+    penningFraction*: array[1..N, float64]  ## with this probability,
+    penningRange*: array[1..N, m]           ## an exponentially distributed distance
+                                            ## away (per axis; 0: in place)
+    penningTime*: array[1..N, ps]           ## and time later (0: at once)
     last*: int                    ## number of processes in use
     isize*: int                   ## start step of the binary search (power of 2)
 
-  NullBounds* = array[1..8, float64]
+  NullBounds* = array[1..8, ps⁻¹]
     ## Upper bounds of the total collision frequency for the null-collision
     ## method at 0 K, in 8 bands of the starting energy (TCFMAX of /LARGE/).
     ## The Monte Carlo raises a bound by 5% whenever it is exceeded, so this

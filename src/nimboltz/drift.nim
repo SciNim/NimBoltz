@@ -16,7 +16,7 @@
 ## while running; results in cm/s, cm²/s, eV, 1/cm and percent.
 
 import std/math
-import rm48, tables, vec3, fields, collisions, freeflight
+import units, rm48, tables, vec3, fields, collisions, freeflight
 
 const
   nSegments* = 10      ## ITMAX
@@ -31,15 +31,15 @@ type
     ncorst*: int   ## pairs per collision
 
   Mark = object
-    pos: Vec3
-    st: float64
+    pos: Vector[m]
+    st: ps
 
   Ring* = object
     ## positions and times of the last NCOLM collisions (XST, YST, ZST, STO)
     marks: seq[Mark]
 
-  Tensor* = object
-    xx*, yy*, zz*, yz*, xy*, xz*: float64
+  Tensor*[T] = object
+    xx*, yy*, zz*, yz*, xy*, xz*: T
 
   Tally*[N: static int] = object
     ## real collisions of one collision table
@@ -50,24 +50,24 @@ type
 
   Sums = object
     ## running sums of the estimators (and their values at a segment start)
-    pos: Vec3          ## position (OUTPT X, Y, Z)
-    st: float64        ## time
-    st1, st2: float64  ## time weights of the pair sums (with / without the
+    pos: Vector[m]     ## position (OUTPT X, Y, Z)
+    st: ps             ## time
+    st1, st2: ps       ## time weights of the pair sums (with / without the
                        ## first two segments)
-    s: Tensor          ## pair sums of the squared displacements
-    ls, ts: float64    ## pair sums along / across the drift (fgCrossed)
-    vx, vy: float64    ## sums for isotropic scattering
-    e2: float64        ## ∫ e dt (fgElectric, fgParallel)
-    ebar: float64      ## energy from the spectrum (other geometries)
-    rot: Vec3          ## position rotated to the frame of E (fgOblique)
-    srot: Tensor       ## pair sums rotated to the frame of E (fgOblique)
+    s: Tensor[m²]      ## pair sums of the squared displacements
+    ls, ts: m²         ## pair sums along / across the drift (fgCrossed)
+    vx, vy: m²         ## sums for isotropic scattering
+    e2: eV•ps          ## ∫ e dt (fgElectric, fgParallel)
+    ebar: eV•ps        ## ∫ e dt from the spectrum (other geometries)
+    rot: Vector[m]     ## position rotated to the frame of E (fgOblique)
+    srot: Tensor[m²]   ## pair sums rotated to the frame of E (fgOblique)
 
   Drift*[G: static FieldGeometry; T] = object
     ## The state of one trajectory; T is `ColdGas` or `WarmGas`.
     f: Field
     el: Electron
     target*: T
-    estep: float64
+    estep: eV
     gases: int
     penning: bool       ## Penning transfers (IPEN)
     isotropic: bool     ## all scattering isotropic (NISO = 0)
@@ -76,7 +76,7 @@ type
     theta*: float64     ## polar angle of the last scattering (THETA)
     nnull*: int         ## null collisions
     extraIons*: int     ## ionisations by Auger electrons and Penning transfer
-    tmax*: float64      ## longest flight (ps)
+    tmax*: ps           ## longest flight
     times*: array[1..nTimeBins, float64]     ## flights per 1 ps bin
     spectrum*: array[1..nEnergyBins, float64]  ## real collisions per energy bin
     when T is ColdGas:
@@ -84,32 +84,35 @@ type
     else:
       tally*: GasTallies
     ncol, id: int       ## position in the ring, times it was filled
-    w: Vec3             ## pos / st (m/ps)
+    w: Vector[m•ps⁻¹]   ## pos / st
     cur, prev: Sums
     # estimates (values of the last segment, as Magboltz keeps them)
-    vel*: Vec3          ## drift velocity (µm/ns)
-    velRot: Vec3        ## fgOblique: drift velocity in the frame of E
-    ave*: float64       ## mean energy (eV)
-    dif*: Tensor        ## diffusion tensor (cm²/s; fgOblique: lab frame)
-    difRot: Tensor      ## fgOblique: diffusion tensor in the frame of E
-    difln*, diftr*: float64
+    vel*: Vector[μm•ns⁻¹]  ## drift velocity
+    velRot: Vector[μm•ns⁻¹]  ## fgOblique: drift velocity in the frame of E
+    ave*: eV            ## mean energy
+    dif*: Tensor[cm²•s⁻¹]  ## diffusion tensor (fgOblique: lab frame)
+    difRot: Tensor[cm²•s⁻¹]  ## fgOblique: diffusion tensor in the frame of E
+    difln*, diftr*: cm²•s⁻¹
     # per-segment estimates
-    wst: array[1..nSegments, Vec3]
-    avest: array[1..nSegments, float64]
-    dst: array[1..nSegments, Tensor]
-    dlnst, dtrst: array[1..nSegments, float64]
+    wst: array[1..nSegments, Vector[μm•ns⁻¹]]
+    avest: array[1..nSegments, eV]
+    dst: array[1..nSegments, Tensor[cm²•s⁻¹]]
+    dlnst, dtrst: array[1..nSegments, cm²•s⁻¹]
 
   Transport* = object
     ## results of a trajectory (what MONTE* leave in /VEL/, /DIFLAB/, ...)
-    vel*, velErr*: Vec3        ## drift velocity (cm/s) and error (%)
-    dif*, difErr*: Tensor      ## diffusion tensor (cm²/s) and errors (%)
-    difln*, diftr*: float64    ## longitudinal and transverse diffusion (cm²/s)
+    vel*: Vector[cm•s⁻¹]       ## drift velocity
+    velErr*: Vec3              ## and its error (%)
+    dif*: Tensor[cm²•s⁻¹]      ## diffusion tensor
+    difErr*: Tensor[float64]   ## and its errors (%)
+    difln*, diftr*: cm²•s⁻¹    ## longitudinal and transverse diffusion
     dfler*, dfter*: float64    ## their errors (%)
-    ave*, den*: float64        ## mean energy (eV) and error (%)
-    alpha*, att*: float64      ## ionisation and attachment coefficients (1/cm)
+    ave*: eV                   ## mean energy
+    den*: float64              ## and its error (%)
+    alpha*, att*: cm⁻¹         ## ionisation and attachment coefficients
     alper*, atter*: float64    ## their errors (%)
 
-func sq(x: float64): float64 {.inline.} = x * x
+func sq[T](x: T): auto {.inline.} = x * x
 
 func initRing*(): Ring =
   Ring(marks: newSeq[Mark](ringSize))
@@ -117,7 +120,7 @@ func initRing*(): Ring =
 func isEmpty*(r: Ring): bool = r.marks.len == 0
 
 func initDrift*[G: static FieldGeometry; T](f: Field, start: Electron, target: T,
-                                            estep: float64, gases: int, penning,
+                                            estep: eV, gases: int, penning,
                                             isotropic: bool, dec: Decorrelation,
                                             btheta: float64): Drift[G, T] =
   doAssert dec.ncolm <= ringSize
@@ -144,7 +147,7 @@ proc record[G: static FieldGeometry; T](d: var Drift[G, T], h: Hit, seg: int, ri
   inc d.ncol
   let v2 = advance[G](d.f, d.el, h.fl, d.cur.pos)
   d.cur.st = d.cur.st + t
-  let it = min(int(trunc(t + 1.0)), nTimeBins)
+  let it = min(int(trunc(t.float + 1.0)), nTimeBins)  # 1 ps bins
   d.times[it] = d.times[it] + 1.0
   d.spectrum[h.ie] = d.spectrum[h.ie] + 1.0
   d.w.z = d.cur.pos.z / d.cur.st
@@ -235,21 +238,22 @@ proc runSegment*[G: static FieldGeometry; T](d: var Drift[G, T],
     d.count(h.gas, tab.iarry[i], i)
     # an excitation transfers to ionisation of another gas with probability
     # PENFRA(1, i)
-    if d.penning and tab.penfra[1, i] != 0.0:
+    if d.penning and tab.penningFraction[i] != 0.0:
       let ran = drand48(rng)
-      if not (ran > tab.penfra[1, i]): inc d.extraIons
+      if not (ran > tab.penningFraction[i]): inc d.extraIons
     let s = scatter(tab, i, h.ie, h.e, ei, h.din, rng,
                     r31First = (G == fgElectric and T is ColdGas))
     d.theta = s.theta
     d.el = leave[G](d.target, d.f, s, h)
 
-func meanEnergy(spectrum, energies, tcf: array[1..nEnergyBins, float64]): float64 =
+func meanEnergy(spectrum: array[1..nEnergyBins, float64], energies: array[1..nEnergyBins, eV],
+                tcf: array[1..nEnergyBins, ps⁻¹]): eV•ps =
   ## ∫ e dt from the collision spectrum: each collision at energy e stands
   ## for a time 1/tcf
   for ik in 1 .. nEnergyBins:
     result = result + energies[ik] * spectrum[ik] / tcf[ik]
 
-func rotate(t: Tensor, rcs, rsn: float64): Tensor =
+func rotate[T](t: Tensor[T], rcs, rsn: float64): Tensor[T] =
   ## tensor in the frame of E (fgOblique: B along x, E at BTHETA in x-z)
   result.xx = t.xx * rcs * rcs + t.zz * rsn * rsn + 2.0 * rcs * rsn * t.xz
   result.yy = t.yy
@@ -258,124 +262,130 @@ func rotate(t: Tensor, rcs, rsn: float64): Tensor =
   result.yz = rsn * t.xy - rcs * t.yz
   result.xz = (rcs * rcs - rsn * rsn) * t.xz - rsn * rcs * (t.xx - t.zz)
 
+func diffusion(s: m², t: ps): cm²•s⁻¹ {.inline.} =
+  ## D = <Δx²> / 2t from a sum of squared displacements weighted by the
+  ## times (Magboltz: C · s / t with C = 5e15)
+  (s / (2.0 * t)).to(cm²•s⁻¹)
+
 proc endSegment*[G: static FieldGeometry; T](d: var Drift[G, T], seg: int,
-                                             energies, tcf: array[1..nEnergyBins, float64]) =
+                                             energies: array[1..nEnergyBins, eV],
+                                             tcf: array[1..nEnergyBins, ps⁻¹]) =
   ## Estimates of segment `seg`. `energies`: centres of the energy bins;
   ## `tcf`: total collision frequency per bin (of all gases).
-  const c = 5000000000000000.0  # 0.5 · (m²/ps → cm²/s)
   let c1 = d.cur
   let p = d.prev
   when G in {fgElectric, fgParallel}:
-    d.vel.z = d.w.z * 1000000000.0
+    d.vel.z = d.w.z.to(μm•ns⁻¹)
     d.ave = c1.e2 / c1.st
     if d.isotropic:
-      d.dif.xx = c * c1.vx / c1.st
-      d.dif.yy = c * c1.vy / c1.st
-      d.dst[seg].xx = c * (c1.vx - p.vx) / (c1.st - p.st)
-      d.dst[seg].yy = c * (c1.vy - p.vy) / (c1.st - p.st)
+      d.dif.xx = diffusion(c1.vx, c1.st)
+      d.dif.yy = diffusion(c1.vy, c1.st)
+      d.dst[seg].xx = diffusion((c1.vx - p.vx), (c1.st - p.st))
+      d.dst[seg].yy = diffusion((c1.vy - p.vy), (c1.st - p.st))
     else:
-      if c1.st2 != 0.0:
-        d.dif.yy = c * c1.s.yy / c1.st2
-        d.dif.xx = c * c1.s.xx / c1.st2
-        d.dst[seg].xx = c * (c1.s.xx - p.s.xx) / (c1.st2 - p.st2)
-        d.dst[seg].yy = c * (c1.s.yy - p.s.yy) / (c1.st2 - p.st2)
+      if c1.st2.float != 0.0:
+        d.dif.yy = diffusion(c1.s.yy, c1.st2)
+        d.dif.xx = diffusion(c1.s.xx, c1.st2)
+        d.dst[seg].xx = diffusion((c1.s.xx - p.s.xx), (c1.st2 - p.st2))
+        d.dst[seg].yy = diffusion((c1.s.yy - p.s.yy), (c1.st2 - p.st2))
       else:
-        d.dst[seg].xx = 0.0
-        d.dst[seg].yy = 0.0
-    if c1.st1 != 0.0:
-      d.dif.zz = c * c1.s.zz / c1.st1
-      d.dst[seg].zz = c * (c1.s.zz - p.s.zz) / (c1.st1 - p.st1)
+        d.dst[seg].xx = 0.0.cm²•s⁻¹
+        d.dst[seg].yy = 0.0.cm²•s⁻¹
+    if c1.st1.float != 0.0:
+      d.dif.zz = diffusion(c1.s.zz, c1.st1)
+      d.dst[seg].zz = diffusion((c1.s.zz - p.s.zz), (c1.st1 - p.st1))
     else:
-      d.dst[seg].zz = 0.0
-    d.wst[seg].z = (c1.pos.z - p.pos.z) / (c1.st - p.st) * 1000000000.0
+      d.dst[seg].zz = 0.0.cm²•s⁻¹
+    d.wst[seg].z = ((c1.pos.z - p.pos.z) / (c1.st - p.st)).to(μm•ns⁻¹)
     d.avest[seg] = (c1.e2 - p.e2) / (c1.st - p.st)
   elif G == fgCrossed:
-    d.vel.z = d.w.z * 1000000000.0
-    d.vel.y = d.w.y * 1000000000.0
-    if c1.st2 != 0.0: d.dif.xx = c * c1.s.xx / c1.st2
-    if c1.st1 != 0.0:
-      d.dif.yy = c * c1.s.yy / c1.st1
-      d.dif.zz = c * c1.s.zz / c1.st1
-      d.dif.yz = -(c * c1.s.yz / c1.st1)
-      d.difln = c * c1.ls / c1.st1
-      d.diftr = c * c1.ts / c1.st1
-    if d.isotropic: d.dif.xx = c * c1.vx / c1.st
+    d.vel.z = d.w.z.to(μm•ns⁻¹)
+    d.vel.y = d.w.y.to(μm•ns⁻¹)
+    if c1.st2.float != 0.0: d.dif.xx = diffusion(c1.s.xx, c1.st2)
+    if c1.st1.float != 0.0:
+      d.dif.yy = diffusion(c1.s.yy, c1.st1)
+      d.dif.zz = diffusion(c1.s.zz, c1.st1)
+      d.dif.yz = -(diffusion(c1.s.yz, c1.st1))
+      d.difln = diffusion(c1.ls, c1.st1)
+      d.diftr = diffusion(c1.ts, c1.st1)
+    if d.isotropic: d.dif.xx = diffusion(c1.vx, c1.st)
     d.cur.ebar = meanEnergy(d.spectrum, energies, tcf)
     d.ave = d.cur.ebar / c1.st
-    d.wst[seg].z = (c1.pos.z - p.pos.z) / (c1.st - p.st) * 1000000000.0
-    d.wst[seg].y = (c1.pos.y - p.pos.y) / (c1.st - p.st) * 1000000000.0
+    d.wst[seg].z = ((c1.pos.z - p.pos.z) / (c1.st - p.st)).to(μm•ns⁻¹)
+    d.wst[seg].y = ((c1.pos.y - p.pos.y) / (c1.st - p.st)).to(μm•ns⁻¹)
     d.avest[seg] = (d.cur.ebar - p.ebar) / (c1.st - p.st)
-    d.dst[seg] = Tensor()
-    d.dlnst[seg] = 0.0
-    d.dtrst[seg] = 0.0
+    d.dst[seg] = Tensor[cm²•s⁻¹]()
+    d.dlnst[seg] = 0.0.cm²•s⁻¹
+    d.dtrst[seg] = 0.0.cm²•s⁻¹
     if seg > 2:
-      d.dst[seg].zz = c * (c1.s.zz - p.s.zz) / (c1.st1 - p.st1)
-      d.dst[seg].yy = c * (c1.s.yy - p.s.yy) / (c1.st1 - p.st1)
-      d.dst[seg].yz = c * (c1.s.yz - p.s.yz) / (c1.st1 - p.st1)
-      d.dlnst[seg] = c * (c1.ls - p.ls) / (c1.st1 - p.st1)
-      d.dtrst[seg] = c * (c1.ts - p.ts) / (c1.st1 - p.st1)
-    if c1.st2 != 0.0: d.dst[seg].xx = c * (c1.s.xx - p.s.xx) / (c1.st2 - p.st2)
-    if d.isotropic: d.dst[seg].xx = c * (c1.vx - p.vx) / (c1.st - p.st)
+      d.dst[seg].zz = diffusion((c1.s.zz - p.s.zz), (c1.st1 - p.st1))
+      d.dst[seg].yy = diffusion((c1.s.yy - p.s.yy), (c1.st1 - p.st1))
+      d.dst[seg].yz = diffusion((c1.s.yz - p.s.yz), (c1.st1 - p.st1))
+      d.dlnst[seg] = diffusion((c1.ls - p.ls), (c1.st1 - p.st1))
+      d.dtrst[seg] = diffusion((c1.ts - p.ts), (c1.st1 - p.st1))
+    if c1.st2.float != 0.0: d.dst[seg].xx = diffusion((c1.s.xx - p.s.xx), (c1.st2 - p.st2))
+    if d.isotropic: d.dst[seg].xx = diffusion((c1.vx - p.vx), (c1.st - p.st))
   else:
     let rcs = d.rcs
     let rsn = d.rsn
-    d.vel = d.w * 1000000000.0
+    d.vel = d.w.convert(μm•ns⁻¹)
     d.velRot = vec3(d.vel.z * rsn + d.vel.x * rcs, d.vel.y, d.vel.z * rcs - d.vel.x * rsn)
     d.cur.rot = vec3(c1.pos.z * rsn + c1.pos.x * rcs, c1.pos.y,
                      c1.pos.z * rcs - c1.pos.x * rsn)
     d.cur.ebar = meanEnergy(d.spectrum, energies, tcf)
     d.ave = d.cur.ebar / c1.st
-    d.wst[seg].z = (d.cur.rot.z - p.rot.z) / (c1.st - p.st) * 1000000000.0
-    d.wst[seg].y = (d.cur.rot.y - p.rot.y) / (c1.st - p.st) * 1000000000.0
-    d.wst[seg].x = (d.cur.rot.x - p.rot.x) / (c1.st - p.st) * 1000000000.0
+    d.wst[seg].z = ((d.cur.rot.z - p.rot.z) / (c1.st - p.st)).to(μm•ns⁻¹)
+    d.wst[seg].y = ((d.cur.rot.y - p.rot.y) / (c1.st - p.st)).to(μm•ns⁻¹)
+    d.wst[seg].x = ((d.cur.rot.x - p.rot.x) / (c1.st - p.st)).to(μm•ns⁻¹)
     d.avest[seg] = (d.cur.ebar - p.ebar) / (c1.st - p.st)
     if seg >= 3:
-      d.dif.xx = c * c1.s.xx / c1.st1
-      d.dif.yy = c * c1.s.yy / c1.st1
-      d.dif.zz = c * c1.s.zz / c1.st1
-      d.dif.yz = c * c1.s.yz / c1.st1
-      d.dif.xz = c * c1.s.xz / c1.st1
-      d.dif.xy = c * c1.s.xy / c1.st1
+      d.dif.xx = diffusion(c1.s.xx, c1.st1)
+      d.dif.yy = diffusion(c1.s.yy, c1.st1)
+      d.dif.zz = diffusion(c1.s.zz, c1.st1)
+      d.dif.yz = diffusion(c1.s.yz, c1.st1)
+      d.dif.xz = diffusion(c1.s.xz, c1.st1)
+      d.dif.xy = diffusion(c1.s.xy, c1.st1)
       d.difRot = rotate(d.dif, rcs, rsn)
       d.cur.srot = rotate(c1.s, rcs, rsn)
-    d.dst[seg] = Tensor()
+    d.dst[seg] = Tensor[cm²•s⁻¹]()
     if seg > 2:
       let s = d.cur.srot
       let ps = p.srot
-      d.dst[seg].zz = c * (s.zz - ps.zz) / (c1.st1 - p.st1)
-      d.dst[seg].yy = c * (s.yy - ps.yy) / (c1.st1 - p.st1)
-      d.dst[seg].xx = c * (s.xx - ps.xx) / (c1.st1 - p.st1)
-      d.dst[seg].xy = c * (s.xy - ps.xy) / (c1.st1 - p.st1)
-      d.dst[seg].yz = c * (s.yz - ps.yz) / (c1.st1 - p.st1)
-      d.dst[seg].xz = c * (s.xz - ps.xz) / (c1.st1 - p.st1)
+      d.dst[seg].zz = diffusion((s.zz - ps.zz), (c1.st1 - p.st1))
+      d.dst[seg].yy = diffusion((s.yy - ps.yy), (c1.st1 - p.st1))
+      d.dst[seg].xx = diffusion((s.xx - ps.xx), (c1.st1 - p.st1))
+      d.dst[seg].xy = diffusion((s.xy - ps.xy), (c1.st1 - p.st1))
+      d.dst[seg].yz = diffusion((s.yz - ps.yz), (c1.st1 - p.st1))
+      d.dst[seg].xz = diffusion((s.xz - ps.xz), (c1.st1 - p.st1))
   d.prev = d.cur
 
-func segmentVelocity*[G: static FieldGeometry; T](d: Drift[G, T]): Vec3 =
+func segmentVelocity*[G: static FieldGeometry; T](d: Drift[G, T]): Vector[μm•ns⁻¹] =
   ## drift velocity after the last segment, as printed (µm/ns);
   ## fgOblique: in the frame of E
   when G == fgOblique: d.velRot else: d.vel
 
-func segmentDiffusion*[G: static FieldGeometry; T](d: Drift[G, T]): Tensor =
+func segmentDiffusion*[G: static FieldGeometry; T](d: Drift[G, T]): Tensor[cm²•s⁻¹] =
   ## diffusion tensor after the last segment, as printed (cm²/s);
   ## fgOblique: in the frame of E
   when G == fgOblique: d.difRot else: d.dif
 
-func position*[G: static FieldGeometry; T](d: Drift[G, T]): Vec3 = d.cur.pos
-func time*[G: static FieldGeometry; T](d: Drift[G, T]): float64 = d.cur.st
+func position*[G: static FieldGeometry; T](d: Drift[G, T]): Vector[m] = d.cur.pos
+func time*[G: static FieldGeometry; T](d: Drift[G, T]): ps = d.cur.st
 func ringFills*[G: static FieldGeometry; T](d: Drift[G, T]): int = d.id
   ## times the position ring was filled (ID)
 
-func relErr(xs: array[1..nSegments, float64], first: int, v: float64): float64 =
-  ## error (%) of the mean of the segment estimates xs[first..10] relative to v
+func relErr[T](xs: array[1..nSegments, T], first: int, v: T): float64 =
+  ## error (%) of the mean of the segment estimates xs[first..10] relative
+  ## to v (all in the unit T)
   var t, t2 = 0.0
   for k in first .. nSegments:
-    t = t + xs[k]
-    t2 = t2 + xs[k] * xs[k]
+    t = t + xs[k].float
+    t2 = t2 + xs[k].float * xs[k].float
   let n = float64(nSegments - first + 1)
-  100.0 * sqrt((t2 - t * t / n) / (n - 1.0)) / v / sqrt(n)
+  100.0 * sqrt((t2 - t * t / n) / (n - 1.0)) / v.float / sqrt(n)
 
-template column(a, field: untyped): array[1..nSegments, float64] =
-  var r: array[1..nSegments, float64]
+template column(a, field: untyped): untyped =
+  var r: array[1..nSegments, typeof(a[1].field)]
   for k in 1 .. nSegments: r[k] = a[k].field
   r
 
@@ -390,7 +400,7 @@ func finish*[G: static FieldGeometry; T](d: Drift[G, T]): Transport =
     result.dif = d.dif
     result.difln = d.dif.zz
     result.diftr = (d.dif.xx + d.dif.yy) / 2.0
-    result.vel.z = d.vel.z * 100000.0
+    result.vel.z = d.vel.z.to(cm•s⁻¹)
     result.dfler = result.difErr.zz
     result.dfter = (result.difErr.xx + result.difErr.yy) / 2.0
   elif G == fgCrossed:
@@ -406,8 +416,8 @@ func finish*[G: static FieldGeometry; T](d: Drift[G, T]): Transport =
     result.dif = d.dif
     result.difln = d.difln
     result.diftr = d.diftr
-    result.vel.z = d.vel.z * 100000.0
-    result.vel.y = d.vel.y * 100000.0
+    result.vel.z = d.vel.z.to(cm•s⁻¹)
+    result.vel.y = d.vel.y.to(cm•s⁻¹)
   else:
     let w = d.velRot
     let dr = d.difRot
@@ -422,7 +432,7 @@ func finish*[G: static FieldGeometry; T](d: Drift[G, T]): Transport =
     result.difErr.yz = relErr(column(d.dst, yz), 3, abs(dr.yz))
     result.difErr.xz = relErr(column(d.dst, xz), 3, abs(dr.xz))
     result.dif = dr
-    result.vel = w * 100000.0
+    result.vel = w.convert(cm•s⁻¹)
   result.ave = d.ave
   # Townsend coefficients: attachments and ionisations per cm of drift
   var ancatt, ancion = 0.0
@@ -435,6 +445,6 @@ func finish*[G: static FieldGeometry; T](d: Drift[G, T]): Transport =
       ancion = ancion + float64(d.tally[g].kinds[2])
   ancion = ancion + float64(d.extraIons)
   if ancatt != 0.0: result.atter = 100.0 * sqrt(ancatt) / ancatt
-  result.att = ancatt / (d.cur.st * result.vel.z) * 1000000000000.0
+  result.att = (ancatt / (d.cur.st * result.vel.z)).to(cm⁻¹)
   if ancion != 0.0: result.alper = 100.0 * sqrt(ancion) / ancion
-  result.alpha = ancion / (d.cur.st * result.vel.z) * 1000000000000.0
+  result.alpha = (ancion / (d.cur.st * result.vel.z)).to(cm⁻¹)

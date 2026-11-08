@@ -11,7 +11,7 @@
 ## for bit.
 
 import std/math
-import vec3
+import units, vec3
 
 type
   FieldGeometry* = enum
@@ -23,71 +23,74 @@ type
 
   Field* = object
     ## E and B, with the derived constants of the free-flight formulas
-    efield*: float64   ## E (V/cm)
-    vfac*: float64     ## speed per sqrt(energy): v = vfac * sqrt(e)  (CONST9)
-    vfac2*: float64    ## vfac²  (CONST10)
-    # fgElectric, fgParallel
-    bp*, f2*, const5*: float64
+    efield*: V•cm⁻¹
+    vfac*: m•ps⁻¹•eV⁻¹ᐟ²    ## speed per sqrt(energy): v = vfac * sqrt(e)  (CONST9)
+    vfac2*: m²•ps⁻²•eV⁻¹    ## vfac²  (CONST10)
+    # fgElectric, fgParallel: energy gain e(t) - e = (ap + bp t) t
+    bp*: eV•ps⁻²
+    f2*: eV¹ᐟ²•ps⁻¹         ## ap = cos θ · f2 · √e
+    const5*: eV¹ᐟ²•cm•V⁻¹•ps⁻¹  ## change of the direction cosine along E
     # all but fgCrossed: acceleration term of the position along E (fgOblique: along B)
-    f1*: float64
+    f1*: m•ps⁻²
     # fgParallel, fgCrossed, fgOblique
-    wb*: float64       ## cyclotron frequency (rad/ps)
+    wb*: ps⁻¹              ## cyclotron frequency (rad/ps)
     # fgCrossed, fgOblique
-    eovb*: float64     ## E×B drift speed for the E component ⊥ B (m/ps)
-    ez100*, ex100*: float64
+    eovb*: m•ps⁻¹          ## E×B drift speed for the E component ⊥ B
+    ez100*, ex100*: eV•m⁻¹  ## energy gain per displacement along z, x
 
   Electron* = object
     ## state of an electron right after a collision (or at the start)
-    e*: float64        ## kinetic energy (eV)
-    dir*: Vec3         ## direction cosines
-    vel*: Vec3         ## velocity (m/ps); kept up to date only when B ≠ 0
+    e*: eV                 ## kinetic energy
+    dir*: Vec3             ## direction cosines
+    vel*: Vector[m•ps⁻¹]     ## velocity; kept up to date only when B ≠ 0
 
   Flight* = object
     ## free flight of duration t from an `Electron` state
-    t*: float64        ## duration (ps)
-    e*: float64        ## energy at the end (eV)
-    cwt*, swt*: float64  ## cos ωt, sin ωt  (B ≠ 0)
-    dz*, dx*: float64    ## displacement along z, x (fgCrossed: dz; fgOblique: both)
+    t*: ps                 ## duration
+    e*: eV                 ## energy at the end
+    cwt*, swt*: float64    ## cos ωt, sin ωt  (B ≠ 0)
+    dz*, dx*: m            ## displacement along z, x (fgCrossed: dz; fgOblique: both)
 
-func geometryOf*(bmag, btheta: float64): FieldGeometry =
+func geometryOf*(bmag: kGauss, btheta: float64): FieldGeometry =
   ## Field geometry; B ∥ E includes the angle -180° (MONTE dispatches -180°
   ## to MONTEC, see simulation.monteGeometry)
-  if bmag == 0.0: fgElectric
+  if bmag.float == 0.0: fgElectric
   elif btheta == 0.0 or abs(btheta) == 180.0: fgParallel
   elif btheta == 90.0: fgCrossed
   else: fgOblique
 
-func initField*(geometry: FieldGeometry, efield, const1, const2, const3,
-                const5, wb, eovb, btheta: float64): Field =
+func initField*(geometry: FieldGeometry, efield: V•cm⁻¹, const1: cm²•V⁻¹•ps⁻²,
+                const2: m•cm•V⁻¹•ps⁻², const3: cm•ps⁻¹•eV⁻¹ᐟ², const5: eV¹ᐟ²•cm•V⁻¹•ps⁻¹,
+                wb: ps⁻¹, eovb: m•ps⁻¹, btheta: float64): Field =
   ## `const1..5` are CNSTS1 of SETUP, `wb`, `eovb` and `btheta` are /BFLD/.
   result.efield = efield
-  result.vfac = const3 * 0.01
+  result.vfac = const3.to(m•ps⁻¹•eV⁻¹ᐟ²)
   result.vfac2 = result.vfac * result.vfac
   result.wb = wb
   case geometry
   of fgElectric, fgParallel:
-    result.bp = efield * efield * const1
+    result.bp = efield * efield * const1 * perElectron
     result.f1 = efield * const2
-    result.f2 = efield * const3
+    result.f2 = efield * const3 * perElectron
     result.const5 = const5
   of fgCrossed:
     result.eovb = eovb
-    result.ez100 = efield * 100.0
+    result.ez100 = efield.to(V•m⁻¹) * perElectron
   of fgOblique:
     let rtheta = btheta * arccos(-1.0) / 180.0
-    result.ez100 = efield * 100.0 * sin(rtheta)
-    result.ex100 = efield * 100.0 * cos(rtheta)
+    result.ez100 = efield.to(V•m⁻¹) * sin(rtheta) * perElectron
+    result.ex100 = efield.to(V•m⁻¹) * cos(rtheta) * perElectron
     result.f1 = efield * const2 * cos(rtheta)
     result.eovb = eovb * sin(rtheta)
 
-func initElectron*[G: static FieldGeometry](f: Field, e, theta, phi: float64): Electron =
+func initElectron*[G: static FieldGeometry](f: Field, e: eV, theta, phi: float64): Electron =
   ## electron of energy e moving at polar angle theta, azimuth phi (to E)
   result.e = e
   result.dir = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta))
   when G != fgElectric:
     result.vel = result.dir * (f.vfac * sqrt(e))
 
-func fly*[G: static FieldGeometry](f: Field, el: Electron, t: float64): Flight {.inline.} =
+func fly*[G: static FieldGeometry](f: Field, el: Electron, t: ps): Flight {.inline.} =
   ## energy after a free flight of duration t; for fgParallel call
   ## `finishFlight` before asking for the velocity or the position
   result.t = t
@@ -113,7 +116,7 @@ func finishFlight*[G: static FieldGeometry](f: Field, fl: var Flight) {.inline.}
     fl.cwt = cos(wbt)
     fl.swt = sin(wbt)
 
-func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 {.inline.}
+func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vector[m•ps⁻¹] {.inline.}
 func directionAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 {.inline.} =
   ## direction cosines at the end of the flight
   when G == fgElectric:
@@ -128,7 +131,7 @@ func directionAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): 
     let v = velocityAt[G](f, el, fl)
     result = v / sqrt(norm2(v))
 
-func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vec3 =
+func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): Vector[m•ps⁻¹] =
   ## velocity at the end of the flight
   when G == fgElectric:
     result = directionAt[G](f, el, fl) * f.vfac * sqrt(fl.e)
@@ -146,7 +149,7 @@ func velocityAt*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): V
     result.z = el.vel.z * fl.cwt - (el.vel.y - f.eovb) * fl.swt
 
 func advance*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight,
-                                       pos: var Vec3): tuple[xx, yy: float64] {.inline.} =
+                                       pos: var Vector[m]): tuple[xx, yy: m²] {.inline.} =
   ## Moves `pos` over the flight. Returns the flight's contributions to
   ## Magboltz's transverse diffusion estimate for isotropic scattering
   ## (squared x and y displacement; for fgOblique none).
@@ -169,13 +172,13 @@ func advance*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight,
   else:
     when G == fgCrossed:
       pos.x = pos.x + el.vel.x * fl.t
-      result = (el.vel.x * el.vel.x * t2, 0.0)
+      result = (el.vel.x * el.vel.x * t2, 0.0.m²)
     else:
       pos.x = pos.x + fl.dx
     pos.y = pos.y + f.eovb * fl.t + ((el.vel.y - f.eovb) * fl.swt + el.vel.z * (1.0 - fl.cwt)) / f.wb
     pos.z = pos.z + fl.dz
 
-func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): float64 {.inline.} =
+func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight): eV•ps {.inline.} =
   ## ∫ e dt over the flight (fgElectric, fgParallel: exact; the energy is
   ## quadratic in t)
   static: doAssert G in {fgElectric, fgParallel}
@@ -184,7 +187,7 @@ func energyIntegral*[G: static FieldGeometry](f: Field, el: Electron, fl: Flight
   let b = f.bp * (fl.t * fl.t)
   fl.t * (el.e + a / 2.0 + b / 3.0)
 
-func afterCollision*[G: static FieldGeometry](f: Field, e: float64, dir: Vec3): Electron {.inline.} =
+func afterCollision*[G: static FieldGeometry](f: Field, e: eV, dir: Vec3): Electron {.inline.} =
   ## lab-frame state leaving a collision with energy e and direction dir
   result.e = e
   result.dir = dir

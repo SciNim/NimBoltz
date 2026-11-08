@@ -6,7 +6,7 @@
 ## the per-gas versions of all steps at compile time (`WarmMixture`).
 
 import std/math
-import frt, rm48, deck, conditions, tables, mixture, gases, fields, collisions,
+import frt, units, rm48, deck, conditions, tables, mixture, gases, fields, collisions,
        freeflight, elimit, drift, simulation, report, analyses
 
 const
@@ -67,7 +67,8 @@ proc mix(r: var Run[ColdMixture]) =
     fwrite(fmt992)
     fstop()
   for n in negative:
-    fwrite(fmt776, n.cf, n.ie, n.process, m.table.iarry[n.process], m.table.ein[n.process])
+    fwrite(fmt776, n.cf.float, n.ie, n.process, m.table.iarry[n.process],
+           m.table.ein[n.process].float)
   for i in 1 .. m.table.last:
     m.descr[i] = fstr(descr[i], 50)
   m.isotropic = not anisotropic(gases)
@@ -83,8 +84,8 @@ proc mix(r: var Run[WarmMixture]) =
   buildPerGas(m.tables, descr, gases, r.cond.van.toOpenArray(1, r.deck.ngas), r.efinal,
               r.grid, r.fcion, r.fcatt, negative)
   for n in negative:
-    fwrite(fmt776t, n.cf, n.gas, n.ie, n.process, m.tables[n.gas].iarry[n.process],
-           m.tables[n.gas].ein[n.process])
+    fwrite(fmt776t, n.cf.float, n.gas, n.ie, n.process, m.tables[n.gas].iarry[n.process],
+           m.tables[n.gas].ein[n.process].float)
   for k in 1 .. gases.len:
     for i in 1 .. m.tables[k].last:
       m.descr[k][i] = fstr(descr[k][i], 50)
@@ -111,7 +112,7 @@ proc findEnergyRange(r: var Run, rng: var MagRng) =
   ## and raise it by √2 until ELIMIT never reaches the last energy bin
   let d = r.deck
   let eop = d.efield * (d.tempc + 273.15) / (d.torr * 293.15)
-  r.efinal = if eop > 15.0: 8.0 else: 0.5
+  r.efinal = if eop > 15.0.V•cm⁻¹•Torr⁻¹: 8.0.eV else: 0.5.eV
   while true:
     r.mix()
     var exceeded: bool
@@ -127,15 +128,16 @@ proc progress[G: static FieldGeometry; T](d: Drift[G, T], seg: int) =
   let df = d.segmentDiffusion
   when G in {fgElectric, fgParallel}:
     if seg == 1: fwrite(when G == fgElectric: fmt201e else: fmt201a)
-    fwrite(fmt202a, w.z, d.position.z, d.time, d.ave, d.ringFills, df.xx, df.yy, df.zz)
+    fwrite(fmt202a, w.z.float, d.position.z.float, d.time.float, d.ave.float, d.ringFills,
+           df.xx.float, df.yy.float, df.zz.float)
   elif G == fgCrossed:
     if seg == 1: fwrite(fmt201b)
-    fwrite(fmt202b, w.z, w.y, d.ave, d.ringFills, df.xx, df.yy, df.zz, df.yz,
-           d.difln, d.diftr)
+    fwrite(fmt202b, w.z.float, w.y.float, d.ave.float, d.ringFills, df.xx.float, df.yy.float,
+           df.zz.float, df.yz.float, d.difln.float, d.diftr.float)
   else:
     if seg == 1: fwrite(fmt201c)
-    fwrite(fmt202c, w.z, w.y, w.x, d.ave, d.ringFills, df.xx, df.yy, df.zz, df.yz,
-           df.xz, df.xy)
+    fwrite(fmt202c, w.z.float, w.y.float, w.x.float, d.ave.float, d.ringFills, df.xx.float,
+           df.yy.float, df.zz.float, df.yz.float, df.xz.float, df.xy.float)
 
 proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var MagRng) =
   ## MONTE, MONTEA, MONTEB, MONTEC and the thermal versions
@@ -177,7 +179,7 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var M
 proc run[M: Mixture](s: var Session, mix: ref M, d: Deck) =
   var r = initRun(d, mix)
   r.threads = s.threads
-  if d.efinal > 0.0: r.mix()
+  if d.efinal > 0.0.eV: r.mix()
   else: r.findEnergyRange(s.rng)
   r.printHeader()
   withGeometry(monteGeometry(d), G):

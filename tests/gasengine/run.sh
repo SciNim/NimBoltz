@@ -17,10 +17,10 @@ git -C "$root" archive "$ref" src/nimboltz/gases src/nimboltz/gases.nim |
 mv "$work/reference/src/nimboltz/gases" "$work/reference/gases"
 mv "$work/reference/src/nimboltz/gases.nim" "$work/reference/refgases.nim"
 rm -r "$work/reference/src"
-sed -i 's#^import ../frt, ../mixture, ../tables#import nimboltz/[frt, mixture, tables]#' \
+sed -i 's#^import ../frt, ../mixture, ../tables#import nimboltz/frt, refxsec#; s#^export math, mixture, tables#export math, refxsec#' \
   "$work/reference/gases/common.nim"
 sed -i 's#\.\./frt#nimboltz/frt#' "$work/reference/gases/"*.nim
-nim c --hints:off --warnings:off -d:release --path:"$root/src" --path:"$work/reference" \
+nim c --hints:off --warnings:off -d:release --path:"$root/src" --path:"$work/reference" --path:"$here" \
   --nimcache:"$work/nimcache" -o:"$work/compare" "$here/compare.nim"
 tol=""
 if [ "$1" = "-t" ]; then tol="-t $2"; shift 2; fi

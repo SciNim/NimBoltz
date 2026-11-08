@@ -6,7 +6,7 @@
 ## (NMAX/10 collisions for E only, NMAX/20 with B) never takes an electron
 ## into the last energy bin.
 
-import rm48, tables, fields, collisions, freeflight
+import units, rm48, tables, fields, collisions, freeflight
 
 func elimitGeometry*(g: FieldGeometry): FieldGeometry =
   ## Magboltz runs ELIMIT (B = 0) for B ∥ E, which does not change the energy
@@ -16,7 +16,7 @@ func sampleSize(geometry: FieldGeometry, nmax: int): int =
   nmax div (if geometry == fgElectric: 10 else: 20)
 
 proc energyLimitExceeded*[G: static FieldGeometry](
-    f: Field, tabs: MixtureTable | GasTables, target: var (ColdGas | WarmGas), estep: float64,
+    f: Field, tabs: MixtureTable | GasTables, target: var (ColdGas | WarmGas), estep: eV,
     start: Electron, nmax: int, rng: var MagRng, theta: var float64): bool =
   ## True as soon as an electron, starting from `start`, reaches the last
   ## energy bin. `tabs`: `MixtureTable` for `ColdGas`, `GasTables` for

@@ -13,7 +13,7 @@
 ## a few details; these are kept, marked with the routine they belong to.
 
 import std/math
-import frt, rm48, tables, vec3, fields, freeflight, cascade, townsend
+import frt, units, rm48, tables, vec3, fields, freeflight, cascade, townsend
 import conditions, simulation, report
 
 type
@@ -102,10 +102,12 @@ const
 proc printNegative(fm: Formats, f: Field, w: NegativeEnergy) =
   let ap = w.el.dir.z * f.f2 * sqrt(w.el.e)
   case fm.negativeKind
-  of 1: fwrite(fm.negative, w.iter, w.fl.e, w.el.e, ap, f.bp, w.el.dir.z)
-  of 2: fwrite(fm.negative, w.iter, w.fl.dz, w.fl.e, w.fl.cwt, w.fl.swt, f.wb * w.fl.t,
-               w.el.vel.y)
-  else: fwrite(fm.negative, w.fl.e, w.el.e, ap, f.bp, w.fl.t, w.el.dir.z, w.iter)
+  of 1: fwrite(fm.negative, w.iter, w.fl.e.float, w.el.e.float, ap.float, f.bp.float,
+               w.el.dir.z)
+  of 2: fwrite(fm.negative, w.iter, w.fl.dz.float, w.fl.e.float, w.fl.cwt, w.fl.swt,
+               float64(f.wb * w.fl.t), w.el.vel.y.float)
+  else: fwrite(fm.negative, w.fl.e.float, w.el.e.float, ap.float, f.bp.float, w.fl.t.float,
+               w.el.dir.z, w.iter)
 
 type
   AvalancheRun[P: static PlaneKind] = object
@@ -204,47 +206,51 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
   if c.iprim != 1:
     let ebar = c.primaryE / float64(c.iprim)
     let eerr = sqrt(c.primaryE2 / float64(c.iprim) - ebar*ebar)
-    fwrite(fmt836, ebar, eerr)
+    fwrite(fmt836, ebar.float, eerr.float)
 
 proc printSst(s: SteadyState) =
   fwrite(fmt800s, s.planes)
   for k in 1 .. s.planes:
     let p = s.plane[k]
-    fwrite(fmt810s, k, p.n, p.vd, p.ws, p.dl, p.dt, p.e, p.alfn, p.alfnj, p.alfne)
+    fwrite(fmt810s, k, p.n, p.vd.float, p.ws.float, p.dl.float, p.dt.float, p.e.float,
+           p.alfn.float, p.alfnj.float, p.alfne.float)
 
 proc printPt[G: static FieldGeometry](pt: PulsedTownsend, s: TimeSums) =
   when G in {fgElectric, fgParallel}:
     fwrite(fmt900p, pt.planes)
     for k in 1 .. pt.planes:
       let p = pt.plane[k]
-      fwrite(fmt910p, k, p.rate, p.e, p.v.z, s.n[k])
+      fwrite(fmt910p, k, p.rate.float, p.e.float, p.v.z.float, s.n[k])
   elif G == fgCrossed:
     fwrite(fmt900pg, pt.planes)
     for k in 1 .. pt.planes:
       let p = pt.plane[k]
-      fwrite(fmt910pg, k, p.rate, p.e, p.v.z, p.v.y, s.n[k])
+      fwrite(fmt910pg, k, p.rate.float, p.e.float, p.v.z.float, p.v.y.float, s.n[k])
   else:
     fwrite(fmt900ph, pt.planes)
     for k in 1 .. pt.planes:
       let p = pt.plane[k]
-      fwrite(fmt910ph, k, p.rate, p.e, p.v.z, p.v.y, p.v.x, s.n[k])
+      fwrite(fmt910ph, k, p.rate.float, p.e.float, p.v.z.float, p.v.y.float, p.v.x.float,
+             s.n[k])
 
 proc printTof[G: static FieldGeometry](tof: TimeOfFlight, planes: int) =
   when G in {fgElectric, fgParallel}:
     fwrite(fmt900t, planes)
     for k in 1 .. planes:
       let p = tof.plane[k]
-      fwrite(fmt910t, k, p.d.zz, p.d.xx, p.d.yy, p.w.z)
+      fwrite(fmt910t, k, p.d.zz.float, p.d.xx.float, p.d.yy.float, p.w.z.float)
   elif G == fgCrossed:
     fwrite(fmt900tg, planes)
     for k in 1 .. planes:
       let p = tof.plane[k]
-      fwrite(fmt910tg, k, p.d.zz, p.d.xx, p.d.yy, p.d.yz, p.w.z, p.w.y)
+      fwrite(fmt910tg, k, p.d.zz.float, p.d.xx.float, p.d.yy.float, p.d.yz.float,
+             p.w.z.float, p.w.y.float)
   else:
     fwrite(fmt900th, planes)
     for k in 1 .. planes:
       let p = tof.plane[k]
-      fwrite(fmt910th, k, p.d.zz, p.d.xx, p.d.yy, p.d.yz, p.d.xz, p.d.xy, p.w.z, p.w.y, p.w.x)
+      fwrite(fmt910th, k, p.d.zz.float, p.d.xx.float, p.d.yy.float, p.d.yz.float,
+             p.d.xz.float, p.d.xy.float, p.w.z.float, p.w.y.float, p.w.x.float)
 
 proc printFriedland[M](r: Run[M]) =
   ## FRIEDLAND, FRIEDLANDT: from the spectrum of the last run
@@ -253,7 +259,7 @@ proc printFriedland[M](r: Run[M]) =
   else:
     template tcf: untyped = r.mix.table.tcf
   let fr = friedland(r.last.spectrum, r.grid.e, tcf, r.fcion, r.fcatt, r.last.ttots)
-  fwrite(fmt900f, fr.e, fr.ionisation, fr.attachment)
+  fwrite(fmt900f, fr.e.float, fr.ionisation.float, fr.attachment.float)
 
 proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
   const thermal = thermalMotion(M)
@@ -263,7 +269,7 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
   when G == fgElectric:
     # steady-state Townsend
     fwrite(fmt11)
-    fwrite(fmt12, planes.zstep * 1000000.0)
+    fwrite(fmt12, planes.zstep.to(μm).float)
     let sr = avalanche[G, pkSpace, M](r, planes, nmax, rng)
     let sst = steadyState(sr.sums, sr.iprim, planes.zstep, planes.izfinal, sr.ratio)
     printSst(sst)
@@ -272,15 +278,16 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
     r.transport.att = sst.att
     r.transport.atter = sst.attErr
     fwrite(fmt18)
-    fwrite(when thermal: fmt19t else: fmt19, sst.vd, sst.vdErr, sst.ws, sst.wsErr)
+    fwrite(when thermal: fmt19t else: fmt19, sst.vd.float, sst.vdErr, sst.ws.float, sst.wsErr)
     fwrite(fmt20)
-    fwrite(when thermal: fmt21t else: fmt21, sst.dl, sst.dlErr, sst.dt, sst.dtErr)
+    fwrite(when thermal: fmt21t else: fmt21, sst.dl.float, sst.dlErr, sst.dt.float, sst.dtErr)
     fwrite(fmt22)
-    fwrite(when thermal: fmt23t else: fmt23, sst.alpha, sst.alphaErr, sst.att, sst.attErr)
+    fwrite(when thermal: fmt23t else: fmt23, sst.alpha.float, sst.alphaErr, sst.att.float,
+           sst.attErr)
     when not thermal: r.printCollisionCounts()  # ALPCALCT has CALL OUTPUT1T commented out
   # pulsed Townsend and time of flight
   fwrite(fmt25)
-  fwrite(fmt26, planes.tstep)
+  fwrite(fmt26, planes.tstep.float)
   let tr = avalanche[G, pkTime, M](r, planes, nmax, rng)
   r.printFriedland()
   let pt = pulsedTownsend[G](tr.sums, tr.iprim, planes.tstep, planes.itfinal)
@@ -289,23 +296,24 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
   when G == fgCrossed:
     # TOFG: the ratio from the collision frequencies of the run
     let fr = frequencies(r.last, r.deck.ngas)
-    if fr.ionisation > 0.0: ratio.ratio = fr.attachment / fr.ionisation  # MB-40
+    if fr.ionisation > 0.0.ps⁻¹: ratio.ratio = fr.attachment / fr.ionisation  # MB-40
   let tof = timeOfFlight[G](tr.sums, pt, planes.tstep, ratio)
   printTof[G](tof, pt.planes)
-  fwrite(when G == fgElectric: fmt27e else: fmt27, tof.alpha, tof.alphaErr, tof.att,
-         tof.attErr)
+  fwrite(when G == fgElectric: fmt27e else: fmt27, tof.alpha.float, tof.alphaErr,
+         tof.att.float, tof.attErr)
   when G in {fgElectric, fgParallel}:
     fwrite(fmt28)
-    fwrite(fmt29, tof.dl, tof.dlErr, tof.dt, tof.dtErr)
+    fwrite(fmt29, tof.dl.float, tof.dlErr, tof.dt.float, tof.dtErr)
     fwrite(fmt30)
-    fwrite(when G == fgElectric: fmt31e else: fmt31a, tof.w.z, tof.wErr.z)
-    let wrzn = tof.w.z * 100000.0
+    fwrite(when G == fgElectric: fmt31e else: fmt31a, tof.w.z.float, tof.wErr.z)
+    # α - η from the drift and growth of a Gaussian swarm
+    let wrzn = tof.w.z.to(cm•s⁻¹)
     let fc1 = wrzn / (2.0 * tof.dl)
-    let fc2 = (tof.alpha - tof.att) * 1000000000000.0 / tof.dl
-    fwrite(fmt888, fc1 - sqrt(fc1*fc1 - fc2))
+    let fc2 = (tof.alpha - tof.att).to(s⁻¹) / tof.dl
+    fwrite(fmt888, float64(fc1 - sqrt(fc1*fc1 - fc2)))
     when G == fgParallel:
-      r.transport.alpha = tof.alpha / tof.w.z * 10000000.0
-      r.transport.att = tof.att / tof.w.z * 10000000.0
+      r.transport.alpha = (tof.alpha / tof.w.z).to(cm⁻¹)
+      r.transport.att = (tof.att / tof.w.z).to(cm⁻¹)
       # NIMBOLTZ FIX MB-42: errors in percent (was errAlpha·α/100)
       r.transport.alper = tof.alphaErr
       r.transport.atter = tof.attErr
@@ -314,24 +322,26 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
     let de = tof.dErr
     fwrite(fmt28b)
     when G == fgCrossed:
-      fwrite(fmt29b, d.zz, de.zz, d.xx, de.xx, d.yy, de.yy, d.yz, de.yz)
+      fwrite(fmt29b, d.zz.float, de.zz, d.xx.float, de.xx, d.yy.float, de.yy, d.yz.float,
+             de.yz)
     else:
-      fwrite(fmt29c, d.zz, de.zz, d.xx, de.xx, d.yy, de.yy, d.yz, de.yz, d.xz, de.xz,
-             d.xy, de.xy)
+      fwrite(fmt29c, d.zz.float, de.zz, d.xx.float, de.xx, d.yy.float, de.yy, d.yz.float,
+             de.yz, d.xz.float, de.xz, d.xy.float, de.xy)
     fwrite(fmt30b)
     when G == fgCrossed:
-      fwrite(fmt31b, tof.w.z, tof.wErr.z, tof.w.y, tof.wErr.y)
+      fwrite(fmt31b, tof.w.z.float, tof.wErr.z, tof.w.y.float, tof.wErr.y)
       let tofwr = sqrt(tof.w.z * tof.w.z + tof.w.y * tof.w.y)
     else:
-      fwrite(fmt31c, tof.w.z, tof.wErr.z, tof.w.y, tof.wErr.y, tof.w.x, tof.wErr.x)
+      fwrite(fmt31c, tof.w.z.float, tof.wErr.z, tof.w.y.float, tof.wErr.y, tof.w.x.float,
+             tof.wErr.x)
       let tofwr = sqrt(tof.w.z * tof.w.z + tof.w.y * tof.w.y + tof.w.x * tof.w.x)
     # as ALPCLCB/C: the drift velocity along E; ALPCLCBT/CT: the full one
-    let wrzn = (when thermal: tofwr else: tof.w.z) * 100000.0
+    let wrzn = (when thermal: tofwr else: tof.w.z).to(cm•s⁻¹)
     let fc1 = wrzn / (2.0 * d.zz)
-    let fc2 = (tof.alpha - tof.att) * 1000000000000.0 / d.zz
-    fwrite(fmt888, fc1 - sqrt(fc1*fc1 - fc2))
-    r.transport.alpha = tof.alpha / tofwr * 10000000.0
-    r.transport.att = tof.att / tofwr * 10000000.0
+    let fc2 = (tof.alpha - tof.att).to(s⁻¹) / d.zz
+    fwrite(fmt888, float64(fc1 - sqrt(fc1*fc1 - fc2)))
+    r.transport.alpha = (tof.alpha / tofwr).to(cm⁻¹)
+    r.transport.att = (tof.att / tofwr).to(cm⁻¹)
     # NIMBOLTZ FIX MB-42: errors in percent (was errAlpha·α/100; ALPCLCB
     # stored that in locals, ALPCLCBT multiplied the η error by 100)
     r.transport.alper = tof.alphaErr
@@ -341,10 +351,10 @@ func needsAnalyses*(r: Run): bool =
   ## MAGBOLTZ runs the analyses when the ionisation or attachment
   ## coefficient (normalised to 760 Torr, 20 °C) exceeds 5 /cm and the
   ## two do not cancel to within 5 /cm
-  const sstmin = 5.0
+  const sstmin = 5.0.cm⁻¹
   let tgas = 273.15 + r.deck.tempc
-  let alpp = r.transport.alpha * 760.0 * tgas / (r.deck.torr * 293.15)
-  let attp = r.transport.att * 760.0 * tgas / (r.deck.torr * 293.15)
+  let alpp = r.transport.alpha * 760.0.Torr * tgas / (r.deck.torr * 293.15)
+  let attp = r.transport.att * 760.0.Torr * tgas / (r.deck.torr * 293.15)
   if abs(alpp - attp) > sstmin: true
   elif alpp > sstmin or attp > sstmin: not (abs(alpp - attp) < sstmin)
   else: false
