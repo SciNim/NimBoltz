@@ -7,20 +7,26 @@
 
 import std/math
 import frt, units, rm48, deck, conditions, tables, mixture, gases, fields, collisions,
-       freeflight, elimit, drift, simulation, report, analyses
+       freeflight, elimit, drift, simulation, report, analyses, results
+
+export MagboltzError, Results
 
 const
-  fmt50 = "(\' WARNING ENERGY OUT OF RANGE,INCREASE ELECTRON ENERGY INTEGRATION RANGE \')"
-  fmt776 = "(\'  WARNING NEGATIVE COLLISION FEQUENCY =\',D12.3,\' IE =\',I6,\' IF =\',I3,\' IARRY=\',I5,\' EIN=\',F7.4)"
-  fmt776t = "(\'  WARNING NEGATIVE COLLISION FEQUENCY =\',D12.3,\' KGAS =\', I2,\' IE =\',I6,\' IF =\',I3,\' IARRY=\',I5,\' EIN=\',F7.4)"
-  fmt992 = "(/,/,6X,\'WARNING TOO MANY LEVELS IN CALCULATION. CAN INCREASE THE ARRAY SIZES FROM 960 UP TO 1800 MAXIMUM\',/)"
+  fmt50 = "(' WARNING ENERGY OUT OF RANGE,INCREASE ELECTRON ENERGY INTEGRATION RANGE ')"
+  fmt776 = "('  WARNING NEGATIVE COLLISION FEQUENCY =',D12.3,' IE =',I6,' IF =',I3,' IARRY='," &
+           "I5,' EIN=',F7.4)"
+  fmt776t = "('  WARNING NEGATIVE COLLISION FEQUENCY =',D12.3,' KGAS =', I2,' IE =',I6," &
+            "' IF =',I3,' IARRY=',I5,' EIN=',F7.4)"
+  fmt992 = "(/,/,6X," &
+           "'WARNING TOO MANY LEVELS IN CALCULATION. CAN INCREASE THE ARRAY SIZES FROM 960 UP TO 1800 MAXIMUM'," &
+           "/)"
   # MONTE progress table, one line per segment
-  fmt201e = "(/,\'    VEL      POS        TIME      ENERGY   COUNT   DIFXX     DIFYY     DIFZZ\',/)"
-  fmt201a = "(/,\'    VEL      POS        TIME      ENERGY   COUNT   DIFXX     DIFYY     DIFZZ  \',/)"
+  fmt201e = "(/,'    VEL      POS        TIME      ENERGY   COUNT   DIFXX     DIFYY     DIFZZ',/)"
+  fmt201a = "(/,'    VEL      POS        TIME      ENERGY   COUNT   DIFXX     DIFYY     DIFZZ  ',/)"
   fmt202a = "(1X,F8.2,2(1X,D10.3),F9.4,1X,I5,1X,3(2X,F8.1))"
-  fmt201b = "(/,\'   VELZ    VELY  ENERGY   ID  DIFXX   DIFYY   DIFZZ   DIFYZ  DIFLNG  DIFTRN\',/)"
+  fmt201b = "(/,'   VELZ    VELY  ENERGY   ID  DIFXX   DIFYY   DIFZZ   DIFYZ  DIFLNG  DIFTRN',/)"
   fmt202b = "(2(F7.2,1X),F7.4,1X,I4,6(F7.1,1X))"
-  fmt201c = "(/,\'   VELZ    VELY    VELX   ENERGY  ID  DIFXX  DIFYY  DIFZZ  DIFYZ  DIFXZ  DIFXY\',/)"
+  fmt201c = "(/,'   VELZ    VELY    VELX   ENERGY  ID  DIFXX  DIFYY  DIFZZ  DIFYZ  DIFXZ  DIFXY',/)"
   fmt202c = "(3(F7.2,1X),1X,F7.4,I4,6(F7.1))"
 
 type
@@ -28,6 +34,7 @@ type
     ## what lives from one deck to the next
     rng*: MagRng   ## Magboltz's random numbers: one stream for all decks
     threads*: int  ## for the avalanche runs (`Run.threads`)
+    output*: File  ## Magboltz's printout; nil: none
     cold: ref ColdMixture
     warm: ref WarmMixture
     rings: array[FieldGeometry, array[bool, Ring]]
@@ -36,8 +43,8 @@ type
       ## routine; MONTEC reads them when NCOLM exceeds the collisions of the
       ## first two segments (reduced nscale only). One ring per routine.
 
-proc initSession*(): Session =
-  Session(rng: initMagRng(stdout), threads: 1)
+proc initSession*(output: File = stdout): Session =
+  Session(rng: initMagRng(output), threads: 1, output: output)
 
 # --- MIXER, MIXERT ------------------------------------------------------------------
 
@@ -48,7 +55,8 @@ proc crossSections(r: var Run): seq[GasXsec] =
   result = newSeq[GasXsec](d.ngas)
   let inp = GasInput(e: r.grid.e, naniso: naniso, kT: r.cond.kT, efinal: r.efinal,
                      estep: r.estep, penning: d.penning, torr: d.torr,
-                     tempc: d.tempc, mixture: mixtureOf(d.gas, d.percent))
+                     output: r.output, tempc: d.tempc,
+                     mixture: mixtureOf(d.gas, d.percent))
   for k, g in result.mpairs:
     crossSections(d.gas[k + 1], inp, g)
   for k in 0 ..< d.ngas:
@@ -64,11 +72,12 @@ proc mix(r: var Run[ColdMixture]) =
     buildMixture(m.table, descr, gases, r.cond.van.toOpenArray(1, r.deck.ngas), r.efinal,
                  r.grid, r.fcion, r.fcatt, negative)
   except ValueError:
-    fwrite(fmt992)
-    fstop()
+    r.output.fwrite(fmt992)
+    r.stop("too many levels in the mixture")
   for n in negative:
-    fwrite(fmt776, n.cf.float, n.ie, n.process, m.table.iarry[n.process],
-           m.table.ein[n.process].float)
+    r.output.fwrite(fmt776, n.cf, n.ie, n.process, m.table.iarry[n.process],
+           m.table.ein[n.process])
+    r.warnings.add "negative collision frequency, energy bin " & $n.ie
   for i in 1 .. m.table.last:
     m.descr[i] = fstr(descr[i], 50)
   m.isotropic = not anisotropic(gases)
@@ -84,8 +93,9 @@ proc mix(r: var Run[WarmMixture]) =
   buildPerGas(m.tables, descr, gases, r.cond.van.toOpenArray(1, r.deck.ngas), r.efinal,
               r.grid, r.fcion, r.fcatt, negative)
   for n in negative:
-    fwrite(fmt776t, n.cf.float, n.gas, n.ie, n.process, m.tables[n.gas].iarry[n.process],
-           m.tables[n.gas].ein[n.process].float)
+    r.warnings.add "negative collision frequency, gas " & $n.gas & ", energy bin " & $n.ie
+    r.output.fwrite(fmt776t, n.cf, n.gas, n.ie, n.process, m.tables[n.gas].iarry[n.process],
+           m.tables[n.gas].ein[n.process])
   for k in 1 .. gases.len:
     for i in 1 .. m.tables[k].last:
       m.descr[k][i] = fstr(descr[k][i], 50)
@@ -123,21 +133,21 @@ proc findEnergyRange(r: var Run, rng: var MagRng) =
 
 # --- MONTE --------------------------------------------------------------------------
 
-proc progress[G: static FieldGeometry; T](d: Drift[G, T], seg: int) =
+proc progress[G: static FieldGeometry; T](o: File, d: Drift[G, T], seg: int) =
   let w = d.segmentVelocity
   let df = d.segmentDiffusion
   when G in {fgElectric, fgParallel}:
-    if seg == 1: fwrite(when G == fgElectric: fmt201e else: fmt201a)
-    fwrite(fmt202a, w.z.float, d.position.z.float, d.time.float, d.ave.float, d.ringFills,
-           df.xx.float, df.yy.float, df.zz.float)
+    if seg == 1: o.fwrite(when G == fgElectric: fmt201e else: fmt201a)
+    o.fwrite(fmt202a, w.z, d.position.z, d.time, d.ave, d.ringFills,
+           df.xx, df.yy, df.zz)
   elif G == fgCrossed:
-    if seg == 1: fwrite(fmt201b)
-    fwrite(fmt202b, w.z.float, w.y.float, d.ave.float, d.ringFills, df.xx.float, df.yy.float,
-           df.zz.float, df.yz.float, d.difln.float, d.diftr.float)
+    if seg == 1: o.fwrite(fmt201b)
+    o.fwrite(fmt202b, w.z, w.y, d.ave, d.ringFills, df.xx, df.yy,
+           df.zz, df.yz, d.difln, d.diftr)
   else:
-    if seg == 1: fwrite(fmt201c)
-    fwrite(fmt202c, w.z.float, w.y.float, w.x.float, d.ave.float, d.ringFills, df.xx.float,
-           df.yy.float, df.zz.float, df.yz.float, df.xz.float, df.xy.float)
+    if seg == 1: o.fwrite(fmt201c)
+    o.fwrite(fmt202c, w.z, w.y, w.x, d.ave, d.ringFills, df.xx,
+           df.yy, df.zz, df.yz, df.xz, df.xy)
 
 proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var MagRng) =
   ## MONTE, MONTEA, MONTEB, MONTEC and the thermal versions
@@ -160,12 +170,13 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var M
   for seg in 1 .. nSegments:
     d.runSegment(tabs, seg, collisions, ring, rng)
     d.endSegment(seg, r.grid.e, tcf)
-    progress(d, seg)
+    r.output.progress(d, seg)
     when G == fgElectric:
       # if the last energy bin is reached often, the table range is too small
       if d.spectrum[nEnergyBins] > 1000.0 * float64(seg):
-        fwrite(fmt50)
-        fstop()
+        r.output.fwrite(fmt50)
+        r.stop("energy out of range: electrons reach the end of the energy range " &
+               "often, increase EFINAL")
   r.transport = d.finish
   when not thermalMotion(M):
     r.mix.bounds = d.target.bounds
@@ -176,8 +187,9 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var M
 
 # --- one deck -----------------------------------------------------------------------
 
-proc run[M: Mixture](s: var Session, mix: ref M, d: Deck) =
-  var r = initRun(d, mix)
+proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Results =
+  var r = initRun(d, mix, s.output)
+  if collisions > 0: r.cond.nmax = collisions
   r.threads = s.threads
   if d.efinal > 0.0.eV: r.mix()
   else: r.findEnergyRange(s.rng)
@@ -187,23 +199,31 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck) =
   r.printTransport()
   if r.needsAnalyses: r.analyse(s.rng)
   r.printFrequencies()
+  results(r)
 
-proc run*(s: var Session, d: Deck) =
-  ## one deck; stops the program on an input error, like Magboltz
+proc run*(s: var Session, d: Deck, collisions = 0): Results =
+  ## one deck; `collisions` > 0 replaces NMAX · nscale. Raises a
+  ## `MagboltzError` where Magboltz stops the program (an input error, an
+  ## energy range too small, ...).
   let e = setupError(d)
   if e != seNone:
-    printSetupError(d, e)
-    fstop()
+    s.output.printSetupError(d, e)
+    raise newException(MagboltzError, case e
+      of seGasInput: "error in the gas input: 1 to 6 gases, shares adding up to 100 %"
+      else: "NMAX too large")
   if d.thermal:
     if s.warm == nil: new s.warm
-    s.run(s.warm, d)
+    s.run(s.warm, d, collisions)
   else:
     if s.cold == nil: new s.cold
-    s.run(s.cold, d)
+    s.run(s.cold, d, collisions)
 
 proc magboltz*(s: var Session) =
-  ## all decks of standard input
+  ## all decks of standard input, until one makes Magboltz stop
   var d: Deck
-  while readDeck(d):
-    s.run(d)
+  try:
+    while readDeck(d):
+      discard s.run(d)
+  except MagboltzError:
+    discard
   fstop()

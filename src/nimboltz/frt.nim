@@ -6,6 +6,7 @@
 ## groups and reversion) and list-directed input/output.
 
 import std/[math, strutils, tables]
+import unchained
 import rm48, farrays
 export rm48, math, farrays
 
@@ -84,6 +85,8 @@ converter toFVal*(x: float64): FVal = FVal(kind: fvReal, f: x)
 converter toFVal*(x: float32): FVal = FVal(kind: fvReal, f: float64(x))
 converter toFVal*(x: string): FVal = FVal(kind: fvStr, s: x)
 converter toFVal*(x: bool): FVal = FVal(kind: fvBool, b: x)
+converter toFVal*[T: SomeUnit](x: T): FVal = FVal(kind: fvReal, f: x.float)
+  ## a quantity, in its unit
 
 type
   EdKind = enum edStr, edX, edSlash, edI, edF, edE, edD, edA, edGroup
@@ -157,7 +160,7 @@ proc parseFormat(f: string): seq[Ed] =
   inc i
   result = parseList(')')
 
-var fmtCache: Table[string, seq[Ed]]
+var fmtCache {.threadvar.}: Table[string, seq[Ed]]
 
 proc stars(w: int): string = repeat('*', w)
 
@@ -167,7 +170,8 @@ proc fmtI(x: int64, w: int): string =
     if result.len > w: return stars(w)
     result = align(result, w)
 
-proc c_snprintf(buf: cstring, n: csize_t, fmt: cstring): cint {.importc: "snprintf", header: "<stdio.h>", varargs.}
+proc c_snprintf(buf: cstring, n: csize_t, fmt: cstring): cint {.importc: "snprintf",
+  header: "<stdio.h>", varargs.}
 
 proc printfF(x: float64, d: int): string =
   ## exactly rounded fixed-point digits of |x| (glibc printf), always with '.'
@@ -231,6 +235,7 @@ proc fmtA(s: string, w: int): string =
   else: align(s, w)
 
 type WState = object
+  o: File
   rec: string
   pending: int             ## spaces from X, emitted only if something follows
   k: int                   ## next item
@@ -243,7 +248,7 @@ proc put(w: var WState, s: string) =
   w.rec.add s
 
 proc endRecord(w: var WState) =
-  stdout.write w.rec, "\n"
+  w.o.write w.rec, "\n"
   w.rec = ""
   w.pending = 0
 
@@ -278,11 +283,12 @@ proc run(w: var WState, list: seq[Ed], items: openArray[FVal], fmt: string) =
           w.put fmtA(v.s, ed.w)
         else: discard
 
-proc fwrite*(fmt: string, items: varargs[FVal, toFVal]) =
-  ## WRITE(6, fmt) items
+proc fwrite*(o: File, fmt: string, items: varargs[FVal, toFVal]) =
+  ## WRITE(6, fmt) items, to o; nothing if o is nil
+  if o == nil: return
   if fmt notin fmtCache: fmtCache[fmt] = parseFormat(fmt)
   let eds = fmtCache[fmt]
-  var w: WState
+  var w = WState(o: o)
   # first pass through the whole format, then reversion while items remain
   w.run(eds, items, fmt)
   if not w.done and w.k < items.len:
@@ -301,19 +307,12 @@ proc fwrite*(fmt: string, items: varargs[FVal, toFVal]) =
         if guard > 1: raise newException(ValueError, "format without data edit descriptors: " & fmt)
   w.endRecord()
 
-proc fwrite*(fmt: string, items: seq[FVal]) =
-  fwrite(fmt, varargs[FVal](items))
+proc fwrite*(o: File, fmt: string, items: seq[FVal]) =
+  fwrite(o, fmt, varargs[FVal](items))
 
-proc fwriteList*(items: varargs[FVal, toFVal]) =
-  ## WRITE(6, *) items (only character items are used by Magboltz)
-  var rec = ""
-  for v in items:
-    case v.kind
-    of fvStr: rec.add (if rec.len == 0: " " else: "") & v.s
-    else: raise newException(ValueError, "list-directed output of non-character items not implemented")
-  stdout.write rec, "\n"
-
-proc fwriteList*(items: seq[FVal]) = fwriteList(varargs[FVal](items))
+proc fwrite*(fmt: string, items: varargs[FVal, toFVal]) =
+  ## WRITE(6, fmt) items
+  fwrite(stdout, fmt, items)
 
 # ---------------------------------------------------------------- list-directed input
 
@@ -341,7 +340,8 @@ proc nextTok(r: var ListReader): string =
   result = r.toks[r.pos]
   inc r.pos
   if result == "/" : r.stopped = true
-  elif '*' in result: raise newException(ValueError, "repeat counts in list input not implemented: " & result)
+  elif '*' in result:
+    raise newException(ValueError, "repeat counts in list input not implemented: " & result)
 
 proc c_strtod(s: cstring, endp: ptr cstring): cdouble {.importc: "strtod", header: "<stdlib.h>".}
 

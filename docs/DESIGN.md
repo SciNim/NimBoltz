@@ -238,6 +238,41 @@ Rules that keep Magboltz's arithmetic:
   `.float`. Logarithms of quantities that only enter through their
   differences take `inUnits` (the value in its unit).
 
+## Library
+
+`nimboltz/api` runs NimBoltz from Nim code (since 2026-11-08):
+
+```nim
+import nimboltz/api
+
+let r = simulate(Setup(mixture: @[(argon, 90.0), (carbonDioxide, 10.0)],
+                       efield: 500.0.V•cm⁻¹))
+echo r.velocity.z, " ", r.spread(r.transverse)
+```
+
+- A `Setup` is one deck, typed: gases as the enum `Gas` (Magboltz's gas
+  numbers), temperature in K, pressure in Torr, B in T, the angle in
+  degrees, and `collisions` (real collisions of the drift run) in place of
+  NMAX · nscale. Defaults: 20 °C, 760 Torr, no B, thermal motion, no
+  Penning transfers, 2 · nscale collisions, Magboltz's seed, energy range
+  found by ELIMIT.
+- `simulate` runs it as the program runs a deck (`Session.run`) and
+  returns `Results`: values with errors (measuremancer `Measurement`, from
+  the errors in per cent of Magboltz) in Magboltz's printed units, the
+  analyses' results if they ran (`Option`), the collision frequencies by
+  process, the energy spectrum and the warnings. `characteristicEnergy` and
+  `spread` give D/µ and √(2D/v) of a diffusion coefficient.
+- Nothing is printed unless `output` is set: every `fwrite` goes to the
+  run's `output` (nil: nowhere), so with `output = stdout` the printout is
+  Magboltz's, bit for bit. Where Magboltz stops the program (input error,
+  energy range too small, avalanche limits) the run raises a
+  `MagboltzError`; the program catches it and stops. `tests/unit/tapi`
+  checks that a setup prints what its deck prints and that the results
+  are the printed numbers.
+- Runs share no state (each `simulate` has a session of its own), but
+  measuremancer numbers its measurements with a global counter, so runs
+  on several threads would need that made thread-safe first.
+
 ## Layout
 
 ```
@@ -262,7 +297,8 @@ src/nimboltz/
                  and pulsed Townsend, time of flight, Friedland estimate
   mixture.nim    GasXsec (output of a gas routine), collision tables of a
                  mixture (MIXER, MIXERT)
-  gases.nim, gases/  cross sections of the 80 gases (GAS1..GAS80)
+  gases.nim, gases/  cross sections of the 80 gases (GAS1..GAS80), the
+                 enum Gas
   deck.nim       the input deck (READIN)
   conditions.nim constants and what follows from a deck (SETUP, SETUPT)
   simulation.nim state of one run: Run[M], ColdMixture, WarmMixture,
@@ -272,4 +308,6 @@ src/nimboltz/
   magboltz.nim   the program: Session, per-deck driver (MIXER, ELIMIT,
                  MONTE calls)
   magboltz_main.nim  entry point: decks on stdin
+  results.nim    the results of a run as values with errors (Results)
+  api.nim        the library: Setup, simulate
 ```

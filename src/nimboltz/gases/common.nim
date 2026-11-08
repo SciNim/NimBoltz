@@ -47,6 +47,7 @@ type
     estep*: eV          ## bin width; old gas routines step their own
                         ## energies by it
     penning*: bool      ## print the Penning transfers
+    output*: File       ## to here (nil: nowhere)
     torr*: Torr         ## gas pressure and temperature (°C), for three-body
     tempc*: float64     ## attachment
     mixture*: array[1..6, tuple[gas: int, percent: float64]]
@@ -232,8 +233,8 @@ proc penning*(g: var GasXsec, inp: GasInput, levels: Slice[int],
   if inp.penning:
     for j in levels:
       if all or g.penningFraction[j] != 0.0:
-        fwrite(fmt, fstr(g.name, 25), g.ei[j].float, g.penningFraction[j],
-               g.penningRange[j].float, g.penningTime[j].float)
+        inp.output.fwrite(fmt, fstr(g.name, 25), g.ei[j], g.penningFraction[j],
+               g.penningRange[j], g.penningTime[j])
 
 proc dropLevelsAbove*(g: var GasXsec, efinal: eV, first = 1) =
   ## levels from the first one at or above the end of the grid are not used

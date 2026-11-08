@@ -1,8 +1,30 @@
 ## Cross sections of the gases Magboltz knows, by its gas number.
 
 import gases/common
-import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane, carbondioxide, neopentane, water, oxygen, nitrogen, nitricoxide, nitrousoxide, ethylene, acetylene, hydrogen, deuterium, c3h6, hexafluoroethane, sulphurhexafluoride, methanol, ethanol, isopropanol, cesium, fluorine, carbondisulphide, carbonylsulphide, deuteratedmethane, borontrifluoride, fluoroform, bromotrifluoromethane, ozone, mercurydimer, hydrogensulphide, nbutane, npentane, germane, npropanol, nitrogenphelps, c2h2f4, trimethylamine, c3f4h2, c4f7n, perfluoropropane, silane, carbontetrachloride, ammonia, methylal, models, carbonmonoxide, dimethylether]
+import gases/[argon, cf4, helium, neon, krypton, xenon, methane, ethane, propane, isobutane,
+              carbondioxide, neopentane, water, oxygen, nitrogen, nitricoxide,
+              nitrousoxide, ethylene, acetylene, hydrogen, deuterium, c3h6,
+              hexafluoroethane, sulphurhexafluoride, methanol, ethanol, isopropanol,
+              cesium, fluorine, carbondisulphide, carbonylsulphide, deuteratedmethane,
+              borontrifluoride, fluoroform, bromotrifluoromethane, ozone,
+              mercurydimer, hydrogensulphide, nbutane, npentane, germane, npropanol,
+              nitrogenphelps, c2h2f4, trimethylamine, c3f4h2, c4f7n, perfluoropropane,
+              silane, carbontetrachloride, ammonia, methylal, models, carbonmonoxide,
+              dimethylether]
 export common
+
+type
+  Gas* = enum
+    ## the gases Magboltz knows, by its gas number (62..80 are empty slots)
+    cf4 = 1, argon, helium4, helium3, neon, krypton, xenon, methane, ethane, propane,
+    isobutane, carbonDioxide, neopentane, water, oxygen, nitrogen, nitricOxide,
+    nitrousOxide, ethylene, acetylene, hydrogen, deuterium, carbonMonoxide, methylal,
+    dimethylEther, reidStep, maxwell, reidRamp, hexafluoroethane, sulphurHexafluoride,
+    ammonia, propene, cyclopropane, methanol, ethanol, isopropanol, cesium, fluorine,
+    carbonDisulphide, carbonylSulphide, deuteratedMethane, boronTrifluoride, c2h2f4,
+    trimethylamine, c3f4h2, nPropanol, paraHydrogen, orthoDeuterium, c4f7n, fluoroform,
+    bromotrifluoromethane, perfluoropropane, ozone, mercuryDimer, hydrogenSulphide, nButane,
+    nPentane, nitrogenPhelps, germane, silane, carbonTetrachloride
 
 proc crossSections*(gas: int, inp: GasInput, g: var GasXsec) =
   ## fills g (zeroed) with the cross sections of gas number `gas` (1..80)

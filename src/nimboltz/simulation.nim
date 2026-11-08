@@ -6,9 +6,15 @@
 ## at 0 K (MIXER, MONTE, ...), `WarmMixture` for thermal motion of the gas
 ## (ITHRM = 1: MIXERT, MONTET, ...).
 
-import units, deck, conditions, tables, mixture, thermal, freeflight, fields, drift
+import std/options
+import units, deck, conditions, tables, mixture, thermal, freeflight, fields, drift,
+       townsend
 
 type
+  MagboltzError* = object of CatchableError
+    ## a run that cannot go on, where Magboltz stops the program; its
+    ## message in Magboltz's words is in the run's output already
+
   ColdMixture* = object
     ## gas at 0 K: one collision table for the whole mixture
     table*: MixtureTable
@@ -63,12 +69,23 @@ type
     threads*: int
       ## avalanche runs on this many threads, each with random numbers of
       ## its own (1: Magboltz's single stream, bit for bit)
+    output*: File          ## Magboltz's printout; nil: none
+    warnings*: seq[string]
+    # the analyses, if run (`needsAnalyses`)
+    steadyState*: Option[SteadyState]       ## B = 0
+    pulsedTownsend*: Option[PulsedTownsend]
+    timeOfFlight*: Option[TimeOfFlight]
+    friedland*: Option[Friedland]
 
 template thermalMotion*(M: typedesc): bool = M is WarmMixture
 
-func initRun*[M: Mixture](d: Deck, mix: ref M): Run[M] =
+func initRun*[M: Mixture](d: Deck, mix: ref M, output: File): Run[M] =
   Run[M](deck: d, cond: conditions(d), mix: mix, efinal: d.efinal, theta: startTheta,
-         threads: 1)
+         threads: 1, output: output)
+
+proc stop*(r: Run, msg: string) {.noreturn.} =
+  ## where Magboltz stops the program
+  raise newException(MagboltzError, msg)
 
 func estart*(r: Run): eV =
   ## energy of the first electron
@@ -114,3 +131,14 @@ func frequencies*(c: Collisions, ngas: int): Frequencies =
   result.elastic = float64(nela) / t
   result.ionisation = float64(nion) / t
   result.attachment = float64(natt) / t
+
+iterator processes*(r: Run[ColdMixture], gas: int): tuple[descr: string, n: int] =
+  ## the processes of a gas with their real collisions in the last run
+  template tab: untyped = r.mix.table  # (a `let` would copy the table)
+  for k in 1 .. tab.last:
+    if tab.iarry[k] <= 5 * gas and tab.iarry[k] > 5 * (gas - 1):
+      yield (r.mix.descr[k], r.last.tally.processes[k])
+
+iterator processes*(r: Run[WarmMixture], gas: int): tuple[descr: string, n: int] =
+  for k in 1 .. r.mix.tables[gas].last:
+    yield (r.mix.descr[gas][k], r.last.tally[gas].processes[k])
