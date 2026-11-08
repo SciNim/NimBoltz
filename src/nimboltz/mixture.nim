@@ -140,10 +140,10 @@ proc describe[N: static int](b: Builder[N], tab: var CollisionTable[N],
                              rgas: float64, ein: eV, ipn: int, text: string) =
   ## energy-independent data of the process just added
   let i = b.np
-  tab.iarry[i] = b.l0 + kind
+  tab.iarry[i] = int32(b.l0 + kind)
   tab.rgas[i] = rgas
   tab.ein[i] = ein
-  tab.ipn[i] = ipn
+  tab.ipn[i] = int32(ipn)
   tab.penningFraction[i] = 0.0
   tab.penningRange[i] = 0.0.m
   tab.penningTime[i] = 0.0.ps
@@ -167,7 +167,7 @@ proc addGas[N: static int](b: var Builder[N], tab: var CollisionTable[N],
       if first:
         b.describe(tab, descr, 2, rgas, g.ionThreshold / rgas, 1, g.scrp[3])
         tab.wpl[b.np] = g.eb[1]
-        tab.augerCount[b.np] = g.nc0[1]
+        tab.augerCount[b.np] = int32(g.nc0[1])
         tab.augerEnergy[b.np] = g.ec0[1]
     else:
       for k in 1 .. g.nion:
@@ -176,7 +176,7 @@ proc addGas[N: static int](b: var Builder[N], tab: var CollisionTable[N],
         if first:
           b.describe(tab, descr, 2, rgas, g.eion[k] / rgas, 1, g.scrp[2 + k])
           tab.wpl[b.np] = g.eb[k]
-          tab.augerCount[b.np] = g.nc0[k]
+          tab.augerCount[b.np] = int32(g.nc0[k])
           tab.augerEnergy[b.np] = g.ec0[k]
   if not (efinal < g.attachThreshold):
     if g.natt <= 1:
@@ -203,7 +203,7 @@ proc finish[N: static int](b: Builder[N], tab: var CollisionTable[N],
                            eroot: eV¹ᐟ², negative: var seq[NegativeFrequency]) =
   ## total collision frequency of the bin, cumulative fractions of the processes
   let ie = b.ie
-  tab.last = b.np
+  tab.last = int32(b.np)
   tab.isize = 1
   while 2 * tab.isize <= tab.last: tab.isize *= 2
   var tcf = 0.0.ps⁻¹•eV⁻¹ᐟ²

@@ -62,7 +62,7 @@ proc crossSections(r: var Run): seq[GasXsec] =
   for k in 0 ..< d.ngas:
     r.names[k + 1] = fstr(result[k].name, 25)
 
-proc mix(r: var Run[ColdMixture]) =
+proc mix*(r: var Run[ColdMixture]) =
   ## MIXER: the collision table of the mixture
   let gases = r.crossSections()
   let m = r.mix

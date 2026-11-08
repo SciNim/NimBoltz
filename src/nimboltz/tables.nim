@@ -23,7 +23,8 @@ const
 type
   CollisionTable*[N: static int] = object
     ## Up to N collision processes per energy bin. Index order follows
-    ## Magboltz (`cf[ie, i]`: energy bin ie, process i).
+    ## Magboltz (`cf[ie, i]`: energy bin ie, process i). The integers are
+    ## `int32`, as they are on a GPU, so a table copies to one as is.
     tcf*: array[1..nEnergyBins, ps⁻¹]
       ## total collision frequency in each energy bin (real collisions)
     cf*: Arr2[float64, nEnergyBins, N]
@@ -33,18 +34,18 @@ type
     ein*: array[1..N, eV]         ## energy loss of the process
     rgas*: array[1..N, float64]   ## mass ratio factor of the target
     wpl*: array[1..N, eV]         ## binding energy of the ionised shell
-    iarry*: array[1..N, int]      ## process kind L (1 elastic, 2 ionisation, ...)
-    ipn*: array[1..N, int]        ## > 0: ionisation, energy shared with the secondary
-    augerCount*: array[1..N, int]       ## ionisation: Auger electrons emitted (NC0)
+    iarry*: array[1..N, int32]    ## process kind L (1 elastic, 2 ionisation, ...)
+    ipn*: array[1..N, int32]      ## > 0: ionisation, energy shared with the secondary
+    augerCount*: array[1..N, int32]     ## ionisation: Auger electrons emitted (NC0)
     augerEnergy*: array[1..N, eV]       ## ionisation: their total energy (EC0)
-    index*: array[1..N, int]      ## 0 isotropic, 1 forward/backward cut, 2 screened
+    index*: array[1..N, int32]    ## 0 isotropic, 1 forward/backward cut, 2 screened
     # Penning transfer (PENFRA): an excitation ionises another gas
     penningFraction*: array[1..N, float64]  ## with this probability,
     penningRange*: array[1..N, m]           ## an exponentially distributed distance
                                             ## away (per axis; 0: in place)
     penningTime*: array[1..N, ps]           ## and time later (0: at once)
-    last*: int                    ## number of processes in use
-    isize*: int                   ## start step of the binary search (power of 2)
+    last*: int32                  ## number of processes in use
+    isize*: int32                 ## start step of the binary search (power of 2)
 
   NullBounds* = array[1..8, ps⁻¹]
     ## Upper bounds of the total collision frequency for the null-collision

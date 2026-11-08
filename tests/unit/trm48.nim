@@ -31,3 +31,15 @@ var g2 = initMagRng(o)
 discard g2.drand48()
 o.close()
 doAssert readFile(tmp) == msg
+
+# Ranmar (one number at a time) gives the numbers of `rm48`
+block:
+  var r: Rm48
+  r.output = nil
+  var blocks = newSeq[float64](3 * NVec)
+  for b in 0 ..< 3:
+    r.rm48(blocks.toOpenArray(b * NVec, (b + 1) * NVec - 1))
+  var q = initRanmar(DefaultSeed)
+  for i in 0 ..< blocks.len:
+    doAssert cast[uint64](q.drand48()) == cast[uint64](blocks[i]), "Ranmar differs at " & $i
+  echo "Ranmar: the numbers of rm48"

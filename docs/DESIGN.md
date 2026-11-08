@@ -273,6 +273,39 @@ echo r.velocity.z, " ", r.spread(r.transverse)
   measuremancer numbers its measurements with a global counter, so runs
   on several threads would need that made thread-safe first.
 
+## GPU
+
+Since 2026-11-08 the collision loop of MONTE for B = 0 at 0 K runs on
+NVIDIA GPUs: `walkers.nim` has independent electrons (`Walker`), each
+with its own `Ranmar` (RM48 one number at a time, the numbers of `rm48`),
+and `gpuwalk.nim` runs one per GPU thread. The kernel is NimBoltz's own
+code (`nextHit`, `findProcess`, `energyLoss`, `scatter`, `advance`, ...),
+compiled to CUDA at Nim compile time by Crucible, the Nim-to-GPU compiler
+of tattletale (github.com/mratsim/tattletale; local fixes on branch
+`nimboltz` of ~/src/gpu/tattletale), and to PTX by NVRTC at run time.
+Unchained units compile to plain `double`s.
+
+What this asks of the code the GPU runs:
+
+- no `break`, `continue` or `case` (Crucible's IR has none): loops with a
+  flag, `if` chains
+- `int32` in what is copied to the GPU (Crucible's `int` is 32 bits), so
+  `CollisionTable` has `int32` integers
+- no references, no `File`, no strings; the random number generator is a
+  generic parameter (`MagRng` on the CPU, `Ranmar` on a GPU)
+
+Equivalence: the same walkers on CPU and GPU take the same collisions
+(same null-collision counts after 2000 collisions); positions differ by
+≤ 5e-15 relative, from CUDA's `log`, `acos`, `sin` (`exact = true`: no
+fused multiply-adds). Many walkers estimate what one trajectory does, not
+the same numbers: `tests/gpu/twalk.nim` (argon, 1000 V/cm) agrees with
+NimBoltz within its seed-to-seed spread. In argon a walker needs ~10⁵
+collisions to forget its start (energy loss 2m/M per collision).
+
+Speed (RTX 3090, shared with another job at 100 % load, FP64 at 1/64 of
+FP32): 8192 walkers, 18–40 M collisions/s, against 3.6 M/s on one CPU
+core.
+
 ## Layout
 
 ```
@@ -307,6 +340,8 @@ src/nimboltz/
   report.nim     printout (PRNTER*, OUTPUT*, OUTPUT1, OUTPUT2*)
   magboltz.nim   the program: Session, per-deck driver (MIXER, ELIMIT,
                  MONTE calls)
+  walkers.nim    independent electrons at 0 K, B = 0 (also on a GPU)
+  gpuwalk.nim    walkers on an NVIDIA GPU (Crucible, NVRTC)
   magboltz_main.nim  entry point: decks on stdin
   results.nim    the results of a run as values with errors (Results)
   api.nim        the library: Setup, simulate

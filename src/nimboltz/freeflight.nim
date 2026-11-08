@@ -53,12 +53,14 @@ proc initWarmGas*(gas: ThermalGas, rng: var MagRng): WarmGas =
 template tableOf*(tab: MixtureTable, h: Hit): untyped = tab
 template tableOf*(tabs: GasTables, h: Hit): untyped = tabs[h.gas]
 
-proc nextHit*[G: static FieldGeometry](f: Field, tab: MixtureTable, target: var ColdGas,
-                                       estep: eV, el: Electron, rng: var MagRng,
-                                       nnull: var int): Hit =
+proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: var ColdGas,
+                                       estep: eV, el: Electron, rng: var (MagRng | Ranmar),
+                                       nnull: var (int | int32)): Hit =
   ## Gas at 0 K: next real collision of an electron leaving `el`.
+  ## (A loop without `break`/`continue`, so the GPU compiler takes it.)
   var tdash = 0.0.ps
-  while true:
+  var real = false
+  while not real:
     let r1 = drand48(rng)
     let band = clamp(int(trunc(el.e / target.bandWidth) + 1.0), 1, target.bounds.len)
     let tlim = target.bounds[band]
@@ -69,10 +71,10 @@ proc nextHit*[G: static FieldGeometry](f: Field, tab: MixtureTable, target: var 
       # bound too low: undo this flight, raise the bound
       tdash = tdash + ln(r1) / tlim
       target.bounds[band] = 1.05 * target.bounds[band]
-      continue
-    let r5 = drand48(rng)
-    if r5 <= tab.tcf[result.ie] / tlim: break
-    inc nnull
+    else:
+      let r5 = drand48(rng)
+      real = r5 <= tab.tcf[result.ie] / tlim
+      if not real: inc nnull
   finishFlight[G](f, result.fl)
   result.e = result.fl.e
   result.din = directionAt[G](f, el, result.fl)

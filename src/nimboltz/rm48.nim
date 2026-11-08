@@ -153,3 +153,33 @@ proc drand48*(g: var MagRng): float64 =
   else:
     g.ivec = g.ivec + 1
   result = g.rvec[g.ivec]
+
+type
+  Ranmar* = object
+    ## RM48 without the buffer of the `drand48` shim: one number at a time,
+    ## the same sequence as `rm48`. Small and without references, so each
+    ## thread of a GPU can run its own.
+    u: array[1..97, float64]
+    c, cd, cm, twom49: float64
+    i97, j97: int32
+
+proc initRanmar*(seed: int): Ranmar =
+  ## RM48 started from `seed`, as RM48IN(seed, 0, 0).
+  var r: Rm48
+  r.rm48in(seed, 0, 0)
+  Ranmar(u: r.u, c: r.c, cd: r.cd, cm: r.cm, twom49: r.twom49,
+         i97: int32(r.i97), j97: int32(r.j97))
+
+proc drand48*(g: var Ranmar): float64 {.inline.} =
+  ## The next number in (0, 1): one step of `rm48`.
+  var uni = g.u[g.i97] - g.u[g.j97]
+  uni = uni + (if uni < 0.0: 1.0 else: 0.0)
+  g.u[g.i97] = uni
+  g.i97 = (if g.i97 == 1: 97'i32 else: g.i97 - 1)
+  g.j97 = (if g.j97 == 1: 97'i32 else: g.j97 - 1)
+  g.c = g.c - g.cd
+  g.c = g.c + (if g.c < 0.0: g.cm else: 0.0)
+  uni = uni - g.c
+  uni = uni + (if uni < 0.0: 1.0 else: 0.0)
+  # Replace exact zeros by 2**-49
+  result = (if uni == 0.0: g.twom49 else: uni)
