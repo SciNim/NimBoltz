@@ -3,6 +3,10 @@
 # gasdmp.nim (translated port) are fed the same cases and their raw dumps
 # are compared case by case (one dump is ~19 MB). Gases rewritten in
 # nimboltz/gases only fill what Magboltz uses; dumpdiff -u compares that.
+# Since the gas engine (2026-11-08) most gases differ from Fortran in the
+# last bits (different order of operations), so they FAIL here; their
+# check is tests/gasengine (engine vs the bit-for-bit modules of f336489).
+# Bit-for-bit here: the hand-written gases 26-28 and the empty slots 62-80.
 #   ./run.sh [gas numbers...]     default: 1..61
 # Env: MAGBOLTZ_SRC, WORK (default /tmp/gasdump), JOBS.
 set -euo pipefail
