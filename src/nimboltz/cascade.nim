@@ -137,11 +137,15 @@ type
       sums*: SpaceSums
     warnings*: seq[NegativeEnergy]
     stop*: Stop
+    primaryLimit: int        ## stTooManyPrimaries above (maxPrimaries, or its
+                             ## share of a walker)
 
 func initCascade*[G: static FieldGeometry; P: static PlaneKind; T](
     f: Field, const2, const3: float64, start: Electron, target: T, estep: float64,
-    nmax: int, penning: bool, planes: Planes, btheta: float64): Cascade[G, P, T] =
-  ## `start`: the first primary
+    nmax: int, penning: bool, planes: Planes, btheta: float64,
+    primaryLimit = maxPrimaries): Cascade[G, P, T] =
+  ## `start`: the first primary; `primaryLimit`: of this run (a walker gets
+  ## its share of maxPrimaries)
   static: doAssert P == pkTime or G == fgElectric
   result.f = f
   result.const2 = const2
@@ -159,6 +163,7 @@ func initCascade*[G: static FieldGeometry; P: static PlaneKind; T](
   result.next = start
   result.j1 = 1
   result.jprint = nmax div 10
+  result.primaryLimit = primaryLimit
 
 func stacked*[G: static FieldGeometry; P: static PlaneKind; T](c: Cascade[G, P, T]): int =
   c.stack.len
@@ -637,7 +642,7 @@ proc run*[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, 
       c.tsstrt = 0.0
       c.zstrt = 0.0
       when P == pkTime: c.plane = 0
-    if c.iprim > maxPrimaries:
+    if c.iprim > c.primaryLimit:
       c.stop = stTooManyPrimaries
       return
     c.primaryE2 = c.primaryE2 + c.el.e * c.el.e
@@ -650,3 +655,47 @@ proc run*[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, 
       if c.stop != stNone: return
       if c.nelec == c.nclus + 1: break
       if not c.pop(): break
+
+# --- walkers ------------------------------------------------------------------
+
+proc add[T: TimeSums | SpaceSums](a: var T, b: T) =
+  for x, y in fields(a, b):
+    for k in low(x) .. high(x): x[k] = x[k] + y[k]
+
+proc add[N: static int](a: var Tally[N], b: Tally[N]) =
+  for k in low(a.kinds) .. high(a.kinds): a.kinds[k] = a.kinds[k] + b.kinds[k]
+  for k in low(a.processes) .. high(a.processes):
+    a.processes[k] = a.processes[k] + b.processes[k]
+
+proc merge*[G: static FieldGeometry; P: static PlaneKind; T](a: var Cascade[G, P, T],
+                                                             b: Cascade[G, P, T]) =
+  ## adds the run of another walker (independent random numbers, its share
+  ## of NMAX) to a: counts, histograms and plane sums add up; the last
+  ## electron (THETA, ST) is b's
+  a.iprim = a.iprim + b.iprim
+  a.nelec = a.nelec + b.nelec
+  a.neion = a.neion + b.neion
+  a.nclus = a.nclus + b.nclus
+  a.id = a.id + b.id
+  a.j1 = a.j1 + b.j1 - 1
+  a.nnull = a.nnull + b.nnull
+  a.tmax = max(a.tmax, b.tmax)
+  for k in 1 .. nTimeBins: a.times[k] = a.times[k] + b.times[k]
+  for k in 1 .. nEnergyBins: a.spectrum[k] = a.spectrum[k] + b.spectrum[k]
+  when T is ColdBound:
+    a.tally.add b.tally
+  else:
+    for g in 1 .. maxGases: a.tally[g].add b.tally[g]
+  a.ztot = a.ztot + b.ztot
+  a.ttot = a.ttot + b.ttot
+  a.ztots = a.ztots + b.ztots
+  a.ttots = a.ttots + b.ttots
+  a.primaryE = a.primaryE + b.primaryE
+  a.primaryE2 = a.primaryE2 + b.primaryE2
+  a.sums.add b.sums
+  a.theta = b.theta
+  a.st = b.st
+  a.warnings.add b.warnings
+  if a.stop == stNone and b.stop != stNone:
+    a.stop = b.stop
+    a.stack = b.stack

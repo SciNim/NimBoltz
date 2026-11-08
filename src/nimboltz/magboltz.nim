@@ -27,6 +27,7 @@ type
   Session* = object
     ## what lives from one deck to the next
     rng*: MagRng   ## Magboltz's random numbers: one stream for all decks
+    threads*: int  ## for the avalanche runs (`Run.threads`)
     cold: ref ColdMixture
     warm: ref WarmMixture
     rings: array[FieldGeometry, array[bool, Ring]]
@@ -36,7 +37,7 @@ type
       ## first two segments (reduced nscale only). One ring per routine.
 
 proc initSession*(): Session =
-  Session(rng: initMagRng(stdout))
+  Session(rng: initMagRng(stdout), threads: 1)
 
 # --- MIXER, MIXERT ------------------------------------------------------------------
 
@@ -175,6 +176,7 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var M
 
 proc run[M: Mixture](s: var Session, mix: ref M, d: Deck) =
   var r = initRun(d, mix)
+  r.threads = s.threads
   if d.efinal > 0.0: r.mix()
   else: r.findEnergyRange(s.rng)
   r.printHeader()

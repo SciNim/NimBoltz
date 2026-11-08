@@ -82,9 +82,19 @@ Rules:
 - Shared state is read-only. Magboltz mutates "tables" during the run
   (TCFMAX, the null-collision bounds, grows by 5% when exceeded); such data
   belongs to the walker (`NullBounds`).
-- Random numbers come from a `var MagRng` that belongs to the walker. For
-  now that is the one stream of the `Session`, passed to every run in
-  Magboltz's order, so that results stay comparable with Fortran.
+- Random numbers come from a `var MagRng` that belongs to the walker. By
+  default that is the one stream of the `Session`, passed to every run in
+  Magboltz's order, so that results stay comparable with Fortran bit for
+  bit.
+- Threads (2026-11-08, opt-in with `NIMBOLTZ_THREADS=n`): the avalanche
+  runs of the Townsend analyses (`cascade.nim`) are split over n walkers,
+  each with its share of NMAX and of the limit on primaries, its own
+  target state and random numbers seeded from the session's stream
+  (`analyses.avalanche`). Primaries are independent apart from the random
+  numbers, so their counts, histograms and plane sums just add up
+  (`cascade.merge`); the estimates are the same, the numbers are not, and
+  the comparison with Fortran is statistical (`tests/stat`). The main
+  drift run (MONTE) is still one trajectory on one thread.
 
 Known leftovers that matter here: table layout is Magboltz's (`cf[ie, i]`
 with the energy bin fastest), which is poor for the per-bin scan over
@@ -121,7 +131,10 @@ uses it, so calls between modules cannot be inlined; the small hot procs
 (`fly`, `velocityAt`, `findProcess`, ...) are therefore `{.inline.}`. With
 LTO (`--passC:-flto=auto --passL:-flto=auto`) the gap is 0–2%, at the
 cost of much slower builds (95 kLOC of gas routines). About half of the
-run time is the random number generator (RM48) and the Maxwell sampler.
+run time was the random number generator (RM48) and the Maxwell sampler;
+RM48 without branches (2026-11-08: the wrap-arounds of each number are
+selects, the same numbers) made it 4.5 times faster and whole runs about
+25% faster.
 
 ## Equivalence with Magboltz
 
@@ -153,6 +166,10 @@ Magboltz's printed errors:
   drift 15.9 ± 0.13% against 13.9 ± 1.6% from the MC of the same run;
   penning_neco2_t0 SST longitudinal diffusion 4283 ± 0.3% vs 5406 ± 0.8%
   (TOF values agree). These are the expected failures with this criterion.
+- Time-of-flight diffusion of strongly attaching gases rests on few
+  electrons at the later planes, and its printed error does not reflect
+  that: gas45 longitudinal, 483 ± 1.9% (Fortran), 347 ± 0.8%, 404 ± 44.7%,
+  411 ± 26.9% (Nim, other random numbers, 1 or 4 threads).
 - In fast mode the MC diffusion estimates have heavy tails (gas04,
   longitudinal: 46 ± 24% with one seed, 440 ± 24% with another).
 - EFINAL found by ELIMIT depends on the random numbers; with NMAX/10

@@ -125,27 +125,61 @@ func formatsOf(G: FieldGeometry, P: PlaneKind, thermal: bool): Formats =
     of fgParallel: (if thermal: formatsAT else: formatsA)
     of fgCrossed, fgOblique: formatsG
 
+type
+  Walker[G: static FieldGeometry; P: static PlaneKind; T, Tabs] = object
+    ## an avalanche run on a thread of its own
+    c: Cascade[G, P, T]
+    rng: MagRng
+    tabs: ptr Tabs
+
+proc walk[G: static FieldGeometry; P: static PlaneKind; T, Tabs](
+    w: ptr Walker[G, P, T, Tabs]) {.thread.} =
+  w.c.run(w.tabs[], w.rng)
+
 proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
     r: var Run[M], planes: Planes, nmax: int, rng: var MagRng): AvalancheRun[P] =
   ## one run of avalanches sampled at `planes`; leaves its collisions in
-  ## `r.last`
+  ## `r.last`. With `r.threads` > 1, that many walkers share NMAX (and the
+  ## limit on primaries), each with random numbers of its own seeded from
+  ## `rng`, and their counts and sums are added up: the same estimates,
+  ## not the same numbers.
   let fm = formatsOf(G, P, thermalMotion(M))
   let f = r.field(G)
   let start = initElectron[G](f, r.estart, r.theta, startPhi)
   let d = r.deck
   when thermalMotion(M):
-    var c = initCascade[G, P, WarmGas](f, const2, const3, start,
-                                       initWarmGas(r.mix.gas, rng), r.estep, nmax,
-                                       d.penning, planes, d.btheta)
-    c.run(r.mix.tables, rng)
+    type Target = WarmGas
+    template tabs: untyped = r.mix.tables
+    template cascade(n, limit: int, g: var MagRng): Cascade[G, P, Target] =
+      initCascade[G, P, WarmGas](f, const2, const3, start, initWarmGas(r.mix.gas, g),
+                                 r.estep, n, d.penning, planes, d.btheta, limit)
   else:
+    type Target = ColdBound
+    template tabs: untyped = r.mix.table
     var tlim = r.mix.bounds[1]
     for i in 2 .. 8:
       if tlim < r.mix.bounds[i]: tlim = r.mix.bounds[i]
-    var c = initCascade[G, P, ColdBound](f, const2, const3, start,
-                                         ColdBound(tlim: tlim), r.estep, nmax,
-                                         d.penning, planes, d.btheta)
-    c.run(r.mix.table, rng)
+    template cascade(n, limit: int, g: var MagRng): Cascade[G, P, Target] =
+      initCascade[G, P, ColdBound](f, const2, const3, start, ColdBound(tlim: tlim),
+                                   r.estep, n, d.penning, planes, d.btheta, limit)
+  var c: Cascade[G, P, Target]
+  if r.threads <= 1:
+    c = cascade(nmax, maxPrimaries, rng)
+    c.run(tabs, rng)
+  else:
+    let n = r.threads
+    var walkers = newSeq[Walker[G, P, Target, typeof(tabs)]](n)
+    for k, w in walkers.mpairs:
+      w.rng = initMagRng(nil)
+      w.rng.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
+      w.c = cascade(nmax div n + (if k < nmax mod n: 1 else: 0),
+                    maxPrimaries div n, w.rng)
+      w.tabs = addr tabs
+    var threads = newSeq[Thread[ptr Walker[G, P, Target, typeof(tabs)]]](n)
+    for k in 0 ..< n: createThread(threads[k], walk[G, P, Target, typeof(tabs)], addr walkers[k])
+    joinThreads(threads)
+    c = move walkers[0].c
+    for k in 1 ..< n: c.merge(walkers[k].c)
   r.last = Collisions[M](tally: c.tally, st: c.st, ttots: c.ttots, spectrum: c.spectrum)
   for w in c.warnings: printNegative(fm, f, w)
   case c.stop

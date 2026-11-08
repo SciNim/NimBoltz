@@ -18,6 +18,8 @@
 # Env: as tests/regress (MAGBOLTZ_SRC, WORK, JOBS, FULL, TIMEOUT), plus
 #      SEED (default 1), ZMAX (default 5), FLOOR (default 0.25 with a spread
 #      table, else 1).
+#      NIMBOLTZ_THREADS is passed on to the Nim build (threaded avalanche
+#      runs; with JOBS lowered to match).
 #      Calibration (docs/DESIGN.md): unchanged port, seed 1, fast mode:
 #      90 of 96 decks pass; expected failures are SST fits whose printed
 #      errors are too small (penning_neco2_t0; gas15 with other seeds).

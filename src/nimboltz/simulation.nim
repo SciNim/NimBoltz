@@ -60,11 +60,15 @@ type
     transport*: Transport
       ## MONTE's results; the analyses replace the Townsend coefficients
     last*: Collisions[M]
+    threads*: int
+      ## avalanche runs on this many threads, each with random numbers of
+      ## its own (1: Magboltz's single stream, bit for bit)
 
 template thermalMotion*(M: typedesc): bool = M is WarmMixture
 
 func initRun*[M: Mixture](d: Deck, mix: ref M): Run[M] =
-  Run[M](deck: d, cond: conditions(d), mix: mix, efinal: d.efinal, theta: startTheta)
+  Run[M](deck: d, cond: conditions(d), mix: mix, efinal: d.efinal, theta: startTheta,
+         threads: 1)
 
 func estart*(r: Run): float64 =
   ## energy of the first electron (eV)
