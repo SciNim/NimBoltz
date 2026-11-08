@@ -827,4 +827,4 @@ const dimethylEtherModel* = GasModel(
   alwaysModel2: true,
   firstCut: 54)
 
-proc dimethylEther*(inp: GasInput, g: var GasXsec) = fill(dimethylEtherModel, inp, g)
+gas dimethylEther, dimethylEtherModel

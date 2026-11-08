@@ -1112,6 +1112,6 @@ const paraHydrogenModel* = GasModel(
   penning: Penning(fraction: 0.0, length: 1.0, time: 1.0, format: penningFormat),
   ninBy: @[(11.0, 114), (8.0, 23), (-Inf, 19)])
 
-proc hydrogen*(inp: GasInput, g: var GasXsec) = fill(hydrogenModel, inp, g)
+gas hydrogen, hydrogenModel
 
-proc paraHydrogen*(inp: GasInput, g: var GasXsec) = fill(paraHydrogenModel, inp, g)
+gas paraHydrogen, paraHydrogenModel

@@ -113,4 +113,4 @@ const acetyleneModel* = GasModel(
   populations: @[pop(1)],
   keepLastAt: true)
 
-proc acetylene*(inp: GasInput, g: var GasXsec) = fill(acetyleneModel, inp, g)
+gas acetylene, acetyleneModel

@@ -100,4 +100,4 @@ const carbonDisulphideModel* = GasModel(
   populations: @[pop(1, group = 1), pop(3, group = 2)],
   firstCut: 5)
 
-proc carbonDisulphide*(inp: GasInput, g: var GasXsec) = fill(carbonDisulphideModel, inp, g)
+gas carbonDisulphide, carbonDisulphideModel

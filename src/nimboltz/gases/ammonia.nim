@@ -667,4 +667,4 @@ const ammoniaModel* = GasModel(
                    all: true, first: 38),
   alwaysModel2: true)
 
-proc ammonia*(inp: GasInput, g: var GasXsec) = fill(ammoniaModel, inp, g)
+gas ammonia, ammoniaModel

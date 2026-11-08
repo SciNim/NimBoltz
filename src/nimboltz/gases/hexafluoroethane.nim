@@ -511,4 +511,4 @@ const hexafluoroethaneModel* = GasModel(
   alwaysModel2: true,
   minLevels: 6)
 
-proc hexafluoroethane*(inp: GasInput, g: var GasXsec) = fill(hexafluoroethaneModel, inp, g)
+gas hexafluoroethane, hexafluoroethaneModel

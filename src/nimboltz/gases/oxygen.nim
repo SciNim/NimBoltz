@@ -1316,4 +1316,4 @@ const oxygenModel* = GasModel(
   penning: Penning(length: 1.0, time: 1.0, format: penningFormat, all: true, first: 76),
   minLevels: 52)
 
-proc oxygen*(inp: GasInput, g: var GasXsec) = fill(oxygenModel, inp, g)
+gas oxygen, oxygenModel

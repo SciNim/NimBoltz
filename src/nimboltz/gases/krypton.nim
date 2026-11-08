@@ -1168,4 +1168,4 @@ const kryptonModel* = GasModel(
   negative: clampNegative,
   penning: Penning(length: 1.0, time: 1.0))
 
-proc krypton*(inp: GasInput, g: var GasXsec) = fill(kryptonModel, inp, g)
+gas krypton, kryptonModel

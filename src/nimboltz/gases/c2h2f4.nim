@@ -314,4 +314,4 @@ const c2h2f4Model* = GasModel(
   minLevels: 6,
   appended: (3, 1000.0))
 
-proc c2h2f4*(inp: GasInput, g: var GasXsec) = fill(c2h2f4Model, inp, g)
+gas c2h2f4, c2h2f4Model

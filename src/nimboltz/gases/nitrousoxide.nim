@@ -916,4 +916,4 @@ const nitrousOxideModel* = GasModel(
   forceModel2: true,
   minLevels: 120)
 
-proc nitrousOxide*(inp: GasInput, g: var GasXsec) = fill(nitrousOxideModel, inp, g)
+gas nitrousOxide, nitrousOxideModel

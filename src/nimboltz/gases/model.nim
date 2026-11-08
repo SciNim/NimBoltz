@@ -4,8 +4,9 @@
 ## A gas is data: the tables of its measured cross sections, the energy
 ## losses of its levels and the variant of each process model it uses
 ## (docs/gas-features.md lists the variants by gas). Each gas module defines
-## one `const GasModel`; `engine.fill` is instantiated per model, so the
-## variants a gas does not use are not compiled into its routine.
+## one `const GasModel` and declares its routine with `engine.gas`; `fill`
+## is instantiated per gas, so the variants a gas does not use are not
+## compiled into its routine.
 ##
 ## Units: energies in eV, cross sections in cm². Tables keep the values of
 ## Magboltz's DATA statements (single precision where Magboltz has them),

@@ -586,4 +586,4 @@ const ethyleneModel* = GasModel(
   alwaysModel2: true,
   minLevels: 12)
 
-proc ethylene*(inp: GasInput, g: var GasXsec) = fill(ethyleneModel, inp, g)
+gas ethylene, ethyleneModel

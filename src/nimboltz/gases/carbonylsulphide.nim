@@ -128,4 +128,4 @@ const carbonylSulphideModel* = GasModel(
   populations: @[pop(1, group = 1), pop(3, group = 2), pop(5, group = 3)],
   firstCut: 7)
 
-proc carbonylSulphide*(inp: GasInput, g: var GasXsec) = fill(carbonylSulphideModel, inp, g)
+gas carbonylSulphide, carbonylSulphideModel

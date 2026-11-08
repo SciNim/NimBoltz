@@ -875,4 +875,4 @@ const nPropanolModel* = GasModel(
   alwaysModel2: true,
   firstCut: 54)
 
-proc nPropanol*(inp: GasInput, g: var GasXsec) = fill(nPropanolModel, inp, g)
+gas nPropanol, nPropanolModel

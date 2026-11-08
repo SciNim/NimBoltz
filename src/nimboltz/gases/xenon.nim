@@ -792,4 +792,4 @@ const xenonModel* = GasModel(
   negative: clampNegative,
   penning: Penning(length: 1.0, time: 1.0))
 
-proc xenon*(inp: GasInput, g: var GasXsec) = fill(xenonModel, inp, g)
+gas xenon, xenonModel

@@ -696,4 +696,4 @@ const methanolModel* = GasModel(
   alwaysModel2: true,
   firstCut: 54)
 
-proc methanol*(inp: GasInput, g: var GasXsec) = fill(methanolModel, inp, g)
+gas methanol, methanolModel

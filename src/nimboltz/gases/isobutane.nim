@@ -277,4 +277,4 @@ const isobutaneModel* = GasModel(
   penning: Penning(length: 1.0, time: 1.0, first: 10, last: 24),
   firstCut: 14)
 
-proc isobutane*(inp: GasInput, g: var GasXsec) = fill(isobutaneModel, inp, g)
+gas isobutane, isobutaneModel

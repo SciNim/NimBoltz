@@ -652,4 +652,4 @@ const argonModel* = GasModel(
   negative: clampNegative,
   penning: Penning(fraction: 0.2, length: 1.0, time: 1.0, format: penningFormat))
 
-proc argon*(inp: GasInput, g: var GasXsec) = fill(argonModel, inp, g)
+gas argon, argonModel

@@ -476,4 +476,4 @@ const perfluoropropaneModel* = GasModel(
   alwaysModel2: true,
   minLevels: 6)
 
-proc perfluoropropane*(inp: GasInput, g: var GasXsec) = fill(perfluoropropaneModel, inp, g)
+gas perfluoropropane, perfluoropropaneModel

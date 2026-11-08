@@ -514,4 +514,4 @@ const silaneModel* = GasModel(
   alwaysModel2: true,
   minLevels: 8)
 
-proc silane*(inp: GasInput, g: var GasXsec) = fill(silaneModel, inp, g)
+gas silane, silaneModel

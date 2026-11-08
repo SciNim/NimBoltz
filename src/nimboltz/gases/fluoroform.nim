@@ -98,4 +98,4 @@ const fluoroformModel* = GasModel(
   isotropic: true, stepped: true,
   populations: @[pop(1, group = 1), pop(3, group = 2)])
 
-proc fluoroform*(inp: GasInput, g: var GasXsec) = fill(fluoroformModel, inp, g)
+gas fluoroform, fluoroformModel

@@ -244,6 +244,6 @@ const cyclopropaneModel* = GasModel(
   isotropic: true, stepped: true,
   populations: @[pop(1, group = 1), pop(3, group = 2)])
 
-proc propene*(inp: GasInput, g: var GasXsec) = fill(propeneModel, inp, g)
+gas propene, propeneModel
 
-proc cyclopropane*(inp: GasInput, g: var GasXsec) = fill(cyclopropaneModel, inp, g)
+gas cyclopropane, cyclopropaneModel

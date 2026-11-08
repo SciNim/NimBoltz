@@ -95,4 +95,4 @@ const nitricOxideModel* = GasModel(
     Level(sigma: table(xexc1, yexc1), ein: 6.10, text: " EXC           ELOSS=  6.10")],
   isotropic: true, stepped: true)
 
-proc nitricOxide*(inp: GasInput, g: var GasXsec) = fill(nitricOxideModel, inp, g)
+gas nitricOxide, nitricOxideModel

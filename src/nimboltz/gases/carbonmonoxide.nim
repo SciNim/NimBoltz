@@ -1110,4 +1110,4 @@ const carbonMonoxideModel* = GasModel(
   alwaysModel2: true,
   minLevels: 113)
 
-proc carbonMonoxide*(inp: GasInput, g: var GasXsec) = fill(carbonMonoxideModel, inp, g)
+gas carbonMonoxide, carbonMonoxideModel

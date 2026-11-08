@@ -1337,4 +1337,4 @@ const waterModel* = GasModel(
   # (zero, but printed)
   penning: Penning(length: 1.0, time: 1.0, format: penningFormat, all: true, first: 215))
 
-proc water*(inp: GasInput, g: var GasXsec) = fill(waterModel, inp, g)
+gas water, waterModel

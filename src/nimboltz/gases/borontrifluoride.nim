@@ -108,4 +108,4 @@ const boronTrifluorideModel* = GasModel(
   populations: @[pop(1, group = 1), pop(2, group = 2), pop(3, group = 3)],
   momentumRatio: 0.58)
 
-proc boronTrifluoride*(inp: GasInput, g: var GasXsec) = fill(boronTrifluorideModel, inp, g)
+gas boronTrifluoride, boronTrifluorideModel

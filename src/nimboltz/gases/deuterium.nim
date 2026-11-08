@@ -1322,7 +1322,6 @@ const orthoDeuteriumModel* = GasModel(
   penning: Penning(fraction: 0.0, length: 1.0, time: 1.0, format: penningFormat),
   ninBy: @[(11.0, 142), (8.0, 23), (-Inf, 19)])
 
-proc deuterium*(inp: GasInput, g: var GasXsec) = fill(deuteriumModel, inp, g)
+gas deuterium, deuteriumModel
 
-proc orthoDeuterium*(inp: GasInput, g: var GasXsec) =
-  fill(orthoDeuteriumModel, inp, g)
+gas orthoDeuterium, orthoDeuteriumModel

@@ -92,4 +92,4 @@ const cesiumModel* = GasModel(
           sigma: table(xexc5, yexc5))],
   isotropic: true, stepped: true)
 
-proc cesium*(inp: GasInput, g: var GasXsec) = fill(cesiumModel, inp, g)
+gas cesium, cesiumModel

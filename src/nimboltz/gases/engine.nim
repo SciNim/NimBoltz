@@ -2,9 +2,9 @@
 ## `GasModel` (model.nim) and fills a `GasXsec` on the energy grid, as the
 ## gas routines GASn of Magboltz do.
 ##
-## `fill` takes the model as a static parameter: each gas gets its own
-## instance, and the variants it does not use (`when`) are not compiled
-## in. The physics is the same as Magboltz's; the floating point operations
+## A gas module declares its routine with `gas name, description`; `fill`
+## is instantiated per gas, and the variants it does not use (`when`) are
+## not compiled in. The physics is the same as Magboltz's; the floating point operations
 ## are not always in the same order, so the results agree with the Fortran
 ## routines to a few units of the last digit (tests/gasengine).
 
@@ -122,10 +122,12 @@ proc mert(p: Mert, en: eV): tuple[qela, qmom: cm²] =
   let q0 = 4.0 * pir2.cm² / ak2
   (sigel * q0, sum * q0)
 
-proc elasticAt(m: static Elastic, en: eV, bend: float64):
+proc elasticAt[M](en: eV, bend: float64):
     tuple[qela, qmom: cm², pq2: float64] =
   ## total and momentum transfer cross sections, anisotropy parameter of
   ## model 2 (bend: population of the bending states)
+  mixin descriptionOf
+  const m = descriptionOf(M).elastic
   let x = en.float
   template interp(kind: Interp, xs, ys: seq[float64]): float64 =
     when kind == logLog: logLog(xs, ys, x)
@@ -172,8 +174,10 @@ proc elasticAt(m: static Elastic, en: eV, bend: float64):
 
 # ------------------------------------------------------------ the gas
 
-proc describe(m: static GasModel, inp: GasInput, g: var GasXsec) =
+proc describe[M](inp: GasInput, g: var GasXsec) =
   ## names, energies and descriptions of the processes
+  mixin descriptionOf
+  template m: untyped = descriptionOf(M)
   let aniso = inp.naniso != 0
   g.name = if aniso: m.name.anisotropic else: m.name.isotropic
   when m.unnamedModel1:
@@ -226,8 +230,10 @@ proc describe(m: static GasModel, inp: GasInput, g: var GasXsec) =
   g.penning(inp, first .. last, m.penning.fraction, m.penning.length,
             m.penning.time, m.penning.format, m.penning.all)
 
-proc ionisation(m: static Ionisation, g: var GasXsec, i: int, en: eV,
+proc ionisation[M](g: var GasXsec, i: int, en: eV,
                 c: Context, iso: float64, ioffion: seq[int]) =
+  mixin descriptionOf
+  const m = descriptionOf(M).ionisation
   when m.scheme == single:
     g.q[3, i] = if (when m.countingExclusive: en.float <= float64(m.countingFrom)
                     else: en.float < float64(m.countingFrom)): 0.0
@@ -355,9 +361,11 @@ type
     rotationEnergy: seq[float64]  ## (`Rotor.ladder`)
     bend: float64            ## of the bending states (Elastic.bend)
 
-proc populations(m: static GasModel, g: GasXsec, kT: float64): Populations =
+proc populations[M](g: GasXsec, kT: float64): Populations =
   ## Boltzmann populations of the excited vibrational states, normalised
   ## per group with the ground state
+  mixin descriptionOf
+  template m: untyped = descriptionOf(M)
   const ps = m.populations
   for p in ps:
     var a = 0.0
@@ -406,9 +414,11 @@ proc populations(m: static GasModel, g: GasXsec, kT: float64): Populations =
         sum = sum + result.rotation[^1]
     for p in result.rotation.mitems: p = p / sum
 
-proc level(m: static GasModel, j: int, b: Bin, ein: eV, pops: Populations,
+proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
            g: var GasXsec, i: int, ioffn: seq[int]) =
   ## cross section and anisotropy of level j (1-based) in bin i
+  mixin descriptionOf
+  template m: untyped = descriptionOf(M)
   let lv = m.levels[j - 1]
   let en = b.en
   when m.isotropic:
@@ -645,8 +655,10 @@ proc h2Attachment(a: Attach, en: eV, c: Context, pops: Populations): float64 =
     if x <= h.highAt: break resonances
     result = result + h.highAmp * exp(-((x - h.highAt) / h.highWidth))
 
-proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context,
+proc attachment[M](g: var GasXsec, i: int, en: eV, c: Context,
                 pops: Populations, iso: float64) =
+  mixin descriptionOf
+  template m: untyped = descriptionOf(M)
   for k, a in m.attachment:
     let s = a.sigma
     let x = en.float
@@ -677,13 +689,15 @@ proc attachment(m: static GasModel, g: var GasXsec, i: int, en: eV, c: Context,
   when m.attachment.len == 1:
     g.q[4, i] = g.qatt[1, i]
 
-proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
+proc fill*[M](inp: GasInput, g: var GasXsec) =
   ## the cross sections of the gas described by m (g zeroed before)
+  mixin descriptionOf
+  template m: untyped = descriptionOf(M)
   var inp = inp
   when m.alwaysModel2: inp.naniso = 2
   when m.forceModel2:
     if inp.naniso != 0: inp.naniso = 2
-  describe(m, inp, g)
+  describe[M](inp, g)
   when m.roundedOffsets:
     # (int(float32(0.5 + e / ESTEP)), as these routines)
     var ioffion = @[int(float32(0.5 + g.e[3] / inp.estep))]
@@ -692,7 +706,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
   else:
     let ioffion = inp.offsets(g.eion[1 .. g.nion])
     let ioffn = inp.offsets(g.ei[1 .. g.nin], magnitude = m.magnitudeOffsets)
-  let pops = populations(m, g, inp.kT)
+  let pops = populations[M](g, inp.kT)
   var b = Bin(iso: if inp.naniso == 2: 0.0 else: 0.5, naniso: inp.naniso)
   b.c = Context(am2: float64(m.ionisation.am2), c: float64(m.ionisation.c),
                 eion: float64(m.e3).eV, negative: m.negative,
@@ -716,7 +730,7 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
   for i, e in energies(inp):
     b.en = e.eV
     b.c.r = relativistic(e)
-    let (qela, qmom, pq2) = elasticAt(m.elastic, b.en, pops.bend)
+    let (qela, qmom, pq2) = elasticAt[M](b.en, pops.bend)
     when m.forceModel2:
       if inp.naniso == 0:
         g.q[2, i] = qmom.float
@@ -745,13 +759,13 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     when m.ionisation.counting.x.len > 0:
       b.c.qcount = m.ionisation.counting.at(b.en, 0.0.eV, b.c)
       b.c.countingBethe = e > m.ionisation.counting.x[^1]
-    ionisation(m.ionisation, g, i, b.en, b.c, b.iso, ioffion)
+    ionisation[M](g, i, b.en, b.c, b.iso, ioffion)
     when m.fixedModel1:
       g.peqel[3, i] = 0.5
       if e > 2.0 * g.e[3]: g.peqel[3, i] = g.peqel[2, i - ioffion[0]]
-    attachment(m, g, i, b.en, b.c, pops, b.iso)
+    attachment[M](g, i, b.en, b.c, pops, b.iso)
     for j in 1 .. m.levels.len:
-      level(m, j, b, g.ei[j].eV, pops, g, i, ioffn)
+      level[M](j, b, g.ei[j].eV, pops, g, i, ioffn)
     when m.elastic.minusLevels.b > 0:
       when m.elastic.minusEach:
         for j in m.elastic.minusLevels: g.q[2, i] = g.q[2, i] - g.qin[j, i]
@@ -780,3 +794,13 @@ proc fill*(m: static GasModel, inp: GasInput, g: var GasXsec) =
     if g.nin < m.minLevels: g.nin = m.minLevels
   when m.appended.n > 0:
     if inp.efinal > m.appended.above: g.nin = g.nin + m.appended.n
+
+template gas*(name: untyped, description: GasModel) =
+  ## Declares the gas routine `name` for the constant `description`. The
+  ## engine reaches the description through a type of its own (`Tag`), not
+  ## as a static parameter: a static value is copied into every use and
+  ## every nested instantiation, which made the compiler about 20 times
+  ## slower.
+  type Tag = object
+  template descriptionOf(_: type Tag): GasModel = description
+  proc name*(inp: GasInput, g: var GasXsec) = fill[Tag](inp, g)

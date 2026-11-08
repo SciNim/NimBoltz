@@ -137,4 +137,4 @@ const nPentaneModel* = GasModel(
   populations: @[pop(1, group = 1), pop(3, group = 2), pop(5, group = 3)],
   firstCut: 6)
 
-proc nPentane*(inp: GasInput, g: var GasXsec) = fill(nPentaneModel, inp, g)
+gas nPentane, nPentaneModel

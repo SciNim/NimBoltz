@@ -614,4 +614,4 @@ const sulphurHexafluorideModel* = GasModel(
   negative: clampNegative,
   penning: Penning(fraction: 0.0, length: 0.0, time: 0.0, format: penningFormat))
 
-proc sulphurHexafluoride*(inp: GasInput, g: var GasXsec) = fill(sulphurHexafluorideModel, inp, g)
+gas sulphurHexafluoride, sulphurHexafluorideModel

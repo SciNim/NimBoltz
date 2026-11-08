@@ -547,4 +547,4 @@ func buildMethane(): GasModel =
 
 const methaneModel* = buildMethane()
 
-proc methane*(inp: GasInput, g: var GasXsec) = fill(methaneModel, inp, g)
+gas methane, methaneModel

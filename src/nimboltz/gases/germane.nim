@@ -93,4 +93,4 @@ const germaneModel* = GasModel(
   isotropicPeq: 0.5,
   firstCut: 2)
 
-proc germane*(inp: GasInput, g: var GasXsec) = fill(germaneModel, inp, g)
+gas germane, germaneModel

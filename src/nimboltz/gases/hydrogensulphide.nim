@@ -106,4 +106,4 @@ const hydrogenSulphideModel* = GasModel(
   populations: @[pop(1, group = 1), pop(3, group = 2)],
   firstCut: 5)
 
-proc hydrogenSulphide*(inp: GasInput, g: var GasXsec) = fill(hydrogenSulphideModel, inp, g)
+gas hydrogenSulphide, hydrogenSulphideModel

@@ -1106,4 +1106,4 @@ const nitrogenModel* = GasModel(
                    all: true, first: 107),
   minLevels: 77)
 
-proc nitrogen*(inp: GasInput, g: var GasXsec) = fill(nitrogenModel, inp, g)
+gas nitrogen, nitrogenModel

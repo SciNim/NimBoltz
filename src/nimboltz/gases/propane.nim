@@ -754,4 +754,4 @@ func buildPropane(): GasModel =
 
 const propaneModel* = buildPropane()
 
-proc propane*(inp: GasInput, g: var GasXsec) = fill(propaneModel, inp, g)
+gas propane, propaneModel

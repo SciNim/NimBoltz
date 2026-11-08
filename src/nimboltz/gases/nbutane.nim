@@ -133,4 +133,4 @@ const nButaneModel* = GasModel(
   populations: @[pop(1, group = 1), pop(3, group = 2)],
   firstCut: 4)
 
-proc nButane*(inp: GasInput, g: var GasXsec) = fill(nButaneModel, inp, g)
+gas nButane, nButaneModel

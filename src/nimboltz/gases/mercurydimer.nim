@@ -132,4 +132,4 @@ const mercuryDimerModel* = GasModel(
   dimer: Dimer(gas: 54, temperature: 573.0, fraction: 0.00221),
   cutStrict: true, firstCut: 2)
 
-proc mercuryDimer*(inp: GasInput, g: var GasXsec) = fill(mercuryDimerModel, inp, g)
+gas mercuryDimer, mercuryDimerModel

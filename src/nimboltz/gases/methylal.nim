@@ -87,4 +87,4 @@ const methylalModel* = GasModel(
           sigma: table(xexc1, yexc1))],
   isotropic: true, stepped: true)
 
-proc methylal*(inp: GasInput, g: var GasXsec) = fill(methylalModel, inp, g)
+gas methylal, methylalModel

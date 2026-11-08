@@ -137,4 +137,4 @@ const neopentaneModel* = GasModel(
   isotropic: true, stepped: true,
   firstCut: 6)
 
-proc neopentane*(inp: GasInput, g: var GasXsec) = fill(neopentaneModel, inp, g)
+gas neopentane, neopentaneModel

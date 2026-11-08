@@ -691,4 +691,4 @@ const neonModel* = GasModel(
   negative: absNegative,
   penning: Penning(fraction: 0.5, length: 1.0, time: 1.0, format: penningFormat))
 
-proc neon*(inp: GasInput, g: var GasXsec) = fill(neonModel, inp, g)
+gas neon, neonModel

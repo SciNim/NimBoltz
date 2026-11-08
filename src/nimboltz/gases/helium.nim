@@ -784,5 +784,5 @@ const
   helium4Model* = heliumModel(he3 = false)
   helium3Model* = heliumModel(he3 = true)
 
-proc helium4*(inp: GasInput, g: var GasXsec) = fill(helium4Model, inp, g)
-proc helium3*(inp: GasInput, g: var GasXsec) = fill(helium3Model, inp, g)
+gas helium4, helium4Model
+gas helium3, helium3Model

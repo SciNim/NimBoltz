@@ -794,4 +794,4 @@ const carbonDioxideModel* = GasModel(
   penning: Penning(length: 1.0, time: 1.0, format: penningFormat, first: 82),
   firstCut: 71)
 
-proc carbonDioxide*(inp: GasInput, g: var GasXsec) = fill(carbonDioxideModel, inp, g)
+gas carbonDioxide, carbonDioxideModel

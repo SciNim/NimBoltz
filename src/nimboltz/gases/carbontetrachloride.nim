@@ -580,5 +580,4 @@ const carbonTetrachlorideModel* = GasModel(
   alwaysModel2: true,
   appended: (2, 1000.0))
 
-proc carbonTetrachloride*(inp: GasInput, g: var GasXsec) =
-  fill(carbonTetrachlorideModel, inp, g)
+gas carbonTetrachloride, carbonTetrachlorideModel

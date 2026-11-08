@@ -320,4 +320,4 @@ const nitrogenPhelpsModel* = GasModel(
                scaleAbove: 6.0),
   fixedModel1: true, roundedOffsets: true)
 
-proc nitrogenPhelps*(inp: GasInput, g: var GasXsec) = fill(nitrogenPhelpsModel, inp, g)
+gas nitrogenPhelps, nitrogenPhelpsModel

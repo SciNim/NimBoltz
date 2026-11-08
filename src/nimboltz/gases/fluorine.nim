@@ -136,4 +136,4 @@ const fluorineModel* = GasModel(
   isotropic: true, stepped: true,
   populations: @[pop(1)])
 
-proc fluorine*(inp: GasInput, g: var GasXsec) = fill(fluorineModel, inp, g)
+gas fluorine, fluorineModel

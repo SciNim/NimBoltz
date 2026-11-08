@@ -150,4 +150,4 @@ const deuteratedMethaneModel* = GasModel(
   populations: @[pop(1)], momentumRatio: 0.8,
   fixedModel1: true, roundedOffsets: true, firstCut: 3)
 
-proc deuteratedMethane*(inp: GasInput, g: var GasXsec) = fill(deuteratedMethaneModel, inp, g)
+gas deuteratedMethane, deuteratedMethaneModel

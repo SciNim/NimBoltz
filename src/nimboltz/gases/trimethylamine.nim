@@ -330,4 +330,4 @@ const trimethylamineModel* = GasModel(
   unnamedModel1: true,
   minLevels: 9)
 
-proc trimethylamine*(inp: GasInput, g: var GasXsec) = fill(trimethylamineModel, inp, g)
+gas trimethylamine, trimethylamineModel

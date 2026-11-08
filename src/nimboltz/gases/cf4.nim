@@ -507,4 +507,4 @@ func buildCf4(): GasModel =
 
 const cf4Model* = buildCf4()
 
-proc cf4*(inp: GasInput, g: var GasXsec) = fill(cf4Model, inp, g)
+gas cf4, cf4Model
