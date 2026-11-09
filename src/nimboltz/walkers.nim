@@ -32,6 +32,7 @@ type
     attachments*: int32
     collisions*: int32   ## real collisions
     nulls*: int32        ## null collisions
+    beyond*: int32       ## thermal motion: collisions above the bound (`windowHit`)
     tmax*: ps            ## longest flight
     pos1*: Vector[m]     ## position and time at the mark (`mark`), for
     st1*: ps             ## the diffusion estimate of `ensemble.nim`
@@ -59,9 +60,14 @@ template TablesOf*(T: typedesc): typedesc =
 proc initWalker*(start: Electron, target: ColdGas, seed: int): Walker[ColdGas] =
   Walker[ColdGas](el: start, target: target, rng: initRanmar(seed))
 
-proc initWalker*(start: Electron, gas: ThermalGas, seed: int): Walker[WarmGas] =
+proc initWalker*(start: Electron, gas: ThermalGas, bands: array[1..maxGases, NullBounds],
+                 efinal: eV, seed: int): Walker[WarmGas] =
+  ## `bands`: per-gas null-collision bounds in 8 bands of the starting
+  ## energy (`mixture.nullBounds` of each gas's table)
   result = Walker[WarmGas](el: start, rng: initRanmar(seed))
   result.target = initWarmGas(gas, result.rng)
+  result.target.bands = bands
+  result.target.bandWidth = efinal / float64(bands[1].len)
 
 func collisionFrequency(tab: MixtureTable, target: ColdGas, ie: int): ps⁻¹ {.inline.} =
   tab.tcf[ie]
@@ -124,9 +130,15 @@ proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var War
                                       rstep: eV⁻¹, el: Electron, rng: var Ranmar,
                                       nnull: var int32): Hit =
   ## thermal motion: next real collision; energy and direction in the rest
-  ## frame of the molecule hit
+  ## frame of the molecule hit. Unlike Magboltz (one bound per gas over all
+  ## energies), the bounds of each gas depend on the starting energy, as at
+  ## 0 K, and are raised when too low: fewer null collisions.
   let e0 = el
-  let itcfmx = 1.0 / target.gas.tcfmx
+  let band = clamp(int(trunc(e0.e / target.bandWidth) + 1.0), 1, target.bands[1].len)
+  let n = int(target.gas.count)
+  var total = 0.0.ps⁻¹
+  for k in 1 .. n: total = total + target.bands[k][band]
+  var itotal = 1.0 / total
   let ivfac2 = 1.0 / f.vfac2
   when G == fgElectric:
     # v(t) = v0 + a t along E, no square roots in the loop
@@ -137,7 +149,8 @@ proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var War
   var vrel: Vector[m•ps⁻¹]
   var real = false
   while not real:
-    tdash = tdash - lnSingle(drand48(rng)) * itcfmx
+    let lnr = lnSingle(drand48(rng))
+    tdash = tdash - lnr * itotal
     when G == fgElectric:
       result.fl.t = tdash
       result.fl.e = e0.e + (ap + f.bp * tdash) * tdash
@@ -147,13 +160,181 @@ proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var War
       result.fl = fly[G](f, e0, tdash)
       finishFlight[G](f, result.fl)
       let vel = velocityAt[G](f, e0, result.fl)
-    result.gas = target.gas.pickGas(drand48(rng))
-    result.vgas = target.maxwell.velocity(target.gas.vtmb[result.gas], rng)
+    # the gas, by its share of the bound
+    let rg = drand48(rng) * total
+    var k = 1
+    var below = target.bands[1][band]
+    while below < rg and k < n:
+      k = k + 1
+      below = below + target.bands[k][band]
+    result.gas = k
+    result.vgas = target.maxwell.velocity(target.gas.vtmb[k], rng)
     vrel = vel - result.vgas
     result.e = norm2(vrel) * ivfac2
     result.ie = binOf(result.e, rstep)
-    real = not (drand48(rng) * target.gas.tcfmax[result.gas] > tabs[result.gas].tcf[result.ie])
-    if not real: inc nnull
+    let tcf = tabs[k].tcf[result.ie]
+    let bound = target.bands[k][band]
+    if tcf > bound:
+      # bound too low: undo this flight, raise the bound
+      tdash = tdash + lnr * itotal
+      target.bands[k][band] = 1.05 * bound
+      total = total + 0.05 * bound
+      itotal = 1.0 / total
+    else:
+      real = drand48(rng) * bound <= tcf
+      if not real: inc nnull
+  result.din = vrel * (1.0 / (f.vfac * sqrt(result.e)))
+
+# Exact bounds per time window (B = 0 and B ∥ E, where the energy along a
+# flight is e0 + ap t + bp t²): from the electron's state, the energies of
+# the next `windowCollisions` mean free times are known, and the largest
+# collision frequency over them (two lookups in a `RangeMax`) bounds the
+# frequency strictly. No trial in the window: the flight goes on in the
+# next window (exponential times forget). Nothing to raise, nothing missed,
+# and few null collisions. Thermal motion: per gas, in the molecule's frame,
+# with a margin of 6 thermal speeds (beyond it: once in 10¹⁵ collisions,
+# taken as real and counted in `Walker.beyond`).
+
+const
+  rangeLevels = 12         ## 2¹² ≥ nEnergyBins
+  windowCollisions = 4.0   ## window length in mean free times
+  speedMargin = 6.0        ## molecule speeds in thermal speeds (`vtmb`)
+
+type
+  RangeMax* = object
+    ## largest collision frequency over a range of energy bins in two
+    ## lookups: level k has the maxima of 2^k bins from each bin on
+    level*: array[0..rangeLevels - 1, array[1..nEnergyBins, ps⁻¹]]
+
+  FlightMaxima* = object
+    ## per gas (at 0 K: the mixture's, as gas 1)
+    gas*: array[1..maxGases, RangeMax]
+
+proc fill(r: var RangeMax, tcf: array[1..nEnergyBins, ps⁻¹]) =
+  r.level[0] = tcf
+  var w = 1
+  for k in 1 ..< rangeLevels:
+    for i in 1 .. nEnergyBins:
+      r.level[k][i] = if i + w <= nEnergyBins: max(r.level[k - 1][i], r.level[k - 1][i + w])
+                      else: r.level[k - 1][i]
+    w = 2 * w
+
+proc flightMaxima*(tab: MixtureTable): ref FlightMaxima =
+  new result
+  result.gas[1].fill(tab.tcf)
+
+proc flightMaxima*(tabs: GasTables): ref FlightMaxima =
+  new result
+  for k in 1 .. maxGases: result.gas[k].fill(tabs[k].tcf)
+
+func rangeMax(r: RangeMax, lo, hi: int): ps⁻¹ {.inline.} =
+  ## over the bins lo .. hi
+  var k = 0
+  var w = 1
+  while 2 * w <= hi - lo + 1:
+    w = 2 * w
+    k = k + 1
+  max(r.level[k][lo], r.level[k][hi - w + 1])
+
+func energyRange(e0: eV, ap: eV•ps⁻¹, bp: eV•ps⁻², t1, t2: ps): (eV, eV) {.inline.} =
+  ## lowest and highest of e0 + ap t + bp t² for t in t1 .. t2
+  let a = e0 + (ap + bp * t1) * t1
+  let b = e0 + (ap + bp * t2) * t2
+  var lo = min(a, b)
+  if bp > 0.0.eV•ps⁻²:
+    let tv = -ap / (2.0 * bp)  # the vertex, a minimum
+    if tv > t1 and tv < t2: lo = min(lo, e0 + (ap + bp * tv) * tv)
+  (lo, max(a, b))
+
+proc windowHit[G: static FieldGeometry](f: Field, tab: MixtureTable, fm: FlightMaxima,
+                                        rstep: eV⁻¹, el: Electron, rng: var Ranmar,
+                                        nnull: var int32): Hit =
+  ## gas at 0 K, B = 0 or B ∥ E: next real collision, exact bounds per window
+  let e0 = el
+  let ap = e0.dir.z * f.f2 * sqrt(e0.e)
+  var tw = 0.0.ps  # start of the window
+  var real = false
+  while not real:
+    let ew = e0.e + (ap + f.bp * tw) * tw
+    let tau = windowCollisions / tab.tcf[binOf(ew, rstep)]
+    let (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+    let bound = rangeMax(fm.gas[1], binOf(elo, rstep), binOf(ehi, rstep))
+    let s = -lnSingle(drand48(rng)) / bound
+    if s > tau:
+      tw = tw + tau
+    else:
+      tw = tw + s
+      result.fl.t = tw
+      result.fl.e = e0.e + (ap + f.bp * tw) * tw
+      result.ie = binOf(result.fl.e, rstep)
+      real = drand48(rng) * bound <= tab.tcf[result.ie]
+      if not real: inc nnull
+  finishFlight[G](f, result.fl)
+  result.e = result.fl.e
+  result.din = directionAt[G](f, e0, result.fl)
+  result.gas = 1
+
+proc windowHit[G: static FieldGeometry](f: Field, tabs: GasTables, fm: FlightMaxima,
+                                        rstep: eV⁻¹, el: Electron, target: var WarmGas,
+                                        rng: var Ranmar, nnull, beyond: var int32): Hit =
+  ## thermal motion, B = 0 or B ∥ E: next real collision, exact bounds per
+  ## window; energy and direction in the rest frame of the molecule hit
+  let e0 = el
+  let n = int(target.gas.count)
+  let ap = e0.dir.z * f.f2 * sqrt(e0.e)
+  let ivfac2 = 1.0 / f.vfac2
+  when G == fgElectric:
+    let v0 = e0.dir * (f.vfac * sqrt(e0.e))
+    let az = f.efield * f.const5 * f.vfac
+  var bounds: array[1..maxGases, ps⁻¹]
+  var tw = 0.0.ps
+  var vrel: Vector[m•ps⁻¹]
+  var real = false
+  while not real:
+    let ew = e0.e + (ap + f.bp * tw) * tw
+    var nu = 0.0.ps⁻¹
+    for k in 1 .. n: nu = nu + tabs[k].tcf[binOf(ew, rstep)]
+    let tau = windowCollisions / nu
+    let (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+    var total = 0.0.ps⁻¹
+    for k in 1 .. n:
+      # in the frame of a molecule slower than the margin
+      let u = speedMargin * target.gas.vtmb[k] / f.vfac
+      let slo = max(sqrt(elo) - u, 0.0.eV¹ᐟ²)
+      let shi = sqrt(ehi) + u
+      bounds[k] = rangeMax(fm.gas[k], binOf(slo * slo, rstep), binOf(shi * shi, rstep))
+      total = total + bounds[k]
+    let s = -lnSingle(drand48(rng)) / total
+    if s > tau:
+      tw = tw + tau
+    else:
+      tw = tw + s
+      result.fl.t = tw
+      result.fl.e = e0.e + (ap + f.bp * tw) * tw
+      when G == fgElectric:
+        var vel = v0
+        vel.z = vel.z + az * tw
+      else:
+        finishFlight[G](f, result.fl)
+        let vel = velocityAt[G](f, e0, result.fl)
+      let rg = drand48(rng) * total
+      var k = 1
+      var below = bounds[1]
+      while below < rg and k < n:
+        k = k + 1
+        below = below + bounds[k]
+      result.gas = k
+      result.vgas = target.maxwell.velocity(target.gas.vtmb[k], rng)
+      vrel = vel - result.vgas
+      result.e = norm2(vrel) * ivfac2
+      result.ie = binOf(result.e, rstep)
+      let tcf = tabs[k].tcf[result.ie]
+      if tcf > bounds[k]:
+        inc beyond
+        real = true
+      else:
+        real = drand48(rng) * bounds[k] <= tcf
+        if not real: inc nnull
   result.din = vrel * (1.0 / (f.vfac * sqrt(result.e)))
 
 func reset*(w: var Walker) =
@@ -165,6 +346,7 @@ func reset*(w: var Walker) =
   w.attachments = 0
   w.collisions = 0
   w.nulls = 0
+  w.beyond = 0
   w.tmax = 0.0.ps
   w.pos1 = w.pos
   w.st1 = w.st
@@ -177,15 +359,27 @@ func mark*(w: var Walker) =
   w.st1 = w.st
 
 proc walk*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: TablesOf(T),
-                                          estep: eV, collisions, penning: int32, tally: C) =
+                                          fm: ptr FlightMaxima, estep: eV,
+                                          collisions, penning: int32, tally: C) =
   ## `collisions` real collisions, with the random numbers drawn in the
   ## order of MONTE (MONTET); `penning` ≠ 0: Penning transfers; each
-  ## collision is counted in `tally` (`Tally`, `NoTally` or a GPU's)
+  ## collision is counted in `tally` (`Tally`, `NoTally` or a GPU's).
+  ## `fm` (B = 0, B ∥ E): exact bounds per window; nil: Magboltz's bounds.
   mixin count
   let rstep = 1.0 / estep
   for _ in 0'i32 ..< collisions:
     let el = w.el  # a copy, so its square roots are computed once
-    let h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
+    var h: Hit
+    when G in {fgElectric, fgParallel}:
+      if fm != nil:
+        when T is ColdGas:
+          h = windowHit[G](f, tabs, fm[], rstep, el, w.rng, w.nulls)
+        else:
+          h = windowHit[G](f, tabs, fm[], rstep, el, w.target, w.rng, w.nulls, w.beyond)
+      else:
+        h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
+    else:
+      h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
     if h.fl.t > w.tmax: w.tmax = h.fl.t
     when G in {fgElectric, fgParallel}:
       w.e2 = w.e2 + energyIntegral[G](f, el, h.fl)
@@ -251,6 +445,7 @@ when compileOption("threads"):
       n: int
       f: ptr Field
       tab: ptr TablesOf(T)
+      fm: ptr FlightMaxima
       estep: eV
       collisions, penning: int32
       tallies: ptr Tallies  # nil: count nothing
@@ -258,16 +453,17 @@ when compileOption("threads"):
   proc walkJob[G: static FieldGeometry; T](j: ptr Job[T]) {.thread.} =
     for k in 0 ..< j.n:
       if j.tallies == nil:
-        walk[G, T, NoTally](j.ws[k], j.f[], j.tab[], j.estep, j.collisions, j.penning,
+        walk[G, T, NoTally](j.ws[k], j.f[], j.tab[], j.fm, j.estep, j.collisions, j.penning,
                             NoTally())
       else:
-        walk[G, T, Tally](j.ws[k], j.f[], j.tab[], j.estep, j.collisions, j.penning,
+        walk[G, T, Tally](j.ws[k], j.f[], j.tab[], j.fm, j.estep, j.collisions, j.penning,
                           tally(j.tallies[]))
 
 proc walkAll*[G: static FieldGeometry; T](ws: var openArray[Walker[T]], f: Field,
                                           tab: TablesOf(T), estep: eV, collisions,
                                           penning: int32, threads = 1,
-                                          tallies: ptr Tallies = nil) =
+                                          tallies: ptr Tallies = nil,
+                                          fm: ptr FlightMaxima = nil) =
   ## `collisions` real collisions of every walker, on `threads` CPU threads;
   ## counted in `tallies` unless nil
   when compileOption("threads"):
@@ -280,7 +476,7 @@ proc walkAll*[G: static FieldGeometry; T](ws: var openArray[Walker[T]], f: Field
         let a = k * ws.len div n
         let b = (k + 1) * ws.len div n
         jobs[k] = Job[T](ws: cast[ptr UncheckedArray[Walker[T]]](addr ws[a]), n: b - a,
-                      f: unsafeAddr f, tab: unsafeAddr tab, estep: estep,
+                      f: unsafeAddr f, tab: unsafeAddr tab, fm: fm, estep: estep,
                       collisions: collisions, penning: penning,
                       tallies: if tallies == nil: nil else: addr parts[k])
         createThread(ts[k], walkJob[G, T], addr jobs[k])
@@ -288,8 +484,8 @@ proc walkAll*[G: static FieldGeometry; T](ws: var openArray[Walker[T]], f: Field
       for p in parts: tallies[].add p
       return
   for w in ws.mitems:
-    if tallies == nil: walk[G, T, NoTally](w, f, tab, estep, collisions, penning, NoTally())
-    else: walk[G, T, Tally](w, f, tab, estep, collisions, penning, tally(tallies[]))
+    if tallies == nil: walk[G, T, NoTally](w, f, tab, fm, estep, collisions, penning, NoTally())
+    else: walk[G, T, Tally](w, f, tab, fm, estep, collisions, penning, tally(tallies[]))
 
 type
   CpuWalkers*[G: static FieldGeometry; T] = object
@@ -297,6 +493,7 @@ type
     ws: seq[Walker[T]]
     f: Field
     tab: ptr TablesOf(T)
+    fm: ptr FlightMaxima
     estep: eV
     penning: int32
     threads: int
@@ -304,10 +501,10 @@ type
 
 proc initCpuWalkers*[G: static FieldGeometry; T](ws: openArray[Walker[T]], f: Field,
                                                  tab: ptr TablesOf(T), estep: eV,
-                                                 penning = false,
-                                                 threads = 1): CpuWalkers[G, T] =
-  ## `tab` must outlive the walkers
-  result = CpuWalkers[G, T](ws: @ws, f: f, tab: tab, estep: estep,
+                                                 penning = false, threads = 1,
+                                                 fm: ptr FlightMaxima = nil): CpuWalkers[G, T] =
+  ## `tab` and `fm` must outlive the walkers
+  result = CpuWalkers[G, T](ws: @ws, f: f, tab: tab, fm: fm, estep: estep,
                             penning: int32(ord(penning)), threads: threads)
   new result.tallies
 
@@ -315,13 +512,16 @@ proc walk*(c: var CpuWalkers, collisions: int32, counting = true) =
   ## `collisions` real collisions of every walker, counted in the tally
   ## unless not `counting`
   walkAll[c.G, c.T](c.ws, c.f, c.tab[], c.estep, collisions, c.penning, c.threads,
-                    if counting: addr c.tallies[] else: nil)
+                    if counting: addr c.tallies[] else: nil, c.fm)
 
 proc read*[T](c: CpuWalkers, ws: var openArray[Walker[T]]) =
   for k in 0 ..< ws.len: ws[k] = c.ws[k]
 
 proc write*[T](c: var CpuWalkers, ws: openArray[Walker[T]]) =
   for k in 0 ..< ws.len: c.ws[k] = ws[k]
+
+func dropsWalkers*(c: CpuWalkers): bool = true
+  ## time goes with all collisions: fewer walkers, less time
 
 proc shrink*(c: var CpuWalkers, n: int) =
   ## keeps the first n walkers

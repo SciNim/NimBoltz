@@ -61,6 +61,8 @@ type
     theta*: float64
       ## polar angle of the last scattering: each Monte Carlo run starts in
       ## the direction where the previous one ended (THETA of /SETP/)
+    collisions*: int      ## MONTE: real collisions counted (NMAX; with
+                          ## walkers on a GPU maybe more)
     nnull*: int64         ## MONTE: null collisions
     tmax*: ps             ## MONTE: longest flight
     transport*: Transport

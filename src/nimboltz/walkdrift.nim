@@ -13,7 +13,9 @@
 ## relaxation times, and the main run of each walker must last at least as
 ## long, else the walkers spread apart by their differences in energy
 ## (ballistically, not by diffusion) and the diffusion comes out too large.
-## So noble gases, which lose energy slowly, get fewer and longer walkers.
+## So noble gases, which lose energy slowly, get longer walkers: on CPUs
+## fewer of them, on a GPU as many, which runs them in the same time (and
+## then more collisions than asked for).
 
 import std/math
 import units, vec3, tables, fields, freeflight, drift, walkers, ensemble
@@ -63,25 +65,31 @@ proc drop*[B, T](b: var B, ws: var seq[Walker[T]], n: int) =
 proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i32): WarmUp =
   ## Runs the walkers in chunks of doubling length until the mean energy and
   ## the drift velocity of a chunk agree with those of the chunk before
-  ## (within 2 errors); then clears their sums. A chunk spends at most
-  ## `budget` collisions (of all walkers): for longer chunks half of the
-  ## walkers are dropped, down to `minWalkers`, where the warm-up stops,
-  ## not converged, at the budget.
-  mixin walk, read, write
+  ## (within 2 errors); then clears their sums. At most budget / 2 /
+  ## `minWalkers` collisions per walker (then not converged). On CPUs, where
+  ## time goes with all collisions, a chunk spends at most budget / 2 of
+  ## them: half of the walkers are dropped for longer chunks (down to
+  ## `minWalkers`); on a GPU, where time goes with the collisions per
+  ## walker, all walkers stay.
+  mixin walk, read, write, dropsWalkers
   proc run(b: var B, ws: var seq[Walker[T]], c: int32): Chunk =
     b.walk(c, counting = false)
     b.read(ws)
     result = chunk(ws)
     for w in ws.mitems: w.reset()
     b.write(ws)
+  let cap = budget div 2 div minWalkers
+  template fit(c: int32) =
+    while b.dropsWalkers and ws.len div 2 >= minWalkers and ws.len * int(c) > budget div 2:
+      b.drop(ws, ws.len div 2)
   var c = first
-  while ws.len div 2 >= minWalkers and ws.len * int(c) > budget: b.drop(ws, ws.len div 2)
+  fit(c)
   var prev = b.run(ws, c)
   result.collisions = c
   while true:
     c = 2'i32 * c
-    while ws.len div 2 >= minWalkers and ws.len * int(c) > budget: b.drop(ws, ws.len div 2)
-    if ws.len * int(c) > budget: return
+    fit(c)
+    if result.collisions + int(c) > cap: return
     let cur = b.run(ws, c)
     result.collisions = result.collisions + c
     result.energy = cur.e.eV
@@ -100,7 +108,6 @@ type
     st*: ps        ## time of all walkers
     nulls*: int64
     tmax*: ps
-    bounds*: NullBounds  ## the null-collision bounds, raised as needed (0 K)
 
 proc driftRun*[G: static FieldGeometry; B, T](b: var B, ws: var seq[Walker[T]],
                                               perWalker: int32, btheta: float64): WalkerRun =
@@ -117,15 +124,7 @@ proc driftRun*[G: static FieldGeometry; B, T](b: var B, ws: var seq[Walker[T]],
   b.read(ws)
   b.readTally(result.tallies)
   result.transport = transport[G, T](ws, btheta)
-  when T is ColdGas: result.bounds = ws.bounds
   for w in ws:
     result.st = result.st + w.st
     result.nulls = result.nulls + int64(w.nulls)
     if w.tmax > result.tmax: result.tmax = w.tmax
-
-func bounds*(ws: openArray[Walker[ColdGas]]): NullBounds =
-  ## the null-collision bounds, raised as any walker needed
-  result = ws[0].target.bounds
-  for w in ws:
-    for i in 1 .. result.len:
-      if w.target.bounds[i] > result[i]: result[i] = w.target.bounds[i]

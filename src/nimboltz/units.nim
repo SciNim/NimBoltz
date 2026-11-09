@@ -40,6 +40,7 @@ defUnit(V•cm⁻¹•Torr⁻¹, toExport = true)    ## E/p
 defUnit(ps⁻¹, toExport = true)             ## cyclotron and collision frequencies
 defUnit(m•ps⁻², toExport = true)           ## acceleration term of the position
 defUnit(eV•ps⁻², toExport = true)          ## acceleration term of the energy
+defUnit(eV•ps⁻¹, toExport = true)          ## rate of change of the energy
 defUnit(eV¹ᐟ²•ps⁻¹, toExport = true)
 defUnit(cm²•V⁻¹•ps⁻², toExport = true)      ## CONST1: (e/m)/2
 defUnit(m•cm•V⁻¹•ps⁻², toExport = true)     ## CONST2

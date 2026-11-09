@@ -143,7 +143,7 @@ proc printTransport*[M](r: Run[M]) =
   let t = r.transport
   r.output.fwrite(fmtRule)
   r.output.fwrite(fmtRule)
-  r.output.fwrite(fmt109, r.tmax, r.nnull, r.cond.nmax)
+  r.output.fwrite(fmt109, r.tmax, r.nnull, r.collisions)
   r.output.fwrite(fmt940, t.vel.z.to(μm•ns⁻¹), t.velErr.z, t.vel.y.to(μm•ns⁻¹),
          t.velErr.y, t.vel.x.to(μm•ns⁻¹), t.velErr.x)
   if d.bmag.float > 0.0 and (d.btheta > 0.0 and d.btheta < 180.0):

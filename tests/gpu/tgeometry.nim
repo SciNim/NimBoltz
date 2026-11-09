@@ -32,7 +32,7 @@ proc parity[M](name: string, s: Setup, efinal: eV) =
       type T = WarmGas
       template tabs: untyped = r.mix.tables
       var cpu: seq[Walker[T]]
-      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, int(drand48(seeds) * 9e8))
+      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8))
     else:
       type T = ColdGas
       template tabs: untyped = r.mix.table
@@ -40,8 +40,9 @@ proc parity[M](name: string, s: Setup, efinal: eV) =
       let target = initColdGas(r.mix.bounds, r.efinal)
       for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8))
     var gpu = cpu
-    walkAll[G, T](cpu, f, tabs, r.estep, 2000, 0)
-    var g = initGpuWalkers[G, T](gpu, f, tabs, r.estep, exact = true)
+    let fm = flightMaxima(tabs)
+    walkAll[G, T](cpu, f, tabs, r.estep, 2000, 0, fm = addr fm[])
+    var g = initGpuWalkers[G, T](gpu, f, tabs, fm[], r.estep, exact = true)
     g.walk(2000)
     g.read(gpu)
     var sameNulls = 0

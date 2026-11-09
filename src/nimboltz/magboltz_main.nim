@@ -9,6 +9,7 @@
 ## 0 K with n independent electrons (walkdrift.nim), on NIMBOLTZ_THREADS
 ## CPU threads or a GPU (a build with -d:nimboltzGpu); again the same
 ## estimates within errors.
+## NIMBOLTZ_TIMING=1 prints the times of the steps of each deck to stderr.
 import std/[os, strutils]
 import rm48, magboltz
 
@@ -25,4 +26,5 @@ if existsEnv("NIMBOLTZ_WALKERS"):
     else: quit("NIMBOLTZ_WALKERS: cpu[:n] or gpu[:n], not " & getEnv("NIMBOLTZ_WALKERS"))
   if w.len > 1: s.walkers.n = parseInt(w[1])
   s.walkers.threads = s.threads
+s.timing = existsEnv("NIMBOLTZ_TIMING")
 s.magboltz()

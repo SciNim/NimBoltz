@@ -5,7 +5,7 @@
 ## analyses (analyses.nim). Thermal motion of the gas (ITHRM = 1) selects
 ## the per-gas versions of all steps at compile time (`WarmMixture`).
 
-import std/math
+import std/[math, times, strutils]
 import frt, units, rm48, deck, conditions, tables, mixture, gases, fields, collisions,
        freeflight, elimit, drift, simulation, report, analyses, results, walkers, walkdrift
 when defined(nimboltzGpu):
@@ -52,6 +52,7 @@ type
     rng*: MagRng   ## Magboltz's random numbers: one stream for all decks
     threads*: int  ## for the avalanche runs (`Run.threads`)
     walkers*: WalkerSettings
+    timing*: bool  ## times of the steps of each deck to stderr
     output*: File  ## Magboltz's printout; nil: none
     cold: ref ColdMixture
     warm: ref WarmMixture
@@ -140,13 +141,22 @@ func walkerCount(wk: WalkerSettings): int =
   elif wk.backend == wbGpu: 16384
   else: 2000
 
+func nullBands*(r: Run[WarmMixture]): array[1..maxGases, NullBounds] =
+  ## walkers with thermal motion: null-collision bounds of each gas in the
+  ## 8 bands of starting energy, as MIXER has them for the mixture at 0 K
+  for k in 1 .. r.deck.ngas:
+    result[k] = nullBounds(r.mix.tables[k], r.deck.efield, tmax, small, r.efinal, r.estep,
+                           const1, const3)
+
 proc initWalkers[G: static FieldGeometry; M](r: Run[M], f: Field, n: int,
                                              rng: var MagRng): auto =
   ## walkers starting as MONTE's electron, with random numbers of their own
   let start = initElectron[G](f, r.estart, r.theta, startPhi)
   when thermalMotion(M):
+    let bands = r.nullBands
     var ws = newSeq[Walker[WarmGas]](n)
-    for w in ws.mitems: w = initWalker(start, r.mix.gas, int(drand48(rng) * 9e8))
+    for w in ws.mitems:
+      w = initWalker(start, r.mix.gas, bands, r.efinal, int(drand48(rng) * 9e8))
   else:
     let target = initColdGas(r.mix.bounds, r.efinal)
     var ws = newSeq[Walker[ColdGas]](n)
@@ -160,16 +170,17 @@ template withWalkers(r: Run, wk: WalkerSettings, G: static FieldGeometry, f: Fie
                      ws: seq, b, body: untyped) =
   ## `body` with walker backend `b` of the settings
   type T = typeof(ws[0].target)
+  let fm = flightMaxima(r.tablesOf)
   case wk.backend
   of wbGpu:
     when defined(nimboltzGpu):
-      var b = initGpuWalkers[G, T](ws, f, r.tablesOf, r.estep, r.deck.penning)
+      var b = initGpuWalkers[G, T](ws, f, r.tablesOf, fm[], r.estep, r.deck.penning)
       body
     else:
       r.stop("walkers on a GPU: NimBoltz was built without -d:nimboltzGpu")
   else:
     var b = initCpuWalkers[G, T](ws, f, addr r.tablesOf, r.estep, r.deck.penning,
-                                 max(wk.threads, 1))
+                                 max(wk.threads, 1), addr fm[])
     body
 
 proc findEnergyRange(r: var Run, rng: var MagRng) =
@@ -238,6 +249,7 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], ring: var Ring, rng: var M
   r.theta = d.theta
   r.tmax = d.tmax
   r.nnull = d.nnull
+  r.collisions = r.cond.nmax
   r.last = Collisions[M](tally: d.tally, st: d.time, spectrum: d.spectrum)
 
 proc monte[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng, wk: WalkerSettings) =
@@ -249,11 +261,12 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng, wk: Walke
   var res: WalkerRun
   var perWalker: int32
   withWalkers(r, wk, G, f, ws, b):
-    wu = b.warmUp(ws, budget = r.cond.nmax div 2)
+    wu = b.warmUp(ws, budget = r.cond.nmax)
     # the main run at least as long as the warm-up (see walkdrift.nim)
-    while ws.len div 2 >= minWalkers and r.cond.nmax div ws.len < wu.collisions:
+    while b.dropsWalkers and ws.len div 2 >= minWalkers and
+          r.cond.nmax div ws.len < wu.collisions:
       b.drop(ws, ws.len div 2)
-    perWalker = int32(max(r.cond.nmax div ws.len, 2))
+    perWalker = int32(max(max(r.cond.nmax div ws.len, wu.collisions), 2))
     res = driftRun[G, typeof(b), typeof(ws[0].target)](b, ws, perWalker, r.deck.btheta)
   r.output.fwrite(fmtWalkers, ws.len, wu.collisions, perWalker)
   if not wu.converged:
@@ -262,13 +275,15 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng, wk: Walke
                    " then " & $wu.energy.float & " eV)"
   when G == fgElectric:
     # MONTE's test, for its 10 segments of NMAX/10 collisions
-    if res.tallies.spectrum[nEnergyBins] > 1000.0 * float64(nSegments):
+    let counted = float64(ws.len) * float64(perWalker) / float64(r.cond.nmax)
+    if res.tallies.spectrum[nEnergyBins] > 1000.0 * float64(nSegments) * counted:
       r.output.fwrite(fmt50)
       r.stop("energy out of range: electrons reach the end of the energy range " &
              "often, increase EFINAL")
   r.transport = res.transport
   r.tmax = res.tmax
   r.nnull = res.nulls
+  r.collisions = ws.len * int(perWalker)
   var c = Collisions[M](st: res.st, spectrum: res.tallies.spectrum)
   when thermalMotion(M):
     for g in 1 .. r.deck.ngas:
@@ -277,7 +292,7 @@ proc monte[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng, wk: Walke
         c.tally[g].processes[i] = k
         c.tally[g].kinds[r.mix.tables[g].iarry[i]] += k
   else:
-    r.mix.bounds = res.bounds
+    # (the analyses keep Magboltz's null-collision bounds, not the walkers')
     for i in 1 .. r.mix.table.last:
       let k = int(res.tallies.processes[i])
       c.tally.processes[i] = k
@@ -291,16 +306,30 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Resu
   if collisions > 0: r.cond.nmax = collisions
   r.threads = s.threads
   let wk = s.walkers
-  if d.efinal > 0.0.eV: r.mix()
-  else: r.findEnergyRange(s.rng)  # one trajectory, as Magboltz, with walkers too
+  var clock = epochTime()
+  template phase(step: string) =
+    if s.timing:
+      let now = epochTime()
+      stderr.writeLine "NimBoltz: ", alignLeft(step, 20), formatFloat(now - clock, ffDecimal, 3), " s"
+      clock = now
+  if d.efinal > 0.0.eV:
+    r.mix()
+    phase "MIXER"
+  else:
+    r.findEnergyRange(s.rng)  # one trajectory, as Magboltz, with walkers too
+    phase "MIXER and ELIMIT"
   r.printHeader()
   withGeometry(monteGeometry(d), G):
     if wk.backend == wbNone: monte[G, M](r, s.rings[G][thermalMotion(M)], s.rng)
     else: monte[G, M](r, s.rng, wk)
+  phase "MONTE"
   r.printTransport()
-  if r.needsAnalyses: r.analyse(s.rng)
+  if r.needsAnalyses:
+    r.analyse(s.rng)
+    phase "analyses"
   r.printFrequencies()
-  results(r)
+  result = results(r)
+  phase "printout" 
 
 proc run*(s: var Session, d: Deck, collisions = 0): Results =
   ## one deck; `collisions` > 0 replaces NMAX · nscale. Raises a

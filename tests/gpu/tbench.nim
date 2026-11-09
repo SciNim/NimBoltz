@@ -29,14 +29,15 @@ proc bench[M](name: string, s: Setup) =
     type T = WarmGas
     template tabs: untyped = r.mix.tables
     var ws: seq[Walker[T]]
-    for k in 0 ..< nWalkers: ws.add initWalker(start, r.mix.gas, int(drand48(seeds) * 9e8))
+    for k in 0 ..< nWalkers: ws.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8))
   else:
     type T = ColdGas
     template tabs: untyped = r.mix.table
     var ws: seq[Walker[T]]
     let target = initColdGas(r.mix.bounds, r.efinal)
     for k in 0 ..< nWalkers: ws.add initWalker(start, target, int(drand48(seeds) * 9e8))
-  var g = initGpuWalkers[G, T](ws, f, tabs, r.estep)
+  let fm = flightMaxima(tabs)
+  var g = initGpuWalkers[G, T](ws, f, tabs, fm[], r.estep)
   g.walk(warmup, counting = false)
   g.read(ws)
   var dt = Inf

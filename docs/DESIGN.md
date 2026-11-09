@@ -307,7 +307,10 @@ What this asks of the code the GPU runs:
 same energy range), the Townsend analyses too. The CPU backend runs the
 walkers on threads, the GPU one needs a build with `-d:nimboltzGpu` and
 `--path:` to tattletale. The results fill the same `Transport`, printout
-and `Results`; one line more in the printout (walkers, collisions each).
+and `Results`; one line more in the printout (walkers, collisions each),
+and the collisions counted (`Results.collisions`) may exceed NMAX on a GPU.
+`NIMBOLTZ_TIMING=1` (`Session.timing`) prints the time of each step of a
+deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
 
 - A walker starts as Magboltz's electron, and runs in chunks of doubling
   length until the mean energy and drift velocity of two chunks agree
@@ -323,11 +326,15 @@ and `Results`; one line more in the printout (walkers, collisions each).
   as its warm-up (a few energy relaxation times), else walkers of
   different energies spread ballistically and D comes out too large
   (Ar/He 90/10 at 1000 V/cm, 2000 collisions per walker: DL 10× too
-  large). So a warm-up chunk spends at most half the collisions of the
-  main run, dropping half of the walkers when it would spend more (down
-  to 100), and after the warm-up walkers are dropped until each runs at
-  least its warm-up length. Molecular gases keep many short walkers,
-  noble gases get few long ones.
+  large). On CPUs, where time goes with all collisions, a warm-up chunk
+  spends at most half the collisions of the main run, dropping half of the
+  walkers when it would spend more (down to 100), and after the warm-up
+  walkers are dropped until each runs at least its warm-up length:
+  molecular gases keep many short walkers, noble gases get few long ones.
+  On a GPU, where time goes with the collisions per walker (below some
+  10⁴ walkers the GPU is not full), all walkers stay and each runs
+  max(NMAX/n, warm-up) collisions: maybe more than NMAX in all, for the
+  same time. The warm-up ends at NMAX/200 collisions per walker.
 
 Equivalence: the same walkers on CPU and GPU take the same collisions
 for a while (`tests/gpu/tgeometry.nim`, `exact = true`: no fused
@@ -353,13 +360,29 @@ flight time and the Maxwell numbers of thermal motion in single precision
 (FP64 runs at 1/64 of FP32 on gaming GPUs), and v(t) = v₀ + a t for thermal
 motion at B = 0. `freeflight.nextHit` stays Magboltz's, bit for bit.
 
+Null collisions: Magboltz's bounds in 8 bands of starting energy
+(`nullBounds`) cover every energy an electron reaches from the band within
+TMAX, nearly the largest frequency of all; with thermal motion it has one
+bound per gas over all energies. Walkers at B = 0 and B ∥ E use exact
+bounds per time window instead (`walkers.windowHit`): the energy over the
+next 4 mean free times is known in closed form, the largest collision
+frequency over it (a sparse range-maximum table, `FlightMaxima`, two
+lookups) bounds it strictly; no trial in the window, the flight goes on
+in the next one. With thermal motion per gas, in the molecule's frame,
+with a margin of 6 thermal speeds. Null collisions per real one: Ar/CO₂
+90/10 at 1000 V/cm 5.6 → 0.34 (0 K), 9.6 → 0.39 (thermal). (Tried first:
+each band's own maximum, raised when exceeded: biased, mean energies 2–6 %
+low over the regression decks, mean z −0.83 — flights crossing energies
+above the bound without a trial there lose collisions.)
+
 Speed (RTX 3090; `tests/gpu/tbench.nim`, 16384 walkers, B = 0, energy range
-from ELIMIT), M collisions/s, before → after the walkers' own free flights:
+from ELIMIT), M collisions/s: Magboltz's free flight → the walkers' own →
+with the exact window bounds:
 
 | | 0 K | thermal |
 |---|---|---|
-| CO₂ (0.1 null collisions per real one) | 284 → 330 | 140 → 145 |
-| Ar/CO₂ 90/10 (5.6 null per real) | 57 → 118 | 14 → 42 |
+| CO₂ | 284 → 330 → 328 | 140 → 145 → 158 |
+| Ar/CO₂ 90/10 | 57 → 118 → 245 | 14 → 42 → 116 |
 
 against ~3.6 M/s for one trajectory on a CPU core. Tried, no gain: walkers
 in local memory (−5 %), the cumulative frequencies transposed so that a

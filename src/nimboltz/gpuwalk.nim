@@ -24,15 +24,16 @@ proc count*(t: GpuTally, i, ie: int) {.inline.} =
 template kernel(G: static FieldGeometry, T: typedesc): string =
   cuda:
     proc walkKernel(ws: ptr UncheckedArray[Walker[T]], n: int32, f: Field,
-                    tab: ptr TablesOf(T), estep: eV, collisions, penning, counting: int32,
+                    tab: ptr TablesOf(T), fm: ptr FlightMaxima, estep: eV,
+                    collisions, penning, counting: int32,
                     processes, spectrum: ptr UncheckedArray[float64]) {.global.} =
       let k = int32(blockIdx.x * blockDim.x + threadIdx.x)
       if k < n:
         if counting != 0:
-          walk[G, T, GpuTally](ws[k], f, tab[], estep, collisions, penning,
+          walk[G, T, GpuTally](ws[k], f, tab[], fm, estep, collisions, penning,
                                GpuTally(processes: processes, spectrum: spectrum))
         else:
-          walk[G, T, NoTally](ws[k], f, tab[], estep, collisions, penning, NoTally())
+          walk[G, T, NoTally](ws[k], f, tab[], fm, estep, collisions, penning, NoTally())
 
 const
   coldElectric = kernel(fgElectric, ColdGas)
@@ -63,6 +64,7 @@ type
     engine: CudaEngine
     ws: DeviceMem[CUdeviceptr, Walker[T]]
     tab: DeviceMem[CUdeviceptr, TablesOf(T)]
+    fm: DeviceMem[CUdeviceptr, FlightMaxima]
     n: int
     f: Field
     estep: eV
@@ -70,6 +72,23 @@ type
     processes, spectrum: DeviceMem[CUdeviceptr, float64]
 
 const threadsPerBlock = 128
+
+var
+  lastEngine: CudaEngine
+  lastKernel: (FieldGeometry, bool, bool)
+    ## the last compiled kernel (geometry, thermal motion, exact), kept for
+    ## the next run (NVRTC takes a while); only one, as each engine has a
+    ## CUDA context of its own, of some 100 MB
+
+proc engineFor(G: static FieldGeometry, T: typedesc, exact: bool): CudaEngine =
+  let kernel = (G, T is WarmGas, exact)
+  if lastEngine == nil or lastKernel != kernel:
+    lastEngine = nil  # the old context goes once its walkers are gone
+    lastEngine = newEngine(runCuda)
+    if exact: lastEngine.ingest(kernelSource(G, T), ["--fmad=false"])
+    else: lastEngine.ingest(kernelSource(G, T))
+    lastKernel = kernel
+  lastEngine
 
 proc clearTally*(g: var GpuWalkers) =
   ## zeroes the collision counts
@@ -83,14 +102,14 @@ proc readTally*(g: GpuWalkers, t: var Tallies) =
   g.engine.copyToHostFromDevice(addr t.spectrum[1], g.spectrum, nEnergyBins)
 
 proc initGpuWalkers*[G: static FieldGeometry; T](ws: openArray[Walker[T]], f: Field,
-                                                 tab: TablesOf(T), estep: eV, penning = false,
+                                                 tab: TablesOf(T), fm: FlightMaxima,
+                                                 estep: eV, penning = false,
                                                  exact = false): GpuWalkers[G, T] =
-  ## Copies the walkers and the table to the GPU. `exact`: no fused
+  ## Copies the walkers, the table and its range maxima (`flightMaxima`,
+  ## for the exact bounds at B = 0 and B ∥ E) to the GPU. `exact`: no fused
   ## multiply-adds, so the arithmetic is that of the CPU (but `log`, `sin`,
   ## ... of CUDA, which may differ from the CPU's in the last bit).
-  result.engine = newEngine(runCuda)
-  if exact: result.engine.ingest(kernelSource(G, T), ["--fmad=false"])
-  else: result.engine.ingest(kernelSource(G, T))
+  result.engine = engineFor(G, T, exact)
   result.penning = int32(ord(penning))
   result.n = ws.len
   result.f = f
@@ -99,6 +118,8 @@ proc initGpuWalkers*[G: static FieldGeometry; T](ws: openArray[Walker[T]], f: Fi
   result.engine.copyToDeviceFromHost(result.ws, unsafeAddr ws[0], ws.len)
   result.tab = result.engine.allocDevice(TablesOf(T), 1)
   result.engine.copyToDeviceFromHost(result.tab, unsafeAddr tab, 1)
+  result.fm = result.engine.allocDevice(FlightMaxima, 1)
+  result.engine.copyToDeviceFromHost(result.fm, unsafeAddr fm, 1)
   result.processes = result.engine.allocDevice(float64, tallyProcesses)
   result.spectrum = result.engine.allocDevice(float64, nEnergyBins)
   result.clearTally()
@@ -108,8 +129,11 @@ proc walk*(g: var GpuWalkers, collisions: int32, counting = true) =
   ## unless not `counting`
   let blocks = (g.n + threadsPerBlock - 1) div threadsPerBlock
   g.engine.launchKernel<<(blocks, threadsPerBlock)>>("walkKernel", g.ws,
-    (int32(g.n), g.f, g.tab, g.estep, collisions, g.penning, int32(ord(counting)),
+    (int32(g.n), g.f, g.tab, g.fm, g.estep, collisions, g.penning, int32(ord(counting)),
      g.processes, g.spectrum))
+
+func dropsWalkers*(g: GpuWalkers): bool = false
+  ## time goes with the collisions per walker: fewer walkers, no less time
 
 proc shrink*(g: var GpuWalkers, n: int) =
   ## keeps the first n walkers

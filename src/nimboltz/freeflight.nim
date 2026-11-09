@@ -28,6 +28,10 @@ type
     ## thermal motion: per-gas bounds and speeds, and the walker's Maxwell numbers
     gas*: ThermalGas
     maxwell*: MaxwellSampler
+    # walkers only (`walkers.nim`; Magboltz has one bound per gas):
+    bands*: array[1..maxGases, NullBounds]
+      ## per-gas bounds in 8 bands of the starting energy, raised as needed
+    bandWidth*: eV
 
   MixtureTable* = CollisionTable[maxMixProcesses]
   GasTables* = array[1..maxGases, CollisionTable[maxGasProcesses]]
