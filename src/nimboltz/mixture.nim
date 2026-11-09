@@ -276,7 +276,7 @@ func nullBounds*(tab: CollisionTable, efield: V•cm⁻¹, tmax: ps, small: floa
 func thermalGas*(tabs: openArray[CollisionTable[maxGasProcesses]],
                  gases: openArray[GasXsec], kT: eV, echarg: C, emass: kg): ThermalGas =
   ## null-collision bounds and thermal speeds of each gas (end of MIXERT)
-  result.count = gases.len
+  result.count = int32(gases.len)
   for k in 1 .. gases.len:
     for ie in 1 .. nEnergyBins:
       if tabs[k - 1].tcf[ie] >= result.tcfmax[k]: result.tcfmax[k] = tabs[k - 1].tcf[ie]

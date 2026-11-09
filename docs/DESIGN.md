@@ -275,36 +275,83 @@ echo r.velocity.z, " ", r.spread(r.transverse)
 
 ## GPU
 
-Since 2026-11-08 the collision loop of MONTE for B = 0 at 0 K runs on
-NVIDIA GPUs: `walkers.nim` has independent electrons (`Walker`), each
-with its own `Ranmar` (RM48 one number at a time, the numbers of `rm48`),
-and `gpuwalk.nim` runs one per GPU thread. The kernel is NimBoltz's own
-code (`nextHit`, `findProcess`, `energyLoss`, `scatter`, `advance`, ...),
-compiled to CUDA at Nim compile time by Crucible, the Nim-to-GPU compiler
-of tattletale (github.com/mratsim/tattletale; local fixes on branch
-`nimboltz` of ~/src/gpu/tattletale), and to PTX by NVRTC at run time.
-Unchained units compile to plain `double`s.
+Since 2026-11-08 the collision loop of MONTE runs on NVIDIA GPUs:
+`walkers.nim` has independent electrons (`Walker[ColdGas]` at 0 K,
+`Walker[WarmGas]` with thermal motion of the gas), each with its own
+`Ranmar` (RM48 one number at a time, the numbers of `rm48`), and
+`gpuwalk.nim` runs one per GPU thread, in all four field geometries. The
+kernel is NimBoltz's own code (`nextHit`, `findProcess`, `energyLoss`,
+`scatter`, `advance`, ...), compiled to CUDA at Nim compile time by
+Crucible, the Nim-to-GPU compiler of tattletale
+(github.com/mratsim/tattletale; local fixes on branch `nimboltz` of
+~/src/gpu/tattletale), and to PTX by NVRTC at run time. Unchained units
+compile to plain `double`s. One kernel per geometry and target (8),
+written once as a template.
 
 What this asks of the code the GPU runs:
 
 - no `break`, `continue` or `case` (Crucible's IR has none): loops with a
   flag, `if` chains
 - `int32` in what is copied to the GPU (Crucible's `int` is 32 bits), so
-  `CollisionTable` has `int32` integers
+  `CollisionTable`, `ThermalGas` and `MaxwellSampler` have `int32` integers
 - no references, no `File`, no strings; the random number generator is a
   generic parameter (`MagRng` on the CPU, `Ranmar` on a GPU)
+- collision counts per process and energy bin: atomic adds into one tally
+  (`GpuTally`)
+
+### The drift run on walkers
+
+`NIMBOLTZ_WALKERS=cpu[:n]` or `gpu[:n]` (`Setup.walkers`,
+`Session.walkers`) runs MONTE on walkers (`walkdrift.nim`, estimators in
+`ensemble.nim`); ELIMIT keeps Magboltz's one trajectory (cheap, and the
+same energy range), the Townsend analyses too. The CPU backend runs the
+walkers on threads, the GPU one needs a build with `-d:nimboltzGpu` and
+`--path:` to tattletale. The results fill the same `Transport`, printout
+and `Results`; one line more in the printout (walkers, collisions each).
+
+- A walker starts as Magboltz's electron, and runs in chunks of doubling
+  length until the mean energy and drift velocity of two chunks agree
+  (warm-up), then its sums restart.
+- Drift velocity Σx/Σt, mean energy Σ∫e dt/Σt (B ⊥ E and oblique: Σ e/ν,
+  as MONTEB/C). Diffusion from the spread of the walkers around the mean
+  drift: with positions marked halfway, D = [Σ(x − wt)² − Σ(x₁ − wt₁)²] /
+  2Σ(t − t₁), so the constant from the correlation of the first
+  collisions cancels exactly. Errors from the scatter of 10 blocks of
+  walkers. Townsend coefficients from the walkers' ionisations and
+  attachments.
+- How many walkers: the main run of each walker must last at least as long
+  as its warm-up (a few energy relaxation times), else walkers of
+  different energies spread ballistically and D comes out too large
+  (Ar/He 90/10 at 1000 V/cm, 2000 collisions per walker: DL 10× too
+  large). So a warm-up chunk spends at most half the collisions of the
+  main run, dropping half of the walkers when it would spend more (down
+  to 100), and after the warm-up walkers are dropped until each runs at
+  least its warm-up length. Molecular gases keep many short walkers,
+  noble gases get few long ones.
 
 Equivalence: the same walkers on CPU and GPU take the same collisions
-(same null-collision counts after 2000 collisions); positions differ by
-≤ 5e-15 relative, from CUDA's `log`, `acos`, `sin` (`exact = true`: no
-fused multiply-adds). Many walkers estimate what one trajectory does, not
-the same numbers: `tests/gpu/twalk.nim` (argon, 1000 V/cm) agrees with
-NimBoltz within its seed-to-seed spread. In argon a walker needs ~10⁵
-collisions to forget its start (energy loss 2m/M per collision).
+(`tests/gpu/tgeometry.nim`: same null-collision counts after 2000
+collisions; positions within 1e-13 relative, from CUDA's `log`, `acos`,
+`sin`, with `exact = true`: no fused multiply-adds; oblique B and B ⊥ E
+with thermal motion: one walker of 256 diverges chaotically). Many walkers
+estimate what one trajectory does, not the same numbers: Ar/CO₂ 90/10 at
+1000 V/cm, B = 1 T, all geometries, 0 K and thermal, 4·10⁷ collisions:
+|z| < 2 for drift, energy and diffusion against `simulate`; the
+regression decks with walkers on CPU and GPU agree within errors
+(`statcmp`). The walkers' diffusion errors are several times smaller
+than Magboltz's for the same collisions. Where they disagree, Magboltz was
+off: Ne/CO₂ 90/10 at 20 kV/cm (penning_neco2_t1), DL at the fast scale
+(4·10⁶) 1421 ± 21 %, at 4·10⁷ 3940–4726 (3 seeds), walkers 4461 and 4644 at
+4·10⁷, 4879 at 4·10⁶ — Magboltz's pairs NCORLN apart need long runs.
+Ar/He 90/10 at 1000 V/cm, 4·10⁸ collisions: Magboltz DL 413, 458, 485,
+walkers 471 ± 19.
 
-Speed (RTX 3090, shared with another job at 100 % load, FP64 at 1/64 of
-FP32): 8192 walkers, 18–40 M collisions/s, against 3.6 M/s on one CPU
-core.
+Speed (RTX 3090, FP64 at 1/64 of FP32), 4·10⁷ collisions: CO₂ 180 M
+collisions/s, Ar/CO₂ 37 M/s (argon's null collisions make the walkers of
+a warp diverge), against ~3.6 M/s for one trajectory on a CPU core. Whole
+decks (MIXER and ELIMIT stay on the CPU): pure CO₂ 11.9 → 2.8 s, CH₄ 10.6 →
+2.9 s, Ar/CO₂ 22–32 → 8–10 s; pure argon is slower than one trajectory
+(warm-up: 31000 collisions per walker).
 
 ## WebAssembly
 
@@ -364,8 +411,10 @@ src/nimboltz/
   report.nim     printout (PRNTER*, OUTPUT*, OUTPUT1, OUTPUT2*)
   magboltz.nim   the program: Session, per-deck driver (MIXER, ELIMIT,
                  MONTE calls)
-  walkers.nim    independent electrons at 0 K, B = 0 (also on a GPU)
-  gpuwalk.nim    walkers on an NVIDIA GPU (Crucible, NVRTC)
+  walkers.nim    independent electrons, any geometry, 0 K or thermal (CPU threads)
+  ensemble.nim   transport coefficients of an ensemble of walkers
+  walkdrift.nim  MONTE on walkers: warm-up, how many, main run
+  gpuwalk.nim    walkers on an NVIDIA GPU (Crucible, NVRTC; -d:nimboltzGpu)
   magboltz_main.nim  entry point: decks on stdin
   results.nim    the results of a run as values with errors (Results)
   api.nim        the library: Setup, simulate

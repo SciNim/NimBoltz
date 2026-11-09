@@ -27,7 +27,7 @@ proc main() =
   let start = initElectron[fgElectric](f, r.estart, r.theta, startPhi)
   let target = initColdGas(r.mix.bounds, r.efinal)
   var seeds = initMagRng(nil)
-  proc walkersOf(n: int): seq[Walker] =
+  proc walkersOf(n: int): seq[Walker[ColdGas]] =
     for k in 0 ..< n:
       result.add initWalker(start, target, int(drand48(seeds) * 9e8))
 
@@ -37,8 +37,8 @@ proc main() =
     const collisions = 2000'i32
     var cpu = walkersOf(n)
     var gpu = cpu
-    for w in cpu.mitems: w.walk(f, r.mix.table, r.estep, collisions)
-    var g = initGpuWalkers(gpu, f, r.mix.table, r.estep, exact = true)
+    walkAll[fgElectric, ColdGas](cpu, f, r.mix.table, r.estep, collisions, 0)
+    var g = initGpuWalkers[fgElectric, ColdGas](gpu, f, r.mix.table, r.estep, exact = true)
     g.walk(collisions)
     g.read(gpu)
     var same, sameCollisions = 0
@@ -70,7 +70,7 @@ proc main() =
     const perLaunch = 10_000'i32
     const collisions = 20_000
     var ws = walkersOf(n)
-    var g = initGpuWalkers(ws, f, r.mix.table, r.estep)
+    var g = initGpuWalkers[fgElectric, ColdGas](ws, f, r.mix.table, r.estep)
     let w0 = getMonoTime()
     for _ in 1 .. warmup div perLaunch: g.walk(perLaunch)
     g.read(ws)

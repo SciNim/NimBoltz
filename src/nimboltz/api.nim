@@ -20,7 +20,7 @@
 
 import units, rm48, deck, conditions, gases, results, magboltz
 
-export units, results, MagboltzError, nscale
+export units, results, MagboltzError, nscale, WalkerBackend, WalkerSettings
 export gases.Gas
 
 type
@@ -42,6 +42,9 @@ type
     threads*: int = 1             ## for the avalanches of the analyses: their
                                   ## own random numbers, so not Magboltz's
                                   ## numbers, but the same within errors
+    walkers*: WalkerSettings      ## backend wbCpu or wbGpu: the drift run of the gas
+                                  ## at 0 K with independent electrons on CPU threads
+                                  ## or a GPU, again the same within errors
     output*: File                 ## Magboltz's printout goes here (nil: nowhere)
 
 func deck*(s: Setup): Deck =
@@ -68,4 +71,6 @@ proc simulate*(s: Setup): Results =
   var session = initSession(s.output)
   if s.seed != DefaultSeed: session.rng.rm.rm48in(s.seed, 0, 0)
   session.threads = max(s.threads, 1)
+  session.walkers = s.walkers
+  if session.walkers.threads <= 0: session.walkers.threads = session.threads
   session.run(s.deck, s.collisions)

@@ -47,7 +47,7 @@ func energyBin*(e, estep: eV): int {.inline.} =
 func initColdGas*(bounds: NullBounds, efinal: eV): ColdGas =
   ColdGas(bounds: bounds, bandWidth: efinal / float64(bounds.len))
 
-proc initWarmGas*(gas: ThermalGas, rng: var MagRng): WarmGas =
+proc initWarmGas*(gas: ThermalGas, rng: var (MagRng | Ranmar)): WarmGas =
   WarmGas(gas: gas, maxwell: initMaxwellSampler(rng))
 
 template tableOf*(tab: MixtureTable, h: Hit): untyped = tab
@@ -81,13 +81,14 @@ proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: va
   result.gas = 1
 
 proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var WarmGas,
-                                       estep: eV, el: Electron, rng: var MagRng,
-                                       nnull: var int64): Hit =
+                                       estep: eV, el: Electron, rng: var (MagRng | Ranmar),
+                                       nnull: var (int | int32 | int64)): Hit =
   ## Thermal motion: next real collision; energy and direction in the rest
   ## frame of the molecule hit.
   var tdash = 0.0.ps
   var vrel: Vector[m•ps⁻¹]
-  while true:
+  var real = false
+  while not real:
     let r1 = drand48(rng)
     tdash = -(ln(r1) / target.gas.tcfmx) + tdash
     result.fl = fly[G](f, el, tdash)
@@ -99,8 +100,8 @@ proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var Wa
     result.e = norm2(vrel) / f.vfac2
     result.ie = energyBin(result.e, estep)
     let r4 = drand48(rng)
-    if not (r4 > tabs[result.gas].tcf[result.ie] / target.gas.tcfmax[result.gas]): break
-    inc nnull
+    real = not (r4 > tabs[result.gas].tcf[result.ie] / target.gas.tcfmax[result.gas])
+    if not real: inc nnull
   result.din = vrel * (1.0 / (f.vfac * sqrt(result.e)))
 
 func leave*[G: static FieldGeometry](target: ColdGas, f: Field, s: Scattered,

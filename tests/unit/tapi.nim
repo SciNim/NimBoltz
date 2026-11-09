@@ -2,7 +2,7 @@
 ## and the results are the numbers Magboltz prints.
 ##   nim c -r -d:release --path:src tests/unit/tapi.nim
 
-import std/[unittest, os, strutils]
+import std/[unittest, os, strutils, math]
 import nimboltz/api
 import nimboltz/[deck, magboltz]
 
@@ -89,3 +89,28 @@ suite "api":
                            thermal: false, collisions: 4_000_000))
     check q.steadyState.isSome and q.timeOfFlight.isSome and q.friedland.isSome
     check q.ionisation.value == q.steadyState.get.alpha
+
+  test "walkers: the gas at 0 K, the same within errors":
+    var s = arco2
+    s.thermal = false
+    let one = simulate(s)
+    s.walkers = WalkerSettings(backend: wbCpu, n: 1000, threads: 4)
+    let many = simulate(s)
+    check many.velocity.z.value != one.velocity.z.value
+    template z(a, b): float =
+      float((b.value - a.value) / sqrt(a.error * a.error + b.error * b.error))
+    check abs(z(one.velocity.z, many.velocity.z)) < 5.0
+    check abs(z(one.meanEnergy, many.meanEnergy)) < 5.0
+    check abs(z(one.longitudinal, many.longitudinal)) < 5.0
+    check many.processes.len > 0 and many.warnings.len == 0
+
+  test "walkers: with thermal motion, the same within errors":
+    var s = arco2
+    s.walkers = WalkerSettings(backend: wbCpu, n: 1000, threads: 4)
+    let q = simulate(s)
+    check q.velocity.z.value != r.velocity.z.value
+    template z(a, b): float =
+      float((b.value - a.value) / sqrt(a.error * a.error + b.error * b.error))
+    check abs(z(r.velocity.z, q.velocity.z)) < 5.0
+    check abs(z(r.meanEnergy, q.meanEnergy)) < 5.0
+    check abs(z(r.transverse, q.transverse)) < 5.0
