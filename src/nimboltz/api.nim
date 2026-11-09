@@ -42,9 +42,10 @@ type
     threads*: int = 1             ## for the avalanches of the analyses: their
                                   ## own random numbers, so not Magboltz's
                                   ## numbers, but the same within errors
-    walkers*: WalkerSettings      ## backend wbCpu or wbGpu: the drift run of the gas
-                                  ## at 0 K with independent electrons on CPU threads
-                                  ## or a GPU, again the same within errors
+    walkers*: WalkerSettings      ## backend wbCpu or wbGpu (`single`: in single
+                                  ## precision): the drift run (and ELIMIT) with
+                                  ## independent electrons on CPU threads or a
+                                  ## GPU, again the same within errors
     output*: File                 ## Magboltz's printout goes here (nil: nowhere)
 
 func deck*(s: Setup): Deck =

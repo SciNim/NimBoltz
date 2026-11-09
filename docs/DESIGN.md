@@ -301,13 +301,14 @@ What this asks of the code the GPU runs:
 
 ### The drift run on walkers
 
-`NIMBOLTZ_WALKERS=cpu[:n]` or `gpu[:n]` (`Setup.walkers`,
+`NIMBOLTZ_WALKERS=cpu[:n]`, `gpu[:n]` or `gpu32[:n]` (`Setup.walkers`,
 `Session.walkers`) runs MONTE on walkers (`walkdrift.nim`, estimators in
-`ensemble.nim`); ELIMIT keeps Magboltz's one trajectory (cheap, and the
-same energy range), the Townsend analyses too. The CPU backend runs the
+`ensemble.nim`), and ELIMIT too when the deck leaves EFINAL to it; the
+Townsend analyses keep Magboltz's one trajectory. The CPU backend runs the
 walkers on threads, the GPU one needs a build with `-d:nimboltzGpu` and
-`--path:` to tattletale. The results fill the same `Transport`, printout
-and `Results`; one line more in the printout (walkers, collisions each),
+`--path:` to tattletale; `gpu32` runs it in single precision (below).
+The results fill the same `Transport`, printout and `Results`; one line
+more in the printout (walkers, collisions each),
 and the collisions counted (`Results.collisions`) may exceed NMAX on a GPU.
 `NIMBOLTZ_TIMING=1` (`Session.timing`) prints the time of each step of a
 deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
@@ -315,6 +316,28 @@ deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
 - A walker starts as Magboltz's electron, and runs in chunks of doubling
   length until the mean energy and drift velocity of two chunks agree
   (warm-up), then its sums restart.
+- ELIMIT (`magboltz.walkerEnergyRange`, `walkdrift.energyLimitExceeded`):
+  EFINAL from 0.5 eV (8 eV above 15 V/cm/Torr) up by √2 until no
+  collision reaches the last energy bin. Each try starts the walkers from
+  Magboltz's electron (in a range too small their energies run away; the
+  walkers keep their random numbers: seeding 16384 generators takes 0.6 s),
+  warms them up, then counts ELIMIT's collisions (NMAX/10, NMAX/20 with B)
+  among all of them. Not the warm-up's: Magboltz counts its one
+  electron's start, many starts would raise EFINAL for nothing. A range
+  far too small shows in a probe of 250 collisions each, or when the
+  warm-up gets more than 1000 per sample in the last bin (MONTE's limit;
+  at 10 per sample, bursts of one walker running away, caught in a
+  warm-up of many more collisions than the sample, raised EFINAL in 22 of
+  95 decks). The
+  walkers of the last try go on to MONTE warm. Where MONTE then has more
+  than 1000 collisions per NMAX/10 in the last bin (Magboltz stops there),
+  walkers raise EFINAL and run MONTE again. Over the regression decks the
+  choice is Magboltz's in 75 of 94, the others one √2 step off, 11 up and
+  8 down, as Magboltz's own varies between seeds; a tail that builds up slowly (Ar/CBrF₃ 90/10:
+  electrons escaping into argon heat up over 10⁵ collisions) is seen by
+  Magboltz's long trajectory, not by short walkers (gas51: 4 eV against 8).
+  Full scale (4·10⁷), 16 threads: arco2_nob_t1 7.0 → 3.3 s a deck, CF₄
+  (gas01) 23.1 → 5.5 s.
 - Drift velocity Σx/Σt, mean energy Σ∫e dt/Σt (B ⊥ E and oblique: Σ e/ν,
   as MONTEB/C). Diffusion from the spread of the walkers around the mean
   drift: with positions marked halfway, D = [Σ(x − wt)² − Σ(x₁ − wt₁)²] /
@@ -365,30 +388,51 @@ Null collisions: Magboltz's bounds in 8 bands of starting energy
 TMAX, nearly the largest frequency of all; with thermal motion it has one
 bound per gas over all energies. Walkers at B = 0 and B ∥ E use exact
 bounds per time window instead (`walkers.windowHit`): the energy over the
-next 4 mean free times is known in closed form, the largest collision
+next 2 mean free times is known in closed form, the largest collision
 frequency over it (a sparse range-maximum table, `FlightMaxima`, two
 lookups) bounds it strictly; no trial in the window, the flight goes on
-in the next one. With thermal motion per gas, in the molecule's frame,
+in the next one. Where the bound is well above the frequency at the
+window's start (a Ramsauer minimum), the window shrinks to 2 / bound and
+gets its own bound. With thermal motion per gas, in the molecule's frame,
 with a margin of 6 thermal speeds. Null collisions per real one: Ar/CO₂
-90/10 at 1000 V/cm 5.6 → 0.34 (0 K), 9.6 → 0.39 (thermal). (Tried first:
+90/10 at 1000 V/cm 5.6 → 0.08 (0 K), 9.6 → 0.10 (thermal); Ar/CF₄ 90/10
+thermal (gas01) 4.3 → 0.12. (Window lengths of 1, 2, 4 mean free times
+cost about the same on CPUs; on the GPU 2 is best.) (Tried first:
 each band's own maximum, raised when exceeded: biased, mean energies 2–6 %
 low over the regression decks, mean z −0.83 — flights crossing energies
 above the bound without a trial there lose collisions.)
 
 Speed (RTX 3090; `tests/gpu/tbench.nim`, 16384 walkers, B = 0, energy range
 from ELIMIT), M collisions/s: Magboltz's free flight → the walkers' own →
-with the exact window bounds:
+with the exact window bounds → shorter windows → single precision:
 
 | | 0 K | thermal |
 |---|---|---|
-| CO₂ | 284 → 330 → 328 | 140 → 145 → 158 |
-| Ar/CO₂ 90/10 | 57 → 118 → 245 | 14 → 42 → 116 |
+| CO₂ | 284 → 330 → 328 → 298 → 506 | 140 → 145 → 158 → 163 → 319 |
+| Ar/CO₂ 90/10 | 57 → 118 → 245 → 268 → 487 | 14 → 42 → 116 → 134 → 269 |
+| Ar/CF₄ 90/10 | → 142 (4 mean free times) → 200 → 481 | → 63 → 95 → 255 |
 
 against ~3.6 M/s for one trajectory on a CPU core. Tried, no gain: walkers
 in local memory (−5 %), the cumulative frequencies transposed so that a
 bin's processes are side by side (−8 %: in Magboltz's layout the threads of
 a warp at nearby energies read neighbouring words). Whole decks keep MIXER
-and ELIMIT on the CPU.
+on the CPU.
+
+### Single precision
+
+`gpu32` runs the same kernel in single precision: Crucible's
+`cudaSingle` (and `webgpuSingle`; WGSL has no doubles) demotes every
+`float64` of the device code to `float32` (pass `pass_demote_f64`, local
+crucible branch). The host hands over walkers, tables and field in single
+precision too (`single.nim`: `pack32`/`unpack32` turn an object's floats
+into 4-byte ones; with 4-byte fields only an object has no padding, on the
+GPU as on the host). The walkers' random numbers become the original
+24-bit RANMAR (`rm48.toSingle`: state on a grid of 2⁻²⁴, Marsaglia and
+Zaman's constants), whose arithmetic is exact in single precision; the
+GPU's tallies are 32-bit counters, added up on the host after each launch
+(single-precision counts stop at 2²⁴). 1.7–2.7× faster than double
+precision on an RTX 3090 (a memory-bound kernel: the 64× of the
+arithmetic does not show).
 
 ## WebAssembly
 

@@ -16,6 +16,9 @@
 ## So noble gases, which lose energy slowly, get longer walkers: on CPUs
 ## fewer of them, on a GPU as many, which runs them in the same time (and
 ## then more collisions than asked for).
+##
+## ELIMIT on walkers (`energyLimitExceeded`): whether, once warm, they get
+## a collision in the last energy bin among ELIMIT's number of them.
 
 import std/math
 import units, vec3, tables, fields, freeflight, drift, walkers, ensemble
@@ -27,6 +30,7 @@ type
     converged*: bool     ## false: stopped at the limit
     energy*: eV          ## mean energy of the last two chunks
     previous*: eV
+    exceeded*: bool      ## `exceeding`: too many collisions in the last energy bin
 
   Chunk = object
     e, ee: float64       ## mean energy and its error (eV)
@@ -62,7 +66,16 @@ proc drop*[B, T](b: var B, ws: var seq[Walker[T]], n: int) =
   ws.setLen(n)
   b.shrink(n)
 
-proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i32): WarmUp =
+proc lastBinShare*[B](b: B): float64 =
+  ## share of the collisions counted since `clearTally` in the last energy
+  ## bin
+  mixin readTally
+  var t {.noinit.}: Tallies
+  b.readTally(t)
+  t.spectrum[nEnergyBins] / max(sum(t.spectrum), 1.0)
+
+proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i32,
+                   exceeding = 0.0): WarmUp =
   ## Runs the walkers in chunks of doubling length until the mean energy and
   ## the drift velocity of a chunk agree with those of the chunk before
   ## (within 2 errors); then clears their sums. At most budget / 2 /
@@ -70,10 +83,12 @@ proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i
   ## time goes with all collisions, a chunk spends at most budget / 2 of
   ## them: half of the walkers are dropped for longer chunks (down to
   ## `minWalkers`); on a GPU, where time goes with the collisions per
-  ## walker, all walkers stay.
+  ## walker, all walkers stay. `exceeding` > 0: the collisions are counted
+  ## (after a `clearTally`), and the warm-up stops (`exceeded`) when more
+  ## than this share of them is in the last energy bin.
   mixin walk, read, write, dropsWalkers
   proc run(b: var B, ws: var seq[Walker[T]], c: int32): Chunk =
-    b.walk(c, counting = false)
+    b.walk(c, counting = exceeding > 0.0)
     b.read(ws)
     result = chunk(ws)
     for w in ws.mitems: w.reset()
@@ -87,6 +102,9 @@ proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i
   var prev = b.run(ws, c)
   result.collisions = c
   while true:
+    if exceeding > 0.0 and b.lastBinShare > exceeding:
+      result.exceeded = true
+      return
     c = 2'i32 * c
     fit(c)
     if result.collisions + int(c) > cap: return
@@ -99,6 +117,34 @@ proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i
       result.converged = true
       return
     prev = cur
+
+proc energyLimitExceeded*[B, T](b: var B, ws: var seq[Walker[T]], budget, sample: int): WarmUp =
+  ## ELIMIT on walkers: whether an electron reaches the last energy bin
+  ## (`result.exceeded`) in `sample` collisions of all walkers together,
+  ## once they have warmed up (`warmUp`). Magboltz's ELIMIT counts its one
+  ## electron from the start; the walkers' starts are many, and would
+  ## raise EFINAL for nothing. Stops early when the last bin gets more than
+  ## 1000 / `sample` of the collisions so far (exceeded for sure). Leaves
+  ## the walkers warm, their sums cleared.
+  mixin walk, read, write, clearTally
+  const probe = 250'i32  # a range far too small shows at once
+  let share = 1000.0 / float64(sample)
+    # as MONTE's limit: one walker running away gives a burst of
+    # collisions in the last bin, which a warm-up of many more collisions
+    # than `sample` catches more often than ELIMIT would
+  b.clearTally()
+  b.walk(probe)
+  if b.lastBinShare > share: return WarmUp(collisions: probe, exceeded: true)
+  b.clearTally()
+  result = b.warmUp(ws, budget, exceeding = share)
+  result.collisions = result.collisions + probe
+  if result.exceeded: return
+  b.clearTally()
+  b.walk(int32(max(sample div ws.len, 1)))
+  result.exceeded = b.lastBinShare > 0.0
+  b.read(ws)
+  for w in ws.mitems: w.reset()
+  b.write(ws)
 
 type
   WalkerRun* = object

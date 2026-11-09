@@ -12,7 +12,7 @@ func elimitGeometry*(g: FieldGeometry): FieldGeometry =
   ## Magboltz runs ELIMIT (B = 0) for B ∥ E, which does not change the energy
   if g == fgParallel: fgElectric else: g
 
-func sampleSize(geometry: FieldGeometry, nmax: int): int =
+func sampleSize*(geometry: FieldGeometry, nmax: int): int =
   nmax div (if geometry == fgElectric: 10 else: 20)
 
 proc energyLimitExceeded*[G: static FieldGeometry](

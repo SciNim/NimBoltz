@@ -189,7 +189,9 @@ proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var War
 # flight is e0 + ap t + bp t²): from the electron's state, the energies of
 # the next `windowCollisions` mean free times are known, and the largest
 # collision frequency over them (two lookups in a `RangeMax`) bounds the
-# frequency strictly. No trial in the window: the flight goes on in the
+# frequency strictly. Where that bound is well above the frequency at the
+# start (a Ramsauer minimum), the window shrinks to `windowCollisions`
+# times 1 / bound and gets its own, lower bound. No trial in the window: the flight goes on in the
 # next window (exponential times forget). Nothing to raise, nothing missed,
 # and few null collisions. Thermal motion: per gas, in the molecule's frame,
 # with a margin of 6 thermal speeds (beyond it: once in 10¹⁵ collisions,
@@ -197,7 +199,7 @@ proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var War
 
 const
   rangeLevels = 12         ## 2¹² ≥ nEnergyBins
-  windowCollisions = 4.0   ## window length in mean free times
+  windowCollisions = 2.0   ## window length in mean free times (at most)
   speedMargin = 6.0        ## molecule speeds in thermal speeds (`vtmb`)
 
 type
@@ -256,9 +258,14 @@ proc windowHit[G: static FieldGeometry](f: Field, tab: MixtureTable, fm: FlightM
   var real = false
   while not real:
     let ew = e0.e + (ap + f.bp * tw) * tw
-    let tau = windowCollisions / tab.tcf[binOf(ew, rstep)]
-    let (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
-    let bound = rangeMax(fm.gas[1], binOf(elo, rstep), binOf(ehi, rstep))
+    var tau = windowCollisions / tab.tcf[binOf(ew, rstep)]
+    var (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+    var bound = rangeMax(fm.gas[1], binOf(elo, rstep), binOf(ehi, rstep))
+    if bound * tau > windowCollisions:
+      # shorter, by the bound: as many trials, less of the range
+      tau = windowCollisions / bound
+      (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+      bound = rangeMax(fm.gas[1], binOf(elo, rstep), binOf(ehi, rstep))
     let s = -lnSingle(drand48(rng)) / bound
     if s > tau:
       tw = tw + tau
@@ -294,16 +301,23 @@ proc windowHit[G: static FieldGeometry](f: Field, tabs: GasTables, fm: FlightMax
     let ew = e0.e + (ap + f.bp * tw) * tw
     var nu = 0.0.ps⁻¹
     for k in 1 .. n: nu = nu + tabs[k].tcf[binOf(ew, rstep)]
-    let tau = windowCollisions / nu
-    let (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+    var tau = windowCollisions / nu
     var total = 0.0.ps⁻¹
-    for k in 1 .. n:
-      # in the frame of a molecule slower than the margin
-      let u = speedMargin * target.gas.vtmb[k] / f.vfac
-      let slo = max(sqrt(elo) - u, 0.0.eV¹ᐟ²)
-      let shi = sqrt(ehi) + u
-      bounds[k] = rangeMax(fm.gas[k], binOf(slo * slo, rstep), binOf(shi * shi, rstep))
-      total = total + bounds[k]
+    template boundsOver(tau: ps) =
+      let (elo, ehi) = energyRange(e0.e, ap, f.bp, tw, tw + tau)
+      total = 0.0.ps⁻¹
+      for k in 1 .. n:
+        # in the frame of a molecule slower than the margin
+        let u = speedMargin * target.gas.vtmb[k] / f.vfac
+        let slo = max(sqrt(elo) - u, 0.0.eV¹ᐟ²)
+        let shi = sqrt(ehi) + u
+        bounds[k] = rangeMax(fm.gas[k], binOf(slo * slo, rstep), binOf(shi * shi, rstep))
+        total = total + bounds[k]
+    boundsOver(tau)
+    if total * tau > windowCollisions:
+      # shorter, by the bound: as many trials, less of the range
+      tau = windowCollisions / total
+      boundsOver(tau)
     let s = -lnSingle(drand48(rng)) / total
     if s > tau:
       tw = tw + tau
@@ -358,26 +372,23 @@ func mark*(w: var Walker) =
   w.pos1 = w.pos
   w.st1 = w.st
 
-proc walk*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: TablesOf(T),
-                                          fm: ptr FlightMaxima, estep: eV,
-                                          collisions, penning: int32, tally: C) =
-  ## `collisions` real collisions, with the random numbers drawn in the
-  ## order of MONTE (MONTET); `penning` ≠ 0: Penning transfers; each
-  ## collision is counted in `tally` (`Tally`, `NoTally` or a GPU's).
-  ## `fm` (B = 0, B ∥ E): exact bounds per window; nil: Magboltz's bounds.
+proc walkWith*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: TablesOf(T),
+                                              fm: ptr FlightMaxima, windows: static bool,
+                                              estep: eV, collisions, penning: int32,
+                                              tally: C) =
+  ## `walk` with the exact bounds per window (`windows`, B = 0 and B ∥ E:
+  ## from `fm`) or Magboltz's bounds (`fm` unused). GPU kernels call it
+  ## directly: no null pointers in WGSL.
   mixin count
   let rstep = 1.0 / estep
   for _ in 0'i32 ..< collisions:
     let el = w.el  # a copy, so its square roots are computed once
     var h: Hit
-    when G in {fgElectric, fgParallel}:
-      if fm != nil:
-        when T is ColdGas:
-          h = windowHit[G](f, tabs, fm[], rstep, el, w.rng, w.nulls)
-        else:
-          h = windowHit[G](f, tabs, fm[], rstep, el, w.target, w.rng, w.nulls, w.beyond)
+    when windows and G in {fgElectric, fgParallel}:
+      when T is ColdGas:
+        h = windowHit[G](f, tabs, fm[], rstep, el, w.rng, w.nulls)
       else:
-        h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
+        h = windowHit[G](f, tabs, fm[], rstep, el, w.target, w.rng, w.nulls, w.beyond)
     else:
       h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
     if h.fl.t > w.tmax: w.tmax = h.fl.t
@@ -405,6 +416,18 @@ proc walk*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: Tabl
                     r31First = (G == fgElectric and T is ColdGas))
     w.el = leave[G](w.target, f, s, h)
   w.collisions = w.collisions + collisions
+
+proc walk*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: TablesOf(T),
+                                          fm: ptr FlightMaxima, estep: eV,
+                                          collisions, penning: int32, tally: C) =
+  ## `collisions` real collisions, with the random numbers drawn in the
+  ## order of MONTE (MONTET); `penning` ≠ 0: Penning transfers; each
+  ## collision is counted in `tally` (`Tally`, `NoTally` or a GPU's).
+  ## `fm` (B = 0, B ∥ E): exact bounds per window; nil: Magboltz's bounds.
+  if fm != nil:
+    walkWith[G, T, C](w, f, tabs, fm, true, estep, collisions, penning, tally)
+  else:
+    walkWith[G, T, C](w, f, tabs, fm, false, estep, collisions, penning, tally)
 
 func driftVelocity*(ws: openArray[Walker]): μm•ns⁻¹ =
   ## Σ z / Σ t over all walkers

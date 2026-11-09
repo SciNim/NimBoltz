@@ -13,6 +13,7 @@
 ## ` RM48 INITIALIZED:` line to the output.
 
 import std/strutils
+from std/math import floor
 
 const
   ModCns = 1_000_000_000      ## MODCNS
@@ -183,3 +184,15 @@ proc drand48*(g: var Ranmar): float64 {.inline.} =
   uni = uni + (if uni < 0.0: 1.0 else: 0.0)
   # Replace exact zeros by 2**-49
   result = (if uni == 0.0: g.twom49 else: uni)
+
+proc toSingle*(g: var Ranmar) =
+  ## The generator as the original RANMAR of Marsaglia and Zaman: numbers
+  ## on a grid of 2⁻²⁴, so its arithmetic is exact in single precision
+  ## (GPU kernels demoted to `float32`). The state snaps to the grid; then
+  ## the same steps give that RANMAR's sequence, in single and in double
+  ## precision alike.
+  const grid = 16777216.0
+  for i in 1 .. 97: g.u[i] = floor(g.u[i] * grid) / grid
+  g.c = floor(g.c * grid) / grid
+  g.cd = 7654321.0 / grid
+  g.cm = 16777213.0 / grid
