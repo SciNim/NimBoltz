@@ -330,10 +330,10 @@ and `Results`; one line more in the printout (walkers, collisions each).
   noble gases get few long ones.
 
 Equivalence: the same walkers on CPU and GPU take the same collisions
-(`tests/gpu/tgeometry.nim`: same null-collision counts after 2000
-collisions; positions within 1e-13 relative, from CUDA's `log`, `acos`,
-`sin`, with `exact = true`: no fused multiply-adds; oblique B and B ⊥ E
-with thermal motion: one walker of 256 diverges chaotically). Many walkers
+for a while (`tests/gpu/tgeometry.nim`, `exact = true`: no fused
+multiply-adds), until a last-bit difference between CUDA's `logf`, `acos`,
+`sin` and glibc's sends a walker on another path: of 256 walkers, 115–256
+still have the same null collisions after 2000 collisions. Many walkers
 estimate what one trajectory does, not the same numbers: Ar/CO₂ 90/10 at
 1000 V/cm, B = 1 T, all geometries, 0 K and thermal, 4·10⁷ collisions:
 |z| < 2 for drift, energy and diffusion against `simulate`; the
@@ -346,12 +346,26 @@ off: Ne/CO₂ 90/10 at 20 kV/cm (penning_neco2_t1), DL at the fast scale
 Ar/He 90/10 at 1000 V/cm, 4·10⁸ collisions: Magboltz DL 413, 458, 485,
 walkers 471 ± 19.
 
-Speed (RTX 3090, FP64 at 1/64 of FP32), 4·10⁷ collisions: CO₂ 180 M
-collisions/s, Ar/CO₂ 37 M/s (argon's null collisions make the walkers of
-a warp diverge), against ~3.6 M/s for one trajectory on a CPU core. Whole
-decks (MIXER and ELIMIT stay on the CPU): pure CO₂ 11.9 → 2.8 s, CH₄ 10.6 →
-2.9 s, Ar/CO₂ 22–32 → 8–10 s; pure argon is slower than one trajectory
-(warm-up: 31000 collisions per walker).
+Walkers have free flights of their own (`walkers.nextHit`): the null-
+collision method of `freeflight.nextHit` with what depends on the start of
+a flight computed once, multiplications for divisions, the logarithm of the
+flight time and the Maxwell numbers of thermal motion in single precision
+(FP64 runs at 1/64 of FP32 on gaming GPUs), and v(t) = v₀ + a t for thermal
+motion at B = 0. `freeflight.nextHit` stays Magboltz's, bit for bit.
+
+Speed (RTX 3090; `tests/gpu/tbench.nim`, 16384 walkers, B = 0, energy range
+from ELIMIT), M collisions/s, before → after the walkers' own free flights:
+
+| | 0 K | thermal |
+|---|---|---|
+| CO₂ (0.1 null collisions per real one) | 284 → 330 | 140 → 145 |
+| Ar/CO₂ 90/10 (5.6 null per real) | 57 → 118 | 14 → 42 |
+
+against ~3.6 M/s for one trajectory on a CPU core. Tried, no gain: walkers
+in local memory (−5 %), the cumulative frequencies transposed so that a
+bin's processes are side by side (−8 %: in Magboltz's layout the threads of
+a warp at nearby energies read neighbouring words). Whole decks keep MIXER
+and ELIMIT on the CPU.
 
 ## WebAssembly
 
