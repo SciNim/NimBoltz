@@ -38,6 +38,13 @@
     <label>Upper energy (eV) <input id="efinal" type="number" step="any" min="0" value="0"
       title="0: found by raising it until no electron reaches it"></label>
     <p class="hint">0 finds the energy range automatically.</p>
+    <label class="stack">Drift run <select id="walkers"
+      title="Magboltz follows one electron for all collisions; many independent electrons (walkers) give the same results within errors">
+      <option value="">One electron (Magboltz)</option>
+      <option value="cpu">Many electrons</option>
+      <option value="gpu" id="gpuOption" disabled>Many electrons, on the GPU</option>
+    </select></label>
+    <p class="hint" id="gpuHint">The GPU needs WebGPU with WGSL pointer parameters (Chrome or Edge 123+), and a build with it.</p>
     <label class="check"><input id="thermal" type="checkbox" checked> Thermal motion of the gas</label>
     <label class="check"><input id="penning" type="checkbox"> Penning transfers</label>
     <label>Random seed <input id="seed" type="number" step="1" min="1" placeholder="Magboltz's"></label>

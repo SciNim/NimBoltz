@@ -34,6 +34,9 @@ function startWorker() {
     const m = e.data;
     if (m.type === 'ready') {
       gases = m.gases;
+      $('gpuOption').disabled = !m.gpu;
+      $('gpuHint').textContent = m.gpu ? `GPU: ${m.gpu}, in single precision.` :
+        'The GPU needs WebGPU with WGSL pointer parameters (Chrome or Edge 123+), and a build with it.';
       if (!$('gases').children.length) { addGas(2, 90); addGas(12, 10); }
       setIdle('Ready.');
     } else if (m.type === 'line') {
@@ -158,6 +161,7 @@ function setups() {
     report: true,
   };
   if ($('seed').value) base.seed = Number($('seed').value);
+  if ($('walkers').value) base.walkers = $('walkers').value;
   if (!(base.pressure > 0)) throw new Error('the pressure must be positive');
   if (!(base.collisions >= 1e5)) throw new Error('at least 0.1 million collisions');
   return fields.map((efield) => ({...base, efield}));
@@ -353,7 +357,7 @@ function seriesOf(rs) {
   // one series per setup apart from E, in fixed colour order (3 slots, then grey)
   const slots = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
   const groups = [];
-  const keyOf = (r) => conditionsLabel(r.setup) + JSON.stringify([r.setup.collisions, r.setup.thermal, r.setup.penning]);
+  const keyOf = (r) => conditionsLabel(r.setup) + JSON.stringify([r.setup.collisions, r.setup.thermal, r.setup.penning, r.setup.walkers]);
   for (const r of rs) {
     let g = groups.find((g) => g.key === keyOf(r));
     if (!g) {

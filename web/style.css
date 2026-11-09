@@ -102,3 +102,5 @@ code { font-size: 12px; }
   border-radius: 4px; padding: 4px 8px; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.15);
   font-variant-numeric: tabular-nums; z-index: 10;
 }
+label.stack { display: block; }
+label.stack select { display: block; width: 100%; min-width: 0; margin-top: 4px; }

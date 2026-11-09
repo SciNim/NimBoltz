@@ -10,6 +10,8 @@ import frt, units, rm48, deck, conditions, tables, mixture, gases, fields, colli
        freeflight, elimit, drift, simulation, report, analyses, results, walkers, walkdrift
 when defined(nimboltzGpu):
   import gpuwalk
+elif defined(nimboltzWebGpu):
+  import webgpuwalk
 
 export MagboltzError, Results
 
@@ -37,7 +39,8 @@ type
   WalkerBackend* = enum
     wbNone  ## Magboltz's one long trajectory
     wbCpu   ## walkers on CPU threads
-    wbGpu   ## walkers on an NVIDIA GPU (built with -d:nimboltzGpu)
+    wbGpu   ## walkers on an NVIDIA GPU (built with -d:nimboltzGpu), or with
+            ## WebGPU in a web page (-d:nimboltzWebGpu, single precision)
 
   WalkerSettings* = object
     ## MONTE with many independent electrons (`walkdrift.nim`), and
@@ -174,7 +177,7 @@ template withWalkers(r: Run, wk: WalkerSettings, G: static FieldGeometry, f: Fie
   let fm = flightMaxima(r.tablesOf)
   case wk.backend
   of wbGpu:
-    when defined(nimboltzGpu):
+    when defined(nimboltzGpu) or defined(nimboltzWebGpu):
       var b = initGpuWalkers[G, T](ws, f, r.tablesOf, fm[], r.estep, r.deck.penning,
                                    single = wk.single)
       body

@@ -458,6 +458,46 @@ distribution, the collision frequencies and Magboltz's printout.
   sections of all gases agree within 7e-15 relative.
 - Speed: 1.4–1.7 times the native time under Node.
 
+### WebGPU
+
+With `TATTLETALE=<tattletale root> web/build.sh` the page also offers the
+drift run on GPU walkers through WebGPU (2026-11-09):
+`src/nimboltz/webgpuwalk.nim` has the interface of `gpuwalk.nim`, its
+kernels are `walkWith` compiled to WGSL by Crucible (`webgpuSingle`, 8
+kernels: 4 geometries, 0 K or thermal), and `web/webgpu.js` (an
+Emscripten JS library) holds the device's buffers and pipelines. The worker
+opens the device; setup `"walkers": "gpu"`.
+
+- Single precision only (WGSL has no f64): the walkers, tables and field
+  packed by `single.nim`, as `gpu32` on CUDA; all fields are 4 bytes, so
+  WGSL's struct layout is the packed one.
+- WGSL needed more of Crucible (local branch `nimboltz`, commit 5762f9af):
+  storage pointers as function parameters (`-d:wgslPointerParams`,
+  `requires unrestricted_pointer_parameters, pointer_composite_access`):
+  the tables (46 MB) pass by reference instead of being copied into
+  function memory; atomics (`array<atomic<u32>>`), struct ternaries,
+  aliased pointer arguments, unreachable functions, `_`.
+- Precise maths (`-d:wgslPreciseMath`): WGSL's `acos`/`asin` inherit
+  `atan2`'s 4096 ULP and `sin`/`cos` are good to 2⁻¹¹ (measured 2e-4 on
+  SwiftShader). With them the walkers drifted 0.8 % fast with thermal
+  motion (49.84 against 49.42 μm/ns for Ar/CO₂ 90/10 at 1000 V/cm); with
+  Crucible's precise ones (to 4e-7) a walker's state after its first
+  collision agrees with the CPU's to 1e-6 in all 8 kernels
+  (`tests/wasm/webgpu.sh`), and the drift run with Magboltz's (thermal:
+  49.384 ± 0.017 against 49.445 ± 0.048; B ⊥ E at 0 K: v_z, v_y and the
+  mean energy within 1σ).
+- Bindings: 5 storage buffers (walkers, table, range maxima, the scalars
+  and field in one struct, the tally: processes then energy bins), as
+  WebGPU allows 8 per stage. Reading back (walkers, tally) is
+  asynchronous, so the module is built with Asyncify
+  (`ASYNCIFY_IGNORE_INDIRECT`: 7.1 MB instead of 6.5, the CPU path 2–7 %
+  slower; without it 11.4 MB and 32 % slower).
+- One dispatch walks at most 1000 collisions per walker (browsers stop
+  long GPU work); errors of the device (`uncapturederror`, a failed
+  pipeline) stop the run with an error instead of wrong numbers.
+- Tested on SwiftShader only (Chromium's CPU Vulkan, 2–3 M collisions/s);
+  speed on a real GPU untested.
+
 ## Layout
 
 ```
@@ -496,9 +536,11 @@ src/nimboltz/
   ensemble.nim   transport coefficients of an ensemble of walkers
   walkdrift.nim  MONTE on walkers: warm-up, how many, main run
   gpuwalk.nim    walkers on an NVIDIA GPU (Crucible, NVRTC; -d:nimboltzGpu)
+  webgpuwalk.nim walkers on WebGPU in a page (Crucible, WGSL; -d:nimboltzWebGpu)
   magboltz_main.nim  entry point: decks on stdin
   results.nim    the results of a run as values with errors (Results)
   api.nim        the library: Setup, simulate
   wasm.nim       the library for web pages (Emscripten): JSON in and out
-web/             build script and page of the WebAssembly build
+web/             build script and page of the WebAssembly build (webgpu.js:
+                 the WebGPU side of webgpuwalk.nim)
 ```

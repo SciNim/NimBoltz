@@ -6,12 +6,38 @@
 // A run can't be interrupted from inside: the page terminates the worker.
 importScripts('nimboltz.js');
 
+// A WebGPU device for the walkers, if the browser has one (null if not).
+// The kernel needs WGSL's pointer parameters (Chrome/Edge 123 and later).
+async function openGpu(m) {
+  if (!navigator.gpu) return null;
+  const f = navigator.gpu.wgslLanguageFeatures;
+  if (!f || !f.has('unrestricted_pointer_parameters') || !f.has('pointer_composite_access')) return null;
+  const adapter = await navigator.gpu.requestAdapter({powerPreference: 'high-performance'});
+  if (!adapter) return null;
+  const l = adapter.limits;
+  const device = await adapter.requestDevice({requiredLimits: {
+    maxStorageBufferBindingSize: l.maxStorageBufferBindingSize, maxBufferSize: l.maxBufferSize}});
+  device.addEventListener('uncapturederror', (e) => {
+    m.gpuError = e.error.message;  // the run stops (webgpu.js)
+    postMessage({type: 'line', text: 'WebGPU: ' + e.error.message});
+  });
+  device.lost.then((i) => { m.gpuError = 'device lost: ' + i.message; });
+  const i = adapter.info || {};
+  device.label = [i.vendor, i.architecture, i.device || i.description].filter(Boolean).join(' ') || 'WebGPU';
+  return device;
+}
+
 const ready = createNimBoltz({
   print: (text) => postMessage({type: 'line', text}),
   printErr: (text) => postMessage({type: 'line', text}),
-}).then((m) => {
+}).then(async (m) => {
   const gases = JSON.parse(m.UTF8ToString(m.ccall('nimboltzGases', 'number', [], [])));
-  postMessage({type: 'ready', gases, scale: m.ccall('nimboltzCollisionScale', 'number', [], [])});
+  m.webgpu = m.ccall('nimboltzWebGpu', 'number', [], []) !== 0;  // built with it
+  if (m.webgpu) {
+    try { m.gpuDevice = await openGpu(m); } catch (err) { m.gpuDevice = null; }
+  }
+  postMessage({type: 'ready', gases, scale: m.ccall('nimboltzCollisionScale', 'number', [], []),
+               gpu: m.gpuDevice ? m.gpuDevice.label : null});
   return m;
 });
 
@@ -20,7 +46,9 @@ onmessage = async (e) => {
   const t = performance.now();
   let result;
   try {
-    result = JSON.parse(m.ccall('nimboltzRun', 'string', ['string'], [JSON.stringify(e.data.setup)]));
+    // asynchronous with WebGPU: the module waits for the GPU (Asyncify)
+    result = JSON.parse(await m.ccall('nimboltzRun', 'string', ['string'], [JSON.stringify(e.data.setup)],
+                                      m.webgpu ? {async: true} : undefined));
   } catch (err) {  // a Nim defect or a trap: the module is unusable now
     result = {error: String(err), fatal: true};
   }

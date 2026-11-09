@@ -1,8 +1,9 @@
 // Runs the web module (web/nimboltz.js) under Node, as web/worker.js does:
 //   node tests/wasm/trun.js '{"mixture": [[2, 90], [12, 10]], "efield": 500}'
+// (NIMBOLTZ_JS=path/nimboltz.js: another build)
 const path = require('path');
 const lines = [];
-const createNimBoltz = require(path.join(__dirname, '../../web/nimboltz.js'));
+const createNimBoltz = require(process.env.NIMBOLTZ_JS || path.join(__dirname, '../../web/nimboltz.js'));
 createNimBoltz({
   print: (s) => lines.push(s),
   printErr: (s) => console.error(s),

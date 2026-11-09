@@ -15,6 +15,15 @@ web/build.sh             # → web/nimboltz.js, web/nimboltz.wasm
 `web/build.sh cli DIR` builds the command-line program instead, to run input
 decks under Node: `node DIR/magboltz.js < deck.in`.
 
+With the GPU: the drift run can also run on independent electrons on the
+GPU through WebGPU. That build needs [tattletale](https://github.com/mratsim/tattletale)
+(its Nim-to-GPU compiler Crucible, with the WGSL changes of the local
+branch `nimboltz`):
+
+```sh
+TATTLETALE=/path/to/tattletale web/build.sh
+```
+
 ## Run
 
 The page needs to be served over HTTP (browsers don't start workers from
@@ -42,6 +51,13 @@ Any static file host works (GitHub Pages, ...): the page is `index.html`,
 - All runs: a table (CSV download) and a plot of any result against E,
   one line per setup.
 
+- Drift run: Magboltz's one electron, or independent electrons (walkers,
+  the same results within errors, smaller errors), on the CPU or on the
+  GPU. The GPU needs a browser with WebGPU and WGSL pointer parameters
+  (Chrome or Edge 123 and later) and the build with it; it runs in single
+  precision, 16384 walkers, and its runs count more collisions than asked
+  (each walker warms up first).
+
 Runs happen in a Web Worker; Stop ends the worker (and the run) and starts
 a new one. Runs of the Townsend analyses (high fields, ionisation or
 attachment) take much longer than the drift run itself.
@@ -55,6 +71,10 @@ with three C functions (`src/nimboltz/wasm.nim`):
   Magboltz's printout to `options.print` if the setup has `"report": true`
 - `nimboltzGases()` → `[{"id", "name"}, ...]`
 - `nimboltzCollisionScale()` → collisions per unit of Magboltz's NMAX
+- `nimboltzWebGpu()` → 1 in the build with WebGPU; then set
+  `m.gpuDevice` to a `GPUDevice` before a run with `"walkers": "gpu"`,
+  and call `nimboltzRun` with `ccall(..., {async: true})` (it waits for the
+  GPU), as `worker.js` does
 
 ```js
 const m = await createNimBoltz({print: console.log});
@@ -64,4 +84,6 @@ console.log(r.velocity.z);   // {value: 41.2, error: 0.097, unit: "μm•ns⁻¹
 ```
 
 `tests/wasm/trun.js` runs it under Node; `tests/wasm/regress.sh` runs the
-regression decks through the command-line build.
+regression decks through the command-line build; `tests/wasm/webgpu.sh`
+compares WebGPU walkers with CPU walkers collision by collision in headless
+Chromium (WebGPU on SwiftShader, no GPU needed).

@@ -6,8 +6,10 @@
 ## Setup: {"mixture": [[gas number, %], ...], "temperature": K,
 ## "pressure": Torr, "efield": V/cm, "bfield": T, "angle": degrees,
 ## "collisions": n, "efinal": eV (0: found), "penning": bool,
-## "thermal": bool, "seed": n, "report": bool (printout to stdout)}; all
-## but "mixture" and "efield" optional, with the defaults of `Setup`.
+## "thermal": bool, "seed": n, "report": bool (printout to stdout),
+## "walkers": "cpu" or "gpu" (MONTE on independent electrons, the GPU's
+## through WebGPU in a build with it: web/build.sh), "walkerCount": n};
+## all but "mixture" and "efield" optional, with the defaults of `Setup`.
 ##
 ## Results: {"gases", "efinal", "collisions", "nullCollisions",
 ## "velocity": {x, y, z}, "diffusion": {xx, yy, zz, xy, xz, yz},
@@ -85,6 +87,13 @@ proc setup(j: JsonNode): Setup =
   if j.hasKey("thermal"): result.thermal = j["thermal"].getBool
   if j.hasKey("seed"): result.seed = j["seed"].getInt
   if j.hasKey("report") and j["report"].getBool: result.output = stdout
+  if j.hasKey("walkers"):
+    case j["walkers"].getStr
+    of "cpu": result.walkers = WalkerSettings(backend: wbCpu, threads: 1)
+    of "gpu": result.walkers = WalkerSettings(backend: wbGpu, single: true)
+    of "", "none": discard
+    else: raise newException(MagboltzError, "walkers: \"cpu\", \"gpu\" or none")
+    if j.hasKey("walkerCount"): result.walkers.n = j["walkerCount"].getInt
 
 var answer: string  # lives until the next call, for the caller to read
 
@@ -104,6 +113,10 @@ proc nimboltzGases(): cstring {.exportc, cdecl.} =
     a.add %*{"id": ord(g), "name": $g}
   answer = $a
   result = cstring(answer)
+
+proc nimboltzWebGpu(): cint {.exportc, cdecl.} =
+  ## whether the walkers can run on WebGPU (a build with it)
+  cint(ord(defined(nimboltzWebGpu)))
 
 proc nimboltzCollisionScale(): cint {.exportc, cdecl.} =
   ## collisions per unit of Magboltz's NMAX (4·10⁷ unless built otherwise)
