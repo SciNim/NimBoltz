@@ -11,6 +11,7 @@
 ## Plain Nim the GPU compiler takes too: no `break`, `continue` or `case`,
 ## no references, no `bool` arguments, `int32` counters.
 
+import std/math
 import units, rm48, tables, vec3, fields, collisions, freeflight, thermal
 
 const tallyProcesses* = max(maxMixProcesses, maxGases * maxGasProcesses)
@@ -70,6 +71,91 @@ func collisionFrequency(tabs: GasTables, target: WarmGas, ie: int): ps⁻¹ {.in
   result = 0.0.ps⁻¹
   for k in 1 .. int(target.gas.count): result = result + tabs[k].tcf[ie]
 
+# Free flights of walkers: the null-collision method of `freeflight.nextHit`,
+# the same distributions, other numbers. What depends only on the start of a
+# flight is computed once, divisions become multiplications, and the
+# logarithm of the flight time is single precision: double precision is
+# slow on GPUs (1/64 of single on gaming ones), and a flight time needs no
+# more digits.
+
+func lnSingle(r: float64): float64 {.inline.} = float64(ln(float32(r)))
+
+func binOf(e: eV, rstep: eV⁻¹): int {.inline.} =
+  ## energy bin of e, rstep = 1 / estep
+  clamp(int(trunc(float64(e * rstep)) + 1.0), 1, nEnergyBins)
+
+proc nextHit[G: static FieldGeometry](f: Field, tab: MixtureTable, target: var ColdGas,
+                                      rstep: eV⁻¹, el: Electron, rng: var Ranmar,
+                                      nnull: var int32): Hit =
+  ## gas at 0 K: next real collision of an electron leaving `el`
+  let e0 = el  # a copy: not reloaded after each random number
+  let band = clamp(int(trunc(e0.e / target.bandWidth) + 1.0), 1, target.bounds.len)
+  var tlim = target.bounds[band]
+  var itlim = 1.0 / tlim
+  when G in {fgElectric, fgParallel}:
+    let ap = e0.dir.z * f.f2 * sqrt(e0.e)
+  var tdash = 0.0.ps
+  var real = false
+  while not real:
+    let lnr = lnSingle(drand48(rng))
+    tdash = tdash - lnr * itlim
+    when G in {fgElectric, fgParallel}:
+      result.fl.t = tdash
+      result.fl.e = e0.e + (ap + f.bp * tdash) * tdash
+    else:
+      result.fl = fly[G](f, e0, tdash)
+    result.ie = binOf(result.fl.e, rstep)
+    let tcf = tab.tcf[result.ie]
+    if tcf > tlim:
+      # bound too low: undo this flight, raise the bound
+      tdash = tdash + lnr * itlim
+      target.bounds[band] = 1.05 * target.bounds[band]
+      tlim = target.bounds[band]
+      itlim = 1.0 / tlim
+    else:
+      real = drand48(rng) * tlim <= tcf
+      if not real: inc nnull
+  finishFlight[G](f, result.fl)
+  result.e = result.fl.e
+  result.din = directionAt[G](f, e0, result.fl)
+  result.gas = 1
+
+proc nextHit[G: static FieldGeometry](f: Field, tabs: GasTables, target: var WarmGas,
+                                      rstep: eV⁻¹, el: Electron, rng: var Ranmar,
+                                      nnull: var int32): Hit =
+  ## thermal motion: next real collision; energy and direction in the rest
+  ## frame of the molecule hit
+  let e0 = el
+  let itcfmx = 1.0 / target.gas.tcfmx
+  let ivfac2 = 1.0 / f.vfac2
+  when G == fgElectric:
+    # v(t) = v0 + a t along E, no square roots in the loop
+    let v0 = e0.dir * (f.vfac * sqrt(e0.e))
+    let az = f.efield * f.const5 * f.vfac
+    let ap = e0.dir.z * f.f2 * sqrt(e0.e)
+  var tdash = 0.0.ps
+  var vrel: Vector[m•ps⁻¹]
+  var real = false
+  while not real:
+    tdash = tdash - lnSingle(drand48(rng)) * itcfmx
+    when G == fgElectric:
+      result.fl.t = tdash
+      result.fl.e = e0.e + (ap + f.bp * tdash) * tdash
+      var vel = v0
+      vel.z = vel.z + az * tdash
+    else:
+      result.fl = fly[G](f, e0, tdash)
+      finishFlight[G](f, result.fl)
+      let vel = velocityAt[G](f, e0, result.fl)
+    result.gas = target.gas.pickGas(drand48(rng))
+    result.vgas = target.maxwell.velocity(target.gas.vtmb[result.gas], rng)
+    vrel = vel - result.vgas
+    result.e = norm2(vrel) * ivfac2
+    result.ie = binOf(result.e, rstep)
+    real = not (drand48(rng) * target.gas.tcfmax[result.gas] > tabs[result.gas].tcf[result.ie])
+    if not real: inc nnull
+  result.din = vrel * (1.0 / (f.vfac * sqrt(result.e)))
+
 func reset*(w: var Walker) =
   ## clears the sums (after the walker has forgotten its start)
   w.pos = vec3(0.0.m, 0.0.m, 0.0.m)
@@ -96,15 +182,17 @@ proc walk*[G: static FieldGeometry; T, C](w: var Walker[T], f: Field, tabs: Tabl
   ## order of MONTE (MONTET); `penning` ≠ 0: Penning transfers; each
   ## collision is counted in `tally` (`Tally`, `NoTally` or a GPU's)
   mixin count
+  let rstep = 1.0 / estep
   for _ in 0'i32 ..< collisions:
-    let h = nextHit[G](f, tabs, w.target, estep, w.el, w.rng, w.nulls)
+    let el = w.el  # a copy, so its square roots are computed once
+    let h = nextHit[G](f, tabs, w.target, rstep, el, w.rng, w.nulls)
     if h.fl.t > w.tmax: w.tmax = h.fl.t
     when G in {fgElectric, fgParallel}:
-      w.e2 = w.e2 + energyIntegral[G](f, w.el, h.fl)
+      w.e2 = w.e2 + energyIntegral[G](f, el, h.fl)
     else:
       w.e2 = w.e2 + (estep / 2.0 + estep * float64(h.ie - 1)) /
                     collisionFrequency(tabs, w.target, h.ie)
-    discard advance[G](f, w.el, h.fl, w.pos)
+    discard advance[G](f, el, h.fl, w.pos)
     w.st = w.st + h.fl.t
     template tab: untyped = tableOf(tabs, h)
     let r2 = drand48(w.rng)

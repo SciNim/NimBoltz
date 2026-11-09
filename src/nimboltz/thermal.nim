@@ -22,13 +22,25 @@ type
 
 # (GPU code too: no iterators but ranges, `int32` in the objects)
 
-proc refill(m: var MaxwellSampler, rng: var (MagRng | Ranmar)) =
+proc refill(m: var MaxwellSampler, rng: var MagRng) =
   for k in 0 .. 2:
     let j = 2 * k + 1
     let ran1 = drand48(rng)
     let ran2 = drand48(rng)
     m.rn[j] = sqrt(-ln(ran1)) * cos(ran2 * (2.0 * PI))
     m.rn[j + 1] = sqrt(-ln(ran1)) * sin(ran2 * (2.0 * PI))
+  m.used = 0
+
+proc refill(m: var MaxwellSampler, rng: var Ranmar) =
+  ## for walkers (`walkers.nim`): in single precision, which is fast on GPUs
+  ## and more than precise enough for the speed of a gas molecule
+  for k in 0 .. 2:
+    let j = 2 * k + 1
+    let ran1 = float32(drand48(rng))
+    let ran2 = float32(drand48(rng))
+    let r = sqrt(-ln(ran1))
+    m.rn[j] = float64(r * cos(ran2 * float32(2.0 * PI)))
+    m.rn[j + 1] = float64(r * sin(ran2 * float32(2.0 * PI)))
   m.used = 0
 
 proc initMaxwellSampler*(rng: var (MagRng | Ranmar)): MaxwellSampler =
