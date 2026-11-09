@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimBoltz</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>NimBoltz</h1>
+  <p class="sub">Electron transport in gas mixtures: Magboltz 11.21 in Nim, running in your browser (WebAssembly)</p>
+</header>
+<main>
+<form id="setup" class="panel" autocomplete="off">
+  <fieldset>
+    <legend>Gas mixture</legend>
+    <div id="gases"></div>
+    <div class="row">
+      <button type="button" id="addGas">Add gas</button>
+      <span id="total" class="muted"></span>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Conditions</legend>
+    <label>Temperature (°C) <input id="temperature" type="number" step="any" value="20"></label>
+    <label>Pressure (Torr) <input id="pressure" type="number" step="any" min="0" value="760"></label>
+    <label>Electric field (V/cm) <input id="efield" type="text" value="1000"
+      title="One field, or several separated by spaces or commas: they run one after the other"></label>
+    <p class="hint">Several fields (e.g. <code>100 200 500 1000</code>) run one after the other.</p>
+    <label>Magnetic field (T) <input id="bfield" type="number" step="any" min="0" value="0"></label>
+    <label>Angle between E and B (°) <input id="angle" type="number" step="any" min="0" max="180" value="0"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Run</legend>
+    <label>Collisions (millions) <input id="collisions" type="number" step="any" min="0.1" value="8"
+      title="Real collisions of the drift run; Magboltz uses 80 (NMAX = 2) and more"></label>
+    <label>Upper energy (eV) <input id="efinal" type="number" step="any" min="0" value="0"
+      title="0: found by raising it until no electron reaches it"></label>
+    <p class="hint">0 finds the energy range automatically.</p>
+    <label class="check"><input id="thermal" type="checkbox" checked> Thermal motion of the gas</label>
+    <label class="check"><input id="penning" type="checkbox"> Penning transfers</label>
+    <label>Random seed <input id="seed" type="number" step="1" min="1" placeholder="Magboltz's"></label>
+  </fieldset>
+  <div class="row buttons">
+    <button type="submit" id="run" class="primary" disabled>Run</button>
+    <button type="button" id="stop" disabled>Stop</button>
+  </div>
+  <p id="status" role="status" class="muted">Loading the simulation…</p>
+</form>
+
+<section class="results">
+  <div class="panel" id="latest" hidden>
+    <h2 id="latestTitle">Results</h2>
+    <div id="tiles" class="tiles"></div>
+    <ul id="warnings" class="warnings"></ul>
+    <p id="runinfo" class="muted"></p>
+  </div>
+
+  <div class="panel" id="scanPanel" hidden>
+    <div class="row between">
+      <h2>All runs</h2>
+      <div class="row">
+        <label class="inline">Plot <select id="scanY"></select> against E</label>
+        <label class="check inline"><input id="scanLogX" type="checkbox" checked> log E</label>
+        <button type="button" id="csv">CSV</button>
+        <button type="button" id="clear">Clear</button>
+      </div>
+    </div>
+    <svg id="scanChart" class="chart" role="img" aria-label="Results of all runs against the electric field"></svg>
+    <div class="tablewrap"><table id="runs"></table></div>
+  </div>
+
+  <div class="panel" id="spectrumPanel" hidden>
+    <div class="row between">
+      <h2>Energy distribution of the collisions</h2>
+      <label class="check inline"><input id="specLogY" type="checkbox"> log scale</label>
+    </div>
+    <svg id="spectrum" class="chart" role="img" aria-label="Energy distribution of the collisions of the latest run"></svg>
+  </div>
+
+  <div class="panel" id="processPanel" hidden>
+    <h2>Collision frequencies</h2>
+    <p id="kinds" class="muted"></p>
+    <div class="tablewrap"><table id="processes"></table></div>
+    <button type="button" id="allProcesses" hidden></button>
+  </div>
+
+  <details class="panel" id="printPanel" hidden>
+    <summary>Magboltz printout <button type="button" id="savePrint">Save</button></summary>
+    <pre id="printout"></pre>
+  </details>
+</section>
+</main>
+<div id="tooltip" class="tooltip" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

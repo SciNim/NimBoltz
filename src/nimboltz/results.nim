@@ -21,7 +21,7 @@ type
     efield*: V•cm⁻¹
     efinal*: eV                       ## upper end of the energy range, given or found
     collisions*: int                  ## real collisions of the drift run (MONTE)
-    nullCollisions*: int
+    nullCollisions*: int64
     velocity*: Vector[Measurement[μm•ns⁻¹]]   ## drift velocity
     diffusion*: Tensor[Measurement[cm²•s⁻¹]]  ## diffusion tensor
     longitudinal*, transverse*: Measurement[cm²•s⁻¹]

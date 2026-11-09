@@ -306,6 +306,30 @@ Speed (RTX 3090, shared with another job at 100 % load, FP64 at 1/64 of
 FP32): 8192 walkers, 18–40 M collisions/s, against 3.6 M/s on one CPU
 core.
 
+## WebAssembly
+
+Since 2026-11-09 NimBoltz also builds for WebAssembly with Emscripten
+(`web/build.sh`), as the program for Node (`web/build.sh cli DIR`, decks on
+stdin) and as a module for web pages (`src/nimboltz/wasm.nim`: a `Setup`
+as JSON in, the `Results` as JSON out). `web/` is a small page that runs
+it in a Web Worker: a mixture, the conditions, one or several fields, the
+results with errors, a table and a plot of all runs, the energy
+distribution, the collision frequencies and Magboltz's printout.
+
+- One thread (`--threads:off`): threads in a browser need
+  SharedArrayBuffer and cross-origin isolation headers from the server.
+- `int` has 32 bits on wasm32. Counters that can pass 2³¹ (null
+  collisions: billions in long avalanche runs) are `int64`, and floats
+  are clamped before they become integers.
+- Memory: ~300 MB for a run (tables of 4000 energy bins), growing as
+  needed up to 4 GB; repeated runs in one module don't grow it.
+- Equivalence: wasm's maths library (musl) differs from glibc's in the
+  last bit of some functions, so trajectories diverge after a while. Of
+  the 96 regression decks 52 stay byte-identical, the rest agree
+  statistically (`tests/wasm/regress.sh`: max |z| 2.6); the cross
+  sections of all gases agree within 7e-15 relative.
+- Speed: 1.4–1.7 times the native time under Node.
+
 ## Layout
 
 ```
@@ -345,4 +369,6 @@ src/nimboltz/
   magboltz_main.nim  entry point: decks on stdin
   results.nim    the results of a run as values with errors (Results)
   api.nim        the library: Setup, simulate
+  wasm.nim       the library for web pages (Emscripten): JSON in and out
+web/             build script and page of the WebAssembly build
 ```

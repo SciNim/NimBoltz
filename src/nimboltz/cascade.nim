@@ -129,7 +129,7 @@ type
     id*: int                 ## real collisions (ITER)
     iprint, jprint: int
     j1*: int                 ## 1 + number of times NMAX/10 collisions passed
-    nnull*: int
+    nnull*: int64
     tmax*: ps                ## longest flight
     times*: array[1..nTimeBins, float64]       ## flights per 1 ps bin
     spectrum*: array[1..nEnergyBins, float64]  ## real collisions per energy bin
@@ -362,7 +362,7 @@ proc stranded[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G,
 
 func slice(planes: Planes, z: m): int =
   ## ZSTEP slice of z (1..9)
-  clamp(int(1.0 + trunc(float64(z / planes.zstep))), 1, nPlanes + 1)
+  int(clamp(1.0 + trunc(float64(z / planes.zstep)), 1.0, float64(nPlanes + 1)))
 
 # --- electrons ---------------------------------------------------------------
 
@@ -488,7 +488,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     tdash = 0.0.ps
     discard advance[G](c.f, c.el, fl, c.pos)
     c.st = c.st + t
-    let it = min(int(trunc(t.float + 1.0)), nTimeBins)  # 1 ps bins
+    let it = int(min(trunc(t.float + 1.0), float64(nTimeBins)))  # 1 ps bins
     c.times[it] = c.times[it] + 1.0
     c.spectrum[h.ie] = c.spectrum[h.ie] + 1.0
     let r2 = drand48(rng)

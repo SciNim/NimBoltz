@@ -196,23 +196,27 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
       initCascade[G, P, ColdBound](f, const2, const3, start, ColdBound(tlim: tlim),
                                    r.estep, n, d.penning, planes, d.btheta, limit)
   var c: Cascade[G, P, Target]
-  if r.threads <= 1:
+  when not compileOption("threads"):
     c = cascade(nmax, maxPrimaries, rng)
     c.run(tabs, rng)
   else:
-    let n = r.threads
-    var walkers = newSeq[Walker[G, P, Target, typeof(tabs)]](n)
-    for k, w in walkers.mpairs:
-      w.rng = initMagRng(nil)
-      w.rng.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
-      w.c = cascade(nmax div n + (if k < nmax mod n: 1 else: 0),
-                    maxPrimaries div n, w.rng)
-      w.tabs = addr tabs
-    var threads = newSeq[Thread[ptr Walker[G, P, Target, typeof(tabs)]]](n)
-    for k in 0 ..< n: createThread(threads[k], walk[G, P, Target, typeof(tabs)], addr walkers[k])
-    joinThreads(threads)
-    c = move walkers[0].c
-    for k in 1 ..< n: c.merge(walkers[k].c)
+    if r.threads <= 1:
+      c = cascade(nmax, maxPrimaries, rng)
+      c.run(tabs, rng)
+    else:
+      let n = r.threads
+      var walkers = newSeq[Walker[G, P, Target, typeof(tabs)]](n)
+      for k, w in walkers.mpairs:
+        w.rng = initMagRng(nil)
+        w.rng.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
+        w.c = cascade(nmax div n + (if k < nmax mod n: 1 else: 0),
+                      maxPrimaries div n, w.rng)
+        w.tabs = addr tabs
+      var threads = newSeq[Thread[ptr Walker[G, P, Target, typeof(tabs)]]](n)
+      for k in 0 ..< n: createThread(threads[k], walk[G, P, Target, typeof(tabs)], addr walkers[k])
+      joinThreads(threads)
+      c = move walkers[0].c
+      for k in 1 ..< n: c.merge(walkers[k].c)
   r.last = Collisions[M](tally: c.tally, st: c.st, ttots: c.ttots, spectrum: c.spectrum)
   for w in c.warnings:
     r.output.printNegative(fm, f, w)

@@ -55,7 +55,7 @@ template tableOf*(tabs: GasTables, h: Hit): untyped = tabs[h.gas]
 
 proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: var ColdGas,
                                        estep: eV, el: Electron, rng: var (MagRng | Ranmar),
-                                       nnull: var (int | int32)): Hit =
+                                       nnull: var (int | int32 | int64)): Hit =
   ## Gas at 0 K: next real collision of an electron leaving `el`.
   ## (A loop without `break`/`continue`, so the GPU compiler takes it.)
   var tdash = 0.0.ps
@@ -82,7 +82,7 @@ proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: va
 
 proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var WarmGas,
                                        estep: eV, el: Electron, rng: var MagRng,
-                                       nnull: var int): Hit =
+                                       nnull: var int64): Hit =
   ## Thermal motion: next real collision; energy and direction in the rest
   ## frame of the molecule hit.
   var tdash = 0.0.ps

@@ -81,6 +81,7 @@ type
 
 converter toFVal*(x: int): FVal = FVal(kind: fvInt, i: x)
 converter toFVal*(x: int32): FVal = FVal(kind: fvInt, i: x)
+converter toFVal*(x: int64): FVal = FVal(kind: fvInt, i: x)
 converter toFVal*(x: float64): FVal = FVal(kind: fvReal, f: x)
 converter toFVal*(x: float32): FVal = FVal(kind: fvReal, f: float64(x))
 converter toFVal*(x: string): FVal = FVal(kind: fvStr, s: x)

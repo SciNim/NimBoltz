@@ -33,6 +33,10 @@ var
 proc put[T](f: File, x: T) =
   when T is string:
     raiseAssert "use putStr"
+  elif T is int:
+    f.put int64(x)  # 8 bytes, also where int has 4 (wasm32)
+  elif T is array[1..250, int] | array[1..6, int] | array[1..30, int]:
+    for y in x: f.put y
   else:
     var y = x
     if f.writeBuffer(addr y, sizeof(y)) != sizeof(y): quit "write failed"

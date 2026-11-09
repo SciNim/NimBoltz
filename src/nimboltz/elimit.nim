@@ -25,7 +25,7 @@ proc energyLimitExceeded*[G: static FieldGeometry](
   ## direction).
   static: doAssert G != fgParallel, "use elimitGeometry"
   var el = start
-  var nnull = 0
+  var nnull = 0'i64
   for _ in 1 .. sampleSize(G, nmax):
     let h = nextHit[G](f, tabs, target, estep, el, rng, nnull)
     if h.ie == nEnergyBins: return true

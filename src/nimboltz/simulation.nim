@@ -61,7 +61,7 @@ type
     theta*: float64
       ## polar angle of the last scattering: each Monte Carlo run starts in
       ## the direction where the previous one ended (THETA of /SETP/)
-    nnull*: int           ## MONTE: null collisions
+    nnull*: int64         ## MONTE: null collisions
     tmax*: ps             ## MONTE: longest flight
     transport*: Transport
       ## MONTE's results; the analyses replace the Townsend coefficients

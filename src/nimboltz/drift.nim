@@ -74,7 +74,7 @@ type
     dec: Decorrelation
     rcs, rsn: float64   ## fgOblique: rotation to the frame of E
     theta*: float64     ## polar angle of the last scattering (THETA)
-    nnull*: int         ## null collisions
+    nnull*: int64       ## null collisions
     extraIons*: int     ## ionisations by Auger electrons and Penning transfer
     tmax*: ps           ## longest flight
     times*: array[1..nTimeBins, float64]     ## flights per 1 ps bin
@@ -147,7 +147,7 @@ proc record[G: static FieldGeometry; T](d: var Drift[G, T], h: Hit, seg: int, ri
   inc d.ncol
   let v2 = advance[G](d.f, d.el, h.fl, d.cur.pos)
   d.cur.st = d.cur.st + t
-  let it = min(int(trunc(t.float + 1.0)), nTimeBins)  # 1 ps bins
+  let it = int(min(trunc(t.float + 1.0), float64(nTimeBins)))  # 1 ps bins
   d.times[it] = d.times[it] + 1.0
   d.spectrum[h.ie] = d.spectrum[h.ie] + 1.0
   d.w.z = d.cur.pos.z / d.cur.st
