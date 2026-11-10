@@ -56,7 +56,9 @@ Any static file host works (GitHub Pages, ...): the page is `index.html`,
   GPU. The GPU needs a browser with WebGPU and WGSL pointer parameters
   (Chrome or Edge 123 and later) and the build with it; it runs in single
   precision, 16384 walkers, and its runs count more collisions than asked
-  (each walker warms up first).
+  (each walker warms up first). When the browser can't use the graphics
+  card it hands out a software adapter (SwiftShader), which runs on the CPU;
+  the page says so under the selector, and chrome://gpu tells why.
 
 Runs happen in a Web Worker; Stop ends the worker (and the run) and starts
 a new one. Runs of the Townsend analyses (high fields, ionisation or
@@ -86,4 +88,5 @@ console.log(r.velocity.z);   // {value: 41.2, error: 0.097, unit: "μm•ns⁻¹
 `tests/wasm/trun.js` runs it under Node; `tests/wasm/regress.sh` runs the
 regression decks through the command-line build; `tests/wasm/webgpu.sh`
 compares WebGPU walkers with CPU walkers collision by collision in headless
-Chromium (WebGPU on SwiftShader, no GPU needed).
+Chromium (WebGPU on SwiftShader, no GPU needed; `WEBGPU=vulkan` for the
+machine's GPU through Vulkan).

@@ -35,8 +35,13 @@ function startWorker() {
     if (m.type === 'ready') {
       gases = m.gases;
       $('gpuOption').disabled = !m.gpu;
-      $('gpuHint').textContent = m.gpu ? `GPU: ${m.gpu}, in single precision.` :
-        'The GPU needs WebGPU with WGSL pointer parameters (Chrome or Edge 123+), and a build with it.';
+      $('gpuHint').textContent = !m.gpu ?
+        'The GPU needs WebGPU with WGSL pointer parameters (Chrome or Edge 123+), and a build with it.' :
+        m.software ?
+        `GPU: ${m.gpu}, a software adapter: it runs on the CPU, not on the graphics card. ` +
+        'The browser can\'t use the real GPU; chrome://gpu (brave://gpu, edge://gpu) says why.' :
+        `GPU: ${m.gpu}, in single precision.`;
+      $('gpuHint').classList.toggle('warn', !!m.software);
       if (!$('gases').children.length) { addGas(2, 90); addGas(12, 10); }
       setIdle('Ready.');
     } else if (m.type === 'line') {

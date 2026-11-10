@@ -24,6 +24,10 @@ async function openGpu(m) {
   device.lost.then((i) => { m.gpuError = 'device lost: ' + i.message; });
   const i = adapter.info || {};
   device.label = [i.vendor, i.architecture, i.device || i.description].filter(Boolean).join(' ') || 'WebGPU';
+  // A software adapter (SwiftShader) runs the kernels on the CPU: the
+  // browser falls back to it when it can't use the real GPU.
+  device.software = !!(i.isFallbackAdapter || adapter.isFallbackAdapter ||
+                       /swiftshader|llvmpipe|lavapipe/i.test(device.label) || /^0xc0de$/i.test(i.device || ''));
   return device;
 }
 
@@ -37,7 +41,8 @@ const ready = createNimBoltz({
     try { m.gpuDevice = await openGpu(m); } catch (err) { m.gpuDevice = null; }
   }
   postMessage({type: 'ready', gases, scale: m.ccall('nimboltzCollisionScale', 'number', [], []),
-               gpu: m.gpuDevice ? m.gpuDevice.label : null});
+               gpu: m.gpuDevice ? m.gpuDevice.label : null,
+               software: m.gpuDevice ? m.gpuDevice.software : false});
   return m;
 });
 
