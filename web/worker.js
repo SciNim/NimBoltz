@@ -4,7 +4,14 @@
 //        {type: 'line', text}           a line of Magboltz's printout
 //        {type: 'result', result, ms}   the run's results (or {error})
 // A run can't be interrupted from inside: the page terminates the worker.
-importScripts('nimboltz.js');
+// With cross-origin isolation (the server's COOP and COEP headers) the
+// module with threads, one per core; else the one with one thread. The
+// module's threads are workers that load this script too (Emscripten starts
+// them from the script that started it): they only load the module.
+const isThread = self.name?.startsWith('em-pthread');
+const maxThreads = self.crossOriginIsolated ? navigator.hardwareConcurrency || 1 : 1;
+importScripts(isThread || maxThreads > 1 ? 'nimboltz-mt.js' : 'nimboltz.js');
+if (!isThread) main();
 
 // A WebGPU device for the walkers, if the browser has one (null if not).
 // The kernel needs WGSL's pointer parameters (Chrome/Edge 123 and later).
@@ -31,31 +38,35 @@ async function openGpu(m) {
   return device;
 }
 
-const ready = createNimBoltz({
-  print: (text) => postMessage({type: 'line', text}),
-  printErr: (text) => postMessage({type: 'line', text}),
-}).then(async (m) => {
-  const gases = JSON.parse(m.UTF8ToString(m.ccall('nimboltzGases', 'number', [], [])));
-  m.webgpu = m.ccall('nimboltzWebGpu', 'number', [], []) !== 0;  // built with it
-  if (m.webgpu) {
-    try { m.gpuDevice = await openGpu(m); } catch (err) { m.gpuDevice = null; }
-  }
-  postMessage({type: 'ready', gases, scale: m.ccall('nimboltzCollisionScale', 'number', [], []),
-               gpu: m.gpuDevice ? m.gpuDevice.label : null,
-               software: m.gpuDevice ? m.gpuDevice.software : false});
-  return m;
-});
+function main() {
+  const ready = createNimBoltz({
+    print: (text) => postMessage({type: 'line', text}),
+    printErr: (text) => postMessage({type: 'line', text}),
+  }).then(async (m) => {
+    const gases = JSON.parse(m.UTF8ToString(m.ccall('nimboltzGases', 'number', [], [])));
+    m.webgpu = m.ccall('nimboltzWebGpu', 'number', [], []) !== 0;  // built with it
+    if (m.webgpu) {
+      try { m.gpuDevice = await openGpu(m); } catch (err) { m.gpuDevice = null; }
+    }
+    postMessage({type: 'ready', gases, scale: m.ccall('nimboltzCollisionScale', 'number', [], []),
+                 gpu: m.gpuDevice ? m.gpuDevice.label : null,
+                 software: m.gpuDevice ? m.gpuDevice.software : false, threads: maxThreads});
+    return m;
+  });
 
-onmessage = async (e) => {
-  const m = await ready;
-  const t = performance.now();
-  let result;
-  try {
-    // asynchronous with WebGPU: the module waits for the GPU (Asyncify)
-    result = JSON.parse(await m.ccall('nimboltzRun', 'string', ['string'], [JSON.stringify(e.data.setup)],
-                                      m.webgpu ? {async: true} : undefined));
-  } catch (err) {  // a Nim defect or a trap: the module is unusable now
-    result = {error: String(err), fatal: true};
-  }
-  postMessage({type: 'result', result, ms: performance.now() - t});
-};
+  self.onmessage = async (e) => {
+    const m = await ready;
+    const t = performance.now();
+    // no more threads than the module started (it can't start more while it runs)
+    const setup = {...e.data.setup, threads: Math.min(Math.max(e.data.setup.threads || 1, 1), maxThreads)};
+    let result;
+    try {
+      // asynchronous with WebGPU: the module waits for the GPU (Asyncify)
+      result = JSON.parse(await m.ccall('nimboltzRun', 'string', ['string'], [JSON.stringify(setup)],
+                                        m.webgpu ? {async: true} : undefined));
+    } catch (err) {  // a Nim defect or a trap: the module is unusable now
+      result = {error: String(err), fatal: true};
+    }
+    postMessage({type: 'result', result, ms: performance.now() - t});
+  };
+}

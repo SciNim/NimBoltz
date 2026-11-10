@@ -8,7 +8,9 @@
 ## "collisions": n, "efinal": eV (0: found), "penning": bool,
 ## "thermal": bool, "seed": n, "report": bool (printout to stdout),
 ## "walkers": "cpu" or "gpu" (MONTE on independent electrons, the GPU's
-## through WebGPU in a build with it: web/build.sh), "walkerCount": n};
+## through WebGPU in a build with it: web/build.sh), "walkerCount": n,
+## "threads": n (of the avalanches and the CPU's walkers; more than one in
+## the build with threads only, nimboltz-mt.js, and not Magboltz's numbers);
 ## all but "mixture" and "efield" optional, with the defaults of `Setup`.
 ##
 ## Results: {"gases", "efinal", "collisions", "nullCollisions",
@@ -86,10 +88,11 @@ proc setup(j: JsonNode): Setup =
   if j.hasKey("penning"): result.penning = j["penning"].getBool
   if j.hasKey("thermal"): result.thermal = j["thermal"].getBool
   if j.hasKey("seed"): result.seed = j["seed"].getInt
+  if j.hasKey("threads"): result.threads = j["threads"].getInt
   if j.hasKey("report") and j["report"].getBool: result.output = stdout
   if j.hasKey("walkers"):
     case j["walkers"].getStr
-    of "cpu": result.walkers = WalkerSettings(backend: wbCpu, threads: 1)
+    of "cpu": result.walkers = WalkerSettings(backend: wbCpu)  # threads: as the setup's
     of "gpu": result.walkers = WalkerSettings(backend: wbGpu, single: true)
     of "", "none": discard
     else: raise newException(MagboltzError, "walkers: \"cpu\", \"gpu\" or none")

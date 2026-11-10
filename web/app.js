@@ -42,6 +42,12 @@ function startWorker() {
         'The browser can\'t use the real GPU; chrome://gpu (brave://gpu, edge://gpu) says why.' :
         `GPU: ${m.gpu}, in single precision.`;
       $('gpuHint').classList.toggle('warn', !!m.software);
+      if (m.threads > 1) {
+        $('threads').disabled = false; $('threads').max = m.threads;
+        if ($('threads').value === '1') $('threads').value = m.threads;
+        $('threadsHint').textContent = `Up to ${m.threads}, one per core: many electrons on the CPU, ` +
+          'and the avalanches (more than one: not Magboltz\'s random numbers, the same within errors).';
+      }
       if (!$('gases').children.length) { addGas(2, 90); addGas(12, 10); }
       setIdle('Ready.');
     } else if (m.type === 'line') {
@@ -167,6 +173,7 @@ function setups() {
   };
   if ($('seed').value) base.seed = Number($('seed').value);
   if ($('walkers').value) base.walkers = $('walkers').value;
+  if (!$('threads').disabled) base.threads = Math.max(1, Math.round(Number($('threads').value)) || 1);
   if (!(base.pressure > 0)) throw new Error('the pressure must be positive');
   if (!(base.collisions >= 1e5)) throw new Error('at least 0.1 million collisions');
   return fields.map((efield) => ({...base, efield}));

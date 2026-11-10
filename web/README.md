@@ -9,7 +9,7 @@ Needs Nim and Emscripten ([emsdk](https://emscripten.org/docs/getting_started/do
 
 ```sh
 source /path/to/emsdk/emsdk_env.sh
-web/build.sh             # → web/nimboltz.js, web/nimboltz.wasm
+web/build.sh             # → web/nimboltz.{js,wasm}, web/nimboltz-mt.{js,wasm}
 ```
 
 `web/build.sh cli DIR` builds the command-line program instead, to run input
@@ -34,7 +34,39 @@ python3 -m http.server -d web 8000    # then open http://localhost:8000
 ```
 
 Any static file host works (GitHub Pages, ...): the page is `index.html`,
-`style.css`, `app.js`, `worker.js`, `nimboltz.js` and `nimboltz.wasm`.
+`style.css`, `app.js`, `worker.js`, `nimboltz.js` and `nimboltz.wasm`,
+and for threads `nimboltz-mt.js` and `nimboltz-mt.wasm`.
+
+Threads: `nimboltz-mt` runs on one thread per core (Emscripten's pthreads,
+Web Workers that share the module's memory). Browsers allow that shared
+memory (`SharedArrayBuffer`) only on pages with cross-origin isolation,
+which the server turns on with two headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+`worker.js` loads `nimboltz-mt` when the page has them
+(`crossOriginIsolated`), else `nimboltz` on one thread. `web/serve.py`
+is Python's server with the headers:
+
+```sh
+python3 web/serve.py 8000             # then open http://localhost:8000
+```
+
+With nginx:
+
+```nginx
+location /nimboltz/ {
+    add_header Cross-Origin-Opener-Policy  same-origin   always;
+    add_header Cross-Origin-Embedder-Policy require-corp always;
+}
+```
+
+(A `location` with `add_header` of its own inherits none from the
+`server` block: repeat those there.) The page loads only its own files, so
+the headers block nothing. GitHub Pages can't set headers.
 
 ## The page
 
@@ -59,6 +91,12 @@ Any static file host works (GitHub Pages, ...): the page is `index.html`,
   (each walker warms up first). When the browser can't use the graphics
   card it hands out a software adapter (SwiftShader), which runs on the CPU;
   the page says so under the selector, and chrome://gpu tells why.
+- Threads (with the headers above): up to one per core, for many electrons
+  on the CPU (16 threads: about 9 times faster, the same numbers as one
+  thread, since each electron has its own random numbers) and for the
+  avalanches of the Townsend analyses (their own random numbers: not
+  Magboltz's numbers, the same within errors). Magboltz's one electron
+  stays on one thread.
 
 Runs happen in a Web Worker; Stop ends the worker (and the run) and starts
 a new one. Runs of the Townsend analyses (high fields, ionisation or

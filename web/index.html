@@ -45,6 +45,9 @@
       <option value="gpu" id="gpuOption" disabled>Many electrons, on the GPU</option>
     </select></label>
     <p class="hint" id="gpuHint">The GPU needs WebGPU with WGSL pointer parameters (Chrome or Edge 123+), and a build with it.</p>
+    <label>Threads <input id="threads" type="number" step="1" min="1" value="1" disabled
+      title="For many electrons on the CPU, and for the avalanches (Townsend coefficients)"></label>
+    <p class="hint" id="threadsHint">One thread: threads need a server that sends the headers for cross-origin isolation (see README.md).</p>
     <label class="check"><input id="thermal" type="checkbox" checked> Thermal motion of the gas</label>
     <label class="check"><input id="penning" type="checkbox"> Penning transfers</label>
     <label>Random seed <input id="seed" type="number" step="1" min="1" placeholder="Magboltz's"></label>

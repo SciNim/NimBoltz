@@ -444,8 +444,18 @@ it in a Web Worker: a mixture, the conditions, one or several fields, the
 results with errors, a table and a plot of all runs, the energy
 distribution, the collision frequencies and Magboltz's printout.
 
-- One thread (`--threads:off`): threads in a browser need
-  SharedArrayBuffer and cross-origin isolation headers from the server.
+- Two modules: `nimboltz` on one thread (`--threads:off`), and
+  `nimboltz-mt` with threads (Emscripten pthreads: Web Workers sharing the
+  memory, a SharedArrayBuffer, which browsers allow only with the
+  server's cross-origin isolation headers; `web/serve.py`). `worker.js`
+  picks by `crossOriginIsolated`. The threads start with the module, one
+  per core (`PTHREAD_POOL_SIZE`): a run blocks its thread in
+  `joinThreads`, so a thread started then could never load; the worker
+  caps the setup's `threads` at that. The threads' workers load
+  `worker.js` (Emscripten 7 starts them from the script that started the
+  module), which then only loads the module. Crucible's CPU thread pool
+  needs Linux futexes, so it stays out under Emscripten (`cpuPool`).
+  CPU walkers on 32 threads: Ar/CO₂ 8M collisions 1.8 s against 16.3 s.
 - `int` has 32 bits on wasm32. Counters that can pass 2³¹ (null
   collisions: billions in long avalanche runs) are `int64`, and floats
   are clamped before they become integers.
