@@ -495,7 +495,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     let i = findProcess(tab, h.ie, r2)
     var ei = tab.ein[i]
     if h.e < ei: ei = h.e - 0.0001.eV
-    if abs(ei - vibrationMark) <= 0.0001.eV: ei = h.e - vibrationMark
+    if tab.moderation[i] == 1'i32: ei = h.e - vibrationMark  # MB-58
     var secondary = -1
     if tab.ipn[i] != 0:
       if tab.ipn[i] == -1:

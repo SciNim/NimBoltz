@@ -19,6 +19,10 @@ const
   maxMixProcesses* = 960   ## collision processes of a mixture at 0 K
   maxGasProcesses* = 300   ## collision processes of one gas (thermal)
   maxGases* = 6
+  vibrationMark* = 0.024999000132083893.eV
+    ## energy loss by which a gas marks a moderation level, where the
+    ## electron keeps 0.024999 eV (0.024999 as REAL*4 widened, as Magboltz
+    ## writes it)
 
 type
   CollisionTable*[N: static int] = object
@@ -36,6 +40,7 @@ type
     wpl*: array[1..N, eV]         ## binding energy of the ionised shell
     iarry*: array[1..N, int32]    ## process kind L (1 elastic, 2 ionisation, ...)
     ipn*: array[1..N, int32]      ## > 0: ionisation, energy shared with the secondary
+    moderation*: array[1..N, int32]  ## 1: a moderation level (`vibrationMark`)
     augerCount*: array[1..N, int32]     ## ionisation: Auger electrons emitted (NC0)
     augerEnergy*: array[1..N, eV]       ## ionisation: their total energy (EC0)
     index*: array[1..N, int32]    ## 0 isotropic, 1 forward/backward cut, 2 screened

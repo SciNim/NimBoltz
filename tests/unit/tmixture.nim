@@ -49,8 +49,8 @@ suite "mixture":
     # gas 1: elastic, ionisation, attachment, 2 levels; gas 2: 4 processes
     check tab.last == 9
     check tab.isize == 8
-    check tab.iarry[1 .. 9] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    check tab.ipn[1 .. 5] == [0, 1, -1, 0, 0]
+    check tab.iarry[1 .. 9] == [1'i32, 2, 3, 4, 5, 6, 7, 8, 9]
+    check tab.ipn[1 .. 5] == [0'i32, 1, -1, 0, 0]
     check tab.ein[2].float == 15.0 / (1.0 + 0.5e-4)
     check tab.index[1] == 2 and tab.index[2] == 0
     let ie = 1234
@@ -64,6 +64,20 @@ suite "mixture":
     check negative.len == 0
     check anisotropic(gases)
 
+  test "moderation levels: only the exact mark (MB-58)":
+    var one = newSeq[GasXsec](1)
+    one[0].fill(1e-15.cm², 0.0.cm², 0.0.cm²,
+                [0.025.eV, float64(0.024999'f32).eV, 0.0249991.eV, 0.1.eV])
+    var tab = new CollisionTable[maxMixProcesses]
+    var descr: array[1..maxMixProcesses, string]
+    var fcion, fcatt: array[1..nEnergyBins, ps⁻¹]
+    var negative: seq[NegativeFrequency]
+    buildMixture(tab[], descr, one, @[1.0.cm⁻²•ps⁻¹•eV⁻¹ᐟ²], 100.0.eV, grid,
+                 fcion, fcatt, negative)
+    # elastic, ionisation, attachment, then the 4 levels
+    check tab.last == 7
+    check tab.moderation[1 .. 7] == [0'i32, 0, 0, 0, 1, 0, 0]
+
   test "one table per gas (thermal)":
     var tabs = new array[1..maxGases, CollisionTable[maxGasProcesses]]
     var descr = new array[1..maxGases, array[1..maxGasProcesses, string]]
@@ -71,7 +85,7 @@ suite "mixture":
     var negative: seq[NegativeFrequency]
     buildPerGas(tabs[], descr[], gases, van, 100.0.eV, grid, fcion, fcatt, negative)
     check tabs[1].last == 5 and tabs[2].last == 4
-    check tabs[2].iarry[1 .. 4] == [1, 2, 3, 4]
+    check tabs[2].iarry[1 .. 4] == [1'i32, 2, 3, 4]
     let ie = 77
     # MB-36: the frequencies are summed over the gases
     check abs(fcion[ie].float / (2.0 * 2e-16 * grid.eroot[ie].float) - 1) < 1e-14

@@ -52,20 +52,17 @@ func rotate*(din: Vec3, cosTheta, sinTheta, cosPhi, sinPhi: float64): Vec3 {.inl
          din.y * cosTheta + sinTheta / argz * (din.x * cosPhi - din.y * dz * sinPhi),
          dz * cosTheta + argz * sinTheta * sinPhi)
 
-const vibrationMark* = 0.024999000132083893.eV
-  ## EIN of a process whose energy loss is "all but 0.025 eV" (0.024999 as
-  ## REAL*4 widened, as Magboltz compares it)
-
 proc energyLoss*[N; R](tab: CollisionTable[N], i: int, e: eV, rng: var R,
                        moderation: static bool = false): eV =
   ## Energy lost in process i at energy e. Ionisation shares the energy above
   ## threshold with the secondary electron (a uniform fraction). With
-  ## `moderation` (MONTE*, not ELIMIT*), a process marked by an energy loss
-  ## of 0.024999 eV takes all but 0.024999 eV of the energy (MB-38: e is the
-  ## energy in the frame of the target, also with thermal motion).
+  ## `moderation` (MONTE*, not ELIMIT*), a moderation level takes all but
+  ## 0.024999 eV of the energy (MB-38: e is the energy in the frame of the
+  ## target, also with thermal motion; MB-58: only the levels the gas marks,
+  ## not every loss within 1e-4 eV of 0.024999).
   result = tab.ein[i]
   when moderation:
-    if abs(result - vibrationMark) <= 0.0001.eV:
+    if tab.moderation[i] == 1'i32:
       result = e - vibrationMark
   if tab.ipn[i] > 0:
     let r9 = drand48(rng)

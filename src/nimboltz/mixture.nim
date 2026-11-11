@@ -144,6 +144,7 @@ proc describe[N: static int](b: Builder[N], tab: var CollisionTable[N],
   tab.rgas[i] = rgas
   tab.ein[i] = ein
   tab.ipn[i] = int32(ipn)
+  tab.moderation[i] = 0
   tab.penningFraction[i] = 0.0
   tab.penningRange[i] = 0.0.m
   tab.penningTime[i] = 0.0.ps
@@ -195,6 +196,8 @@ proc addGas[N: static int](b: var Builder[N], tab: var CollisionTable[N],
       let kind = if g.ei[j] < 0.0.eV: 5 else: 4
       b.describe(tab, descr, kind, rgas, g.ei[j] / rgas, 0,
                  g.scrp[4 + g.nion + g.natt + j])
+      if g.ei[j].float == vibrationMark.float:  # exactly (MB-58)
+        tab.moderation[b.np] = 1
       tab.penningFraction[b.np] = g.penningFraction[j]
       tab.penningRange[b.np] = g.penningRange[j].to(m) / sqrt(3.0)  # per axis
       tab.penningTime[b.np] = g.penningTime[j]
