@@ -49,10 +49,10 @@ addToLibrary({
   },
 
   nbgpuRun__deps: ['$nbgpu'],
-  nbgpuRun: (pipe, ws, tab, fm, args, tally, groups) => {
+  nbgpuRun: (pipe, fs, us, tab, fm, args, tally, groups) => {
     const dev = Module.gpuDevice;
     const pipeline = nbgpu.pipelines[pipe];
-    const entries = [ws, tab, fm, args, tally].map((b, binding) => ({binding, resource: {buffer: nbgpu.buffers[b]}}));
+    const entries = [fs, us, tab, fm, args, tally].map((b, binding) => ({binding, resource: {buffer: nbgpu.buffers[b]}}));
     const bindGroup = dev.createBindGroup({layout: pipeline.getBindGroupLayout(0), entries});
     const enc = dev.createCommandEncoder();
     const pass = enc.beginComputePass();

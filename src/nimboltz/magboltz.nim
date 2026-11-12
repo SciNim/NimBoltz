@@ -51,7 +51,8 @@ type
     threads*: int  ## CPU threads; 0: the session's
     single*: bool  ## GPU: in single precision (see single.nim)
     rng*: RngKind = rkXoshiro
-      ## the walkers' random numbers on the CPU (GPUs: Ranmar), and the
+      ## the walkers' random numbers (xoshiro: xoshiro256+ on the CPU,
+      ## xoshiro128** on a GPU, xoshiro128+ in single precision), and the
       ## avalanches' with exact bounds
 
   Session* = object
@@ -197,18 +198,36 @@ template withWalkers(r: Run, wk: WalkerSettings, G: static FieldGeometry, f: Fie
   let fm = flightMaxima(r.tablesOf)
   case wk.backend
   of wbGpu:
-    when (defined(nimboltzGpu) or defined(nimboltzWebGpu)) and R is Ranmar:
-      var b = initGpuWalkers[G, T](ws, f, r.tablesOf, fm[], r.estep, r.deck.penning,
-                                   single = wk.single)
+    when defined(nimboltzGpu) and (R is Xoshiro128 or R is Ranmar and defined(gpuRanmar)) or
+         defined(nimboltzWebGpu) and (R is Xoshiro128Plus or R is Ranmar and defined(gpuRanmar)):
+      var b = initGpuWalkers[G, T, R](ws, f, r.tablesOf, fm[], r.estep, r.deck.penning,
+                                      single = wk.single)
       body
-    elif R isnot Ranmar:
-      r.stop("walkers on a GPU: Ranmar's random numbers only")
+    elif defined(nimboltzGpu) or defined(nimboltzWebGpu):
+      r.stop("walkers on a GPU: xoshiro's random numbers (Ranmar's with -d:gpuRanmar)")
     else:
       r.stop("walkers on a GPU: NimBoltz was built without -d:nimboltzGpu")
   else:
     var b = initCpuWalkers[G, T, R](ws, f, addr r.tablesOf, r.estep, r.deck.penning,
                                     max(wk.threads, 1), addr fm[])
     body
+
+template withWalkerRng(wk: WalkerSettings, R, body: untyped) =
+  ## body with `R` the walkers' generator: on a GPU xoshiro128** (32-bit
+  ## arithmetic, as WGSL has it) or, in single precision, xoshiro128+
+  when defined(nimboltzGpu) or defined(nimboltzWebGpu):
+    if wk.backend == wbGpu and wk.rng == rkXoshiro:
+      if wk.single or defined(nimboltzWebGpu):  # (WebGPU: single precision only)
+        type R {.inject.} = Xoshiro128Plus
+        body
+      else:
+        when defined(nimboltzGpu):
+          type R {.inject.} = Xoshiro128StarStar
+          body
+    else:
+      withRng(wk.rng, R, body)
+  else:
+    withRng(wk.rng, R, body)
 
 func firstEfinal(d: Deck): eV =
   ## EFINAL not given: ELIMIT starts at 0.5 eV (8 eV if E/p > 15 V/cm/Torr
@@ -413,7 +432,6 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Resu
   r.fortran = s.fortran
   var wk = s.walkers
   if s.fortran: wk.backend = wbNone
-  if wk.backend == wbGpu: wk.rng = rkRanmar  # the GPU kernels' generator
   r.generator = wk.rng
   if wk.threads <= 0: wk.threads = s.threads
   when not compileOption("threads"): wk.threads = 1
@@ -426,7 +444,7 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Resu
   if wk.backend != wbNone and d.efinal <= 0.0.eV:
     # ELIMIT on the walkers, which go on to MONTE warm
     withGeometry(monteGeometry(d), G):
-      withRng(wk.rng, R):
+      withWalkerRng(wk, R):
         var (ws, wu) = walkerEnergyRange[G, M, R](r, s.rng, wk)
         phase "MIXER and ELIMIT"
         type T = typeof(ws[0].target)
@@ -459,7 +477,7 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Resu
     withGeometry(monteGeometry(d), G):
       if wk.backend == wbNone: monte[G, M](r, s.rings[G][thermalMotion(M)], s.rng)
       else:
-        withRng(wk.rng, R): monte[G, M, R](r, s.rng, wk)
+        withWalkerRng(wk, R): monte[G, M, R](r, s.rng, wk)
   phase "MONTE"
   r.printTransport()
   if r.needsAnalyses:

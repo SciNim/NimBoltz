@@ -298,7 +298,8 @@ echo r.velocity.z, " ", r.spread(r.transverse)
 Since 2026-11-08 the collision loop of MONTE runs on NVIDIA GPUs:
 `walkers.nim` has independent electrons (`Walker[ColdGas]` at 0 K,
 `Walker[WarmGas]` with thermal motion of the gas), each with its own
-`Ranmar` (RM48 one number at a time, the numbers of `rm48`), and
+random numbers (`Ranmar` until 2026-11-12, xoshiro128 since: see "Walker
+layout and random numbers" below), and
 `gpuwalk.nim` runs one per GPU thread, in all four field geometries. The
 kernel is NimBoltz's own code (`nextHit`, `findProcess`, `energyLoss`,
 `scatter`, `advance`, ...), compiled to CUDA at Nim compile time by
@@ -315,7 +316,7 @@ What this asks of the code the GPU runs:
 - `int32` in what is copied to the GPU (Crucible's `int` is 32 bits), so
   `CollisionTable`, `ThermalGas` and `MaxwellSampler` have `int32` integers
 - no references, no `File`, no strings; the random number generator is a
-  generic parameter (`MagRng` on the CPU, `Ranmar` on a GPU)
+  generic parameter (`MagRng` or a `WalkerRng` on the CPU, xoshiro128 on a GPU)
 - collision counts per process and energy bin: atomic adds into one tally
   (`GpuTally`)
 
@@ -335,7 +336,8 @@ Random numbers of the default mode (`WalkerSettings.rng`,
 `NIMBOLTZ_RNG`): xoshiro256+ (`xoshiro.nim`; 0.9 ns a number, 32 bytes of
 state) or Ranmar (RM48 one number at a time, 5 ns, 800 bytes). Over five
 decks xoshiro made whole runs 5–14 % faster, with the same agreement.
-GPUs keep Ranmar (WGSL has no 64-bit integers). `Walker[T; R = Ranmar]`;
+GPUs take xoshiro128** (xoshiro128+ in single precision; WGSL has no
+64-bit integers): see "Walker layout and random numbers". `Walker[T; R = Ranmar]`;
 procs take R explicitly: Nim 2.4 substitutes a default of a proc's
 generic parameter into its signature even when the argument is given.
 
@@ -484,6 +486,58 @@ bin's processes are side by side (−8 %: in Magboltz's layout the threads of
 a warp at nearby energies read neighbouring words). Whole decks keep MIXER
 on the CPU.
 
+### Walker layout and random numbers (2026-11-12)
+
+Static view first (no hardware counters in the container: the driver has
+`RmProfilingAdminOnly`, no ncu or nsys, and nvprof does not do Ampere).
+ptxas for sm_86 gave the old kernels 44 (0 K, single) to 104 (thermal,
+double) registers, no spills: 33–83 % theoretical occupancy. But 16384
+walkers are 6 warps per SM of 48, and throughput fell beyond 16384
+walkers (cold CO₂, double: 53/120/74/74 M/s at 4k/16k/65k/262k, on a
+shared GPU): latency-bound below, cache-bound above, with 1048 bytes per
+walker (536 in single precision), almost all Ranmar's 97 numbers, walker
+after walker (17 MB at 16k walkers against 6 MB of L2, next to the
+tables).
+
+Two changes:
+
+- xoshiro128** on the GPU (`xoshiro.nim`; 16 bytes, 32-bit integer
+  arithmetic only, which WGSL has), numbers with 32 random bits; in
+  single precision xoshiro128+, top 23 bits centred in their cell (k + ½,
+  k < 2²³, exact in a float32: a demoted kernel draws the CPU's numbers,
+  as the 24-bit RANMAR did). Ranmar stays possible on a GPU with
+  `-d:gpuRanmar` (comparisons). A walker: 208 bytes at 0 K (was 1048),
+  ~740 with thermal motion.
+- Walkers field by field (`soa.nim`): slot j of walker k at
+  `j · stride + k`, floats in one array and `int32`/`uint32` in another;
+  macros `load`/`store` write the copying from the walker's type. A
+  thread copies its walker into a variable of its own, walks, and copies
+  it back. Registers went up (0 K double 66 → 104, thermal double 104 →
+  254, with 104 bytes of spills), faster all the same.
+
+`tests/gpu/tbench.nim` on an idle RTX 3090 (sweep in /tmp/gpu2/sweep.txt),
+M collisions/s, old best (16k walkers; worse beyond) → new at 16k / 65k /
+262k walkers:
+
+| | double | single |
+|---|---|---|
+| CO₂, 0 K | 302 → 364 / 453 / 483 | 460 → 1400 / 1696 / 1690 |
+| Ar/CO₂ 90/10, 0 K | 271 → 343 / 402 / 410 | 450 → 1353 / 1780 / 1775 |
+| CO₂, thermal | 154 → 237 / 241 / 274 | 221 → 1034 / 1111 / 1219 |
+| Ar/CO₂ 90/10, thermal | 132 → 185 / 196 / 201 | 206 → 961 / 1045 / 1209 |
+| Ar/CF₄ 90/10, 0 K | 214 → 260 / 293 / 304 | 444 → 1242 / 1561 / 1524 |
+| Ar/CF₄ 90/10, thermal | 99 → 124 / 128 / 136 | 215 → 734 / 922 / 1128 |
+
+Ranmar in slots: single precision 706 M/s at 16k (CO₂, 0 K), 459 at 65k:
+the generator's state is most of the gain. Whole decks (16384 walkers,
+NMAX 4·10⁷ and 4·10⁸): MONTE in single precision 3–10× faster (pure_co2_t1
+1.01 → 0.21 s, arco2_bperp_t0 1.37 → 0.13 s), ELIMIT on the walkers about
+2× (MIXER included); double precision 0–40 %. More walkers do not pay on
+whole decks even at 4·10⁸ collisions: each walker warms up (and ELIMIT
+warms up per try), so 65k walkers took 2–5× as long. 16384 stay the
+default. The same GPU outputs against Fortran: χ²/n ≤ 0.14, |z| ≤ 1.0
+(4 decks × 5 settings).
+
 ### Single precision
 
 `gpu32` runs the same kernel in single precision: Crucible's
@@ -492,9 +546,10 @@ on the CPU.
 crucible branch). The host hands over walkers, tables and field in single
 precision too (`single.nim`: `pack32`/`unpack32` turn an object's floats
 into 4-byte ones; with 4-byte fields only an object has no padding, on the
-GPU as on the host). The walkers' random numbers become the original
-24-bit RANMAR (`rm48.toSingle`: state on a grid of 2⁻²⁴, Marsaglia and
-Zaman's constants), whose arithmetic is exact in single precision; the
+GPU as on the host; walkers in slots, `soa.slotBytes`). The walkers'
+random numbers are xoshiro128+'s 23-bit ones (with -d:gpuRanmar: the
+original 24-bit RANMAR, `rm48.toSingle`: state on a grid of 2⁻²⁴, Marsaglia
+and Zaman's constants), exact in single precision; the
 GPU's tallies are 32-bit counters, added up on the host after each launch
 (single-precision counts stop at 2²⁴). 1.7–2.7× faster than double
 precision on an RTX 3090 (a memory-bound kernel: the 64× of the

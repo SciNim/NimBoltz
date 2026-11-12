@@ -31,19 +31,19 @@ proc parity[M](name: string, s: Setup, efinal: eV) =
     when M is WarmMixture:
       type T = WarmGas
       template tabs: untyped = r.mix.tables
-      var cpu: seq[Walker[T]]
-      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8))
+      var cpu: seq[Walker[T, Xoshiro128StarStar]]
+      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8), Xoshiro128StarStar)
     else:
       type T = ColdGas
       template tabs: untyped = r.mix.table
-      var cpu: seq[Walker[T]]
+      var cpu: seq[Walker[T, Xoshiro128StarStar]]
       let target = initColdGas(r.mix.bounds, r.efinal)
-      for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8))
+      for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8), Xoshiro128StarStar)
     var gpu = cpu
     let fm = flightMaxima(tabs)
     for w in cpu.mitems:  # with the GPU's windows, step by step as the GPU
-      walkWith[G, T, NoTally, Ranmar](w, f, tabs, addr fm[], gpuWindows, r.estep, 2000, 0, NoTally())
-    var g = initGpuWalkers[G, T](gpu, f, tabs, fm[], r.estep, exact = true)
+      walkWith[G, T, NoTally, Xoshiro128StarStar](w, f, tabs, addr fm[], gpuWindows, r.estep, 2000, 0, NoTally())
+    var g = initGpuWalkers[G, T, Xoshiro128StarStar](gpu, f, tabs, fm[], r.estep, exact = true)
     g.walk(2000)
     g.read(gpu)
     var sameNulls = 0

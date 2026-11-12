@@ -17,7 +17,7 @@
 ## walker's first collision agrees with the CPU's to rounding.
 
 import workspace/crucible
-import units, rm48, tables, fields, freeflight, walkers, single
+import units, rm48, xoshiro, tables, fields, freeflight, walkers, single, soa
 from simulation import MagboltzError
 
 type
@@ -26,7 +26,7 @@ type
     ## storage buffers per shader stage)
     f: Field
     estep: eV
-    n, collisions, penning, counting: int32
+    n, stride, collisions, penning, counting: int32
 
 const spectrumAt = tallyProcesses
   ## the tally: real collisions per process, then per energy bin
@@ -37,36 +37,50 @@ proc count(t: ptr UncheckedArray[uint32], i, ie: int) {.inline.} =
 
 const threadsPerGroup = 64
 
-template kernel(G: static FieldGeometry, T: typedesc): string =
+# The walkers lie in slots (soa.nim), as in gpuwalk.nim: a thread copies
+# its walker into a variable of its own, walks, and copies it back.
+template kernel(G: static FieldGeometry, T, R: typedesc): string =
   webgpuSingle:
-    proc walkKernel(ws: ptr UncheckedArray[Walker[T]], tab: ptr UncheckedArray[TablesOf(T)],
+    proc walkKernel(fs: ptr UncheckedArray[float64], us: ptr UncheckedArray[uint32],
+                    tab: ptr UncheckedArray[TablesOf(T)],
                     fm: ptr UncheckedArray[FlightMaxima], a: KernelArgs,
                     tally: ptr UncheckedArray[uint32]) {.global, workgroup: (64, 1, 1).} =
       let k = int32(thread_position_in_grid.x)
       if k < a.n:
+        var w: Walker[T, R]
+        load(w, fs, us, k, a.stride)
         if a.counting != 0:
-          walkWith[G, T, ptr UncheckedArray[uint32], Ranmar](ws[k], a.f, tab[0], addr fm[0], gpuWindows,
-                                                    a.estep, a.collisions, a.penning, tally)
+          walkWith[G, T, ptr UncheckedArray[uint32], R](w, a.f, tab[0], addr fm[0], gpuWindows,
+                                                        a.estep, a.collisions, a.penning, tally)
         else:
-          walkWith[G, T, NoTally, Ranmar](ws[k], a.f, tab[0], addr fm[0], gpuWindows,
-                                  a.estep, a.collisions, a.penning, NoTally())
+          walkWith[G, T, NoTally, R](w, a.f, tab[0], addr fm[0], gpuWindows,
+                                     a.estep, a.collisions, a.penning, NoTally())
+        store(w, fs, us, k, a.stride)
 
-const kernels = [
-  [kernel(fgElectric, ColdGas), kernel(fgParallel, ColdGas),
-   kernel(fgCrossed, ColdGas), kernel(fgOblique, ColdGas)],
-  [kernel(fgElectric, WarmGas), kernel(fgParallel, WarmGas),
-   kernel(fgCrossed, WarmGas), kernel(fgOblique, WarmGas)]]
+template kernels(R: typedesc): untyped =
+  [[kernel(fgElectric, ColdGas, R), kernel(fgParallel, ColdGas, R),
+    kernel(fgCrossed, ColdGas, R), kernel(fgOblique, ColdGas, R)],
+   [kernel(fgElectric, WarmGas, R), kernel(fgParallel, WarmGas, R),
+    kernel(fgCrossed, WarmGas, R), kernel(fgOblique, WarmGas, R)]]
 
-func kernelSource*(G: static FieldGeometry, T: typedesc): string =
-  ## the WGSL source of the kernel for geometry G and target T
-  kernels[ord(T is WarmGas)][ord(G)]
+const xoshiroKernels = kernels(Xoshiro128Plus)
+when defined(gpuRanmar):
+  const ranmarKernels = kernels(Ranmar)
+
+func kernelSource*(G: static FieldGeometry, T, R: typedesc): string =
+  ## the WGSL source of the kernel for geometry G, target T and generator R
+  ## (xoshiro128+; Ranmar `toSingle` if built with -d:gpuRanmar)
+  when R is Xoshiro128Plus: xoshiroKernels[ord(T is WarmGas)][ord(G)]
+  elif R is Ranmar and defined(gpuRanmar): ranmarKernels[ord(T is WarmGas)][ord(G)]
+  else:
+    {.error: "walkers with WebGPU: xoshiro128+ (Ranmar with -d:gpuRanmar)".}
 
 # web/webgpu.js
 proc nbgpuReady(): cint {.importc.}
 proc nbgpuPipeline(src: cstring, len: cint): cint {.importc.}
 proc nbgpuBuffer(bytes: cdouble): cint {.importc.}
 proc nbgpuWrite(id: cint, offset: cdouble, p: pointer, len: cdouble) {.importc.}
-proc nbgpuRun(pipe, ws, tab, fm, args, tally, groups: cint) {.importc.}
+proc nbgpuRun(pipe, fs, us, tab, fm, args, tally, groups: cint) {.importc.}
 proc nbgpuRead(id: cint, p: pointer, len: cdouble): cint {.importc.}
 proc nbgpuFree(id: cint) {.importc.}
 
@@ -81,14 +95,14 @@ proc readBack(id: cint, p: pointer, len: int) =
 
 type
   Buffers = object
-    ws, tab, fm, args, tally: cint
+    fs, us, tab, fm, args, tally: cint
 
-  GpuWalkers*[G: static FieldGeometry; T] = object
+  GpuWalkers*[G: static FieldGeometry; T, R] = object
     ## walkers, their collision tables and the kernel on the GPU, all in
     ## single precision
     pipe: cint
     bufs: ref Buffers
-    stride: int            ## bytes per walker
+    stride: int            ## walkers room is made for (each slot's length)
     n: int
     f: Field
     estep: eV
@@ -96,7 +110,7 @@ type
     tallies: ref Tallies   ## the counts so far, on the host
 
 proc `=destroy`(b: Buffers) =
-  for id in [b.ws, b.tab, b.fm, b.args, b.tally]:
+  for id in [b.fs, b.us, b.tab, b.fm, b.args, b.tally]:
     if id > 0: nbgpuFree(id)
 
 proc upload(bytes: openArray[byte]): cint =
@@ -130,24 +144,26 @@ proc fetchTally(g: var GpuWalkers) =
   zeroMem(addr c[0], c.len * 4)
   nbgpuWrite(g.bufs.tally, 0, addr c[0], cdouble(c.len * 4))
 
-proc initGpuWalkers*[G: static FieldGeometry; T](ws: openArray[Walker[T]], f: Field,
-                                                 tab: TablesOf(T), fm: FlightMaxima,
-                                                 estep: eV, penning = false,
-                                                 exact = false, single = true): GpuWalkers[G, T] =
+proc initGpuWalkers*[G: static FieldGeometry; T, R](ws: openArray[Walker[T, R]], f: Field,
+                                                    tab: TablesOf(T), fm: FlightMaxima,
+                                                    estep: eV, penning = false,
+                                                    exact = false, single = true): GpuWalkers[G, T, R] =
   ## Copies the walkers, the table and its range maxima to the GPU, in
   ## single precision (`exact`, `single`: for the interface of gpuwalk.nim)
   if nbgpuReady() == 0:
     raise newException(MagboltzError, "walkers on a GPU: no WebGPU device")
-  const src = kernelSource(G, T)
+  const src = kernelSource(G, T, R)
   result.pipe = nbgpuPipeline(cstring(src), cint(src.len))
   if result.pipe == 0: failed()
-  result.stride = singleSize(Walker[T])
+  result.stride = ws.len
   result.penning = int32(ord(penning))
   result.n = ws.len
   result.f = f
   result.estep = estep
   new result.bufs
-  result.bufs.ws = upload(packed(ws))
+  let (fb, ub) = slotBytes(ws, result.stride, single = true)
+  result.bufs.fs = upload(fb)
+  result.bufs.us = upload(ub)
   result.bufs.tab = upload(packed(one(tab)))
   result.bufs.fm = upload(packed(one(fm)))
   result.bufs.args = upload(packed(KernelArgs()))
@@ -165,10 +181,11 @@ proc walk*(g: var GpuWalkers, collisions: int32, counting = true) =
   var left = collisions
   while left > 0:
     let c = min(left, perLaunch)
-    let a = single(KernelArgs(f: g.f, estep: g.estep, n: int32(g.n), collisions: c,
+    let a = single(KernelArgs(f: g.f, estep: g.estep, n: int32(g.n), stride: int32(g.stride),
+                              collisions: c,
                               penning: g.penning, counting: int32(ord(counting))))
     nbgpuWrite(g.bufs.args, 0, unsafeAddr a[0], cdouble(a.len))
-    nbgpuRun(g.pipe, g.bufs.ws, g.bufs.tab, g.bufs.fm, g.bufs.args, g.bufs.tally, groups)
+    nbgpuRun(g.pipe, g.bufs.fs, g.bufs.us, g.bufs.tab, g.bufs.fm, g.bufs.args, g.bufs.tally, groups)
     left = left - c
   if counting: g.fetchTally()
 
@@ -180,16 +197,19 @@ proc shrink*(g: var GpuWalkers, n: int) =
   doAssert n <= g.n
   g.n = n
 
-proc read*[T](g: GpuWalkers, ws: var openArray[Walker[T]]) =
+proc read*[T, R](g: GpuWalkers, ws: var openArray[Walker[T, R]]) =
   ## the walkers' state, back from the GPU
   doAssert ws.len == g.n
-  var bytes = newSeq[byte](g.n * g.stride)
-  readBack(g.bufs.ws, addr bytes[0], bytes.len)
-  var pos = 0
-  for w in ws.mitems: unpack32(w, bytes, pos)
+  const c = slotCounts(Walker[T, R])
+  var fb = newSeq[byte](max(c[0] * g.stride * 4, 4))
+  var ub = newSeq[byte](max(c[1] * g.stride * 4, 4))
+  readBack(g.bufs.fs, addr fb[0], fb.len)
+  readBack(g.bufs.us, addr ub[0], ub.len)
+  fromSlotBytes(ws, fb, ub, g.stride, single = true)
 
-proc write*[T](g: var GpuWalkers, ws: openArray[Walker[T]]) =
+proc write*[T, R](g: var GpuWalkers, ws: openArray[Walker[T, R]]) =
   ## replaces the walkers' state on the GPU
   doAssert ws.len == g.n
-  let bytes = single(ws)
-  nbgpuWrite(g.bufs.ws, 0, unsafeAddr bytes[0], cdouble(bytes.len))
+  let (fb, ub) = slotBytes(ws, g.stride, single = true)
+  nbgpuWrite(g.bufs.fs, 0, unsafeAddr fb[0], cdouble(fb.len))
+  nbgpuWrite(g.bufs.us, 0, unsafeAddr ub[0], cdouble(ub.len))

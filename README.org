@@ -50,7 +50,7 @@ NIMBOLTZ_FORTRAN=1 ./nimboltz-mb < deck.in   # Magboltz 11.21, bit for bit
 | ~NIMBOLTZ_THREADS=n~     | n threads instead of all cores                                                     |
 | ~NIMBOLTZ_SEED=n~        | another seed (Magboltz's is 54217137)                                              |
 | ~NIMBOLTZ_WALKERS=…~     | ~cpu[:n]~ (default: 100 per thread), ~gpu[:n]~ or ~gpu32[:n]~ (a GPU build, below)  |
-| ~NIMBOLTZ_RNG=…~         | ~xoshiro~ (xoshiro256+, default) or ~ranmar~ (Magboltz's RM48) for the walkers     |
+| ~NIMBOLTZ_RNG=…~         | ~xoshiro~ (default: xoshiro256+, on GPUs xoshiro128) or ~ranmar~ (RM48), walkers    |
 | ~NIMBOLTZ_TIMING=1~      | the time of each step of a deck on stderr                                          |
 
 ** As a library
@@ -108,7 +108,8 @@ xoshiro256+ (Ranmar's in the bit-for-bit mode). See ~docs/DESIGN.md~.
 
 - NVIDIA GPUs: build with ~-d:nimboltzGpu --path:<tattletale>~ (Crucible,
   the Nim-to-GPU compiler of [[https://github.com/mratsim/tattletale][tattletale]]) and run with
-  ~NIMBOLTZ_WALKERS=gpu~ (or ~gpu32~ in single precision).
+  ~NIMBOLTZ_WALKERS=gpu~ (or ~gpu32~ in single precision: on an RTX 3090
+  1.0–1.8 G collisions/s, double precision 0.12–0.48).
 - A web page (~web/~): NimBoltz compiled to WebAssembly, on all cores of
   the browser's machine and on its GPU through WebGPU. See ~web/README.md~.
 

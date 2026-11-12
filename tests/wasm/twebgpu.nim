@@ -1,7 +1,7 @@
 ## WebGPU walkers against CPU walkers, in a browser: 256 walkers, Ar/CO₂
 ## 90/10 at 1000 V/cm (B = 1 T in the geometries with B), the gas at 0 K and
 ## with thermal motion. The CPU walkers' random numbers are the GPU's
-## (`rm48.toSingle`), so both walk the same flights, apart from the single
+## (xoshiro128+: 23 bits, exact in a float32), so both walk the same flights, apart from the single
 ## precision of the GPU: their states after 1, 10 and 100 collisions differ
 ## by rounding only, until a rounding difference changes a decision.
 ##
@@ -28,22 +28,21 @@ proc parity[M](name: string, s: Setup) =
     when M is WarmMixture:
       type T = WarmGas
       template tabs: untyped = r.mix.tables
-      var cpu: seq[Walker[T]]
-      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8))
+      var cpu: seq[Walker[T, Xoshiro128Plus]]
+      for k in 0 ..< 256: cpu.add initWalker(start, r.mix.gas, r.nullBands, r.efinal, int(drand48(seeds) * 9e8), Xoshiro128Plus)
     else:
       type T = ColdGas
       template tabs: untyped = r.mix.table
-      var cpu: seq[Walker[T]]
+      var cpu: seq[Walker[T, Xoshiro128Plus]]
       let target = initColdGas(r.mix.bounds, r.efinal)
-      for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8))
-    for w in cpu.mitems: w.rng.toSingle()
+      for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8), Xoshiro128Plus)
     var gpu = cpu
     let fm = flightMaxima(tabs)
-    var g = initGpuWalkers[G, T](gpu, f, tabs, fm[], r.estep)
+    var g = initGpuWalkers[G, T, Xoshiro128Plus](gpu, f, tabs, fm[], r.estep)
     var done = 0
     for n in [1, 10, 100]:
       for w in cpu.mitems:  # with the GPU's windows, step by step as the GPU
-        walkWith[G, T, NoTally, Ranmar](w, f, tabs, addr fm[], gpuWindows, r.estep,
+        walkWith[G, T, NoTally, Xoshiro128Plus](w, f, tabs, addr fm[], gpuWindows, r.estep,
                                         int32(n - done), 0, NoTally())
       g.walk(int32(n - done), counting = false)
       done = n
