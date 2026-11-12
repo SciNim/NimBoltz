@@ -1319,7 +1319,7 @@ const deuteriumModel* = GasModel(
                    scale: 0.9879999756813049),
   ionisation: deuteriumIonisation,
   attachment: @[Attach(text: " ATTACHMENT", fromStart: true,
-         sigma: table(xatt, yatt, unit = 1e-21.cm²))],
+         sigma: table(xatt, yatt, unit = 1e-21.cm², beyond = zero))],  # MB-60
   levels: deuteriumLevels,
   rotor: Rotor(jMax: 8, ladder: @[8, 9, 10, 11, 12, 13, 14], weights: [6.0, 3.0],
                oddBase: 0.007411940023303032, fixBelow: 0.023499999195337296,
@@ -1342,7 +1342,7 @@ const orthoDeuteriumModel* = GasModel(
                    scale: 0.9879999756813049),
   ionisation: deuteriumIonisation,
   attachment: @[Attach(text: " ATTACHMENT", fromStart: true,
-         sigma: table(xatt, yatt, unit = 1e-21.cm²))],
+         sigma: table(xatt, yatt, unit = 1e-21.cm², beyond = zero))],  # MB-60
   levels: deuteriumLevels,
   rotor: Rotor(jMax: 8, ladder: @[8, 9, 10, 11, 12, 13, 14], weights: [6.0, 0.0],
                oddBase: 0.007411940023303032, fixBelow: 0.0, fixRatio: (2.0, 1.0)),
