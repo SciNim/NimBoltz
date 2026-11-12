@@ -230,7 +230,7 @@ type
     squareTail    ## y_end (x_end / E')²
     inverseTail   ## y_end x_end / E
     crossTail     ## y_end x_end E' / E²
-    mixedTail     ## y_end x_end / (E' E)
+    mixedTail     ## y_end x_end / E (dipole superelastic; MB-59)
     e2Tail        ## y_end x_end / E'
     powerTail     ## y_end (x_end / E')^n (`Sigma.n`)
     zeroTail      ## nothing

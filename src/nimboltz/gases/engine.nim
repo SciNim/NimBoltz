@@ -476,7 +476,7 @@ proc level[M](j: int, b: Bin, ein: eV, pops: Populations,
             of squareTail: s.y[^1] * pow2(s.x[^1] / e2.float) * s.unit
             of inverseTail: s.y[^1] * (s.x[^1] / en.float) * s.unit
             of crossTail: s.y[^1] * s.x[^1] * float(e2 / (en * en).float) * s.unit
-            of mixedTail: s.y[^1] * (s.x[^1] / e2.float) / en.float * s.unit
+            of mixedTail: s.y[^1] * s.x[^1] / en.float * s.unit  # MB-59
             of e2Tail: s.y[^1] * s.x[^1] / e2.float * s.unit
             of powerTail: s.y[^1] * s.unit * pow(s.x[^1] / e2.float, s.n)
             of zeroTail: 0.0.cm²
