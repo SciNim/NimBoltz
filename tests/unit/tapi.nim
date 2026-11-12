@@ -90,10 +90,21 @@ suite "api":
     check q.steadyState.isSome and q.timeOfFlight.isSome and q.friedland.isSome
     check q.ionisation.value == q.steadyState.get.alpha
 
+  test "Magboltz bit for bit: one electron":
+    var s = arco2
+    s.fortran = true
+    let (bfb, one) = printout(s)
+    check "MONTE WITH" notin bfb and "MONTE WITH" in text
+    check one.collisions == 4_000_000
+    var t = initSession(nil, fortran = true)
+    check t.run(arco2.deck, arco2.collisions).velocity.z.value == one.velocity.z.value
+
   test "walkers: the gas at 0 K, the same within errors":
     var s = arco2
     s.thermal = false
+    s.fortran = true
     let one = simulate(s)
+    s.fortran = false
     s.walkers = WalkerSettings(backend: wbCpu, n: 1000, threads: 4)
     let many = simulate(s)
     check many.velocity.z.value != one.velocity.z.value
@@ -106,7 +117,10 @@ suite "api":
 
   test "walkers: with thermal motion, the same within errors":
     var s = arco2
-    s.walkers = WalkerSettings(backend: wbCpu, n: 1000, threads: 4)
+    s.fortran = true
+    let r = simulate(s)
+    s.fortran = false
+    s.walkers = WalkerSettings(backend: wbCpu, n: 1000, threads: 4, rng: rkRanmar)
     let q = simulate(s)
     check q.velocity.z.value != r.velocity.z.value
     template z(a, b): float =

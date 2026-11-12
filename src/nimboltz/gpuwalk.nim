@@ -7,7 +7,7 @@
 
 import workspace/crucible
 from workspace/crucible/src/abis/nvidia_abi import CUdeviceptr
-import units, tables, fields, freeflight, walkers, single
+import units, rm48, tables, fields, freeflight, walkers, single
 
 type
   GpuTally* = object
@@ -32,10 +32,10 @@ template kernel(G: static FieldGeometry, T: typedesc, compiler: untyped): string
       let k = int32(blockIdx.x * blockDim.x + threadIdx.x)
       if k < n:
         if counting != 0:
-          walkWith[G, T, GpuTally](ws[k], f, tab[], fm, true, estep, collisions, penning,
+          walkWith[G, T, GpuTally, Ranmar](ws[k], f, tab[], fm, gpuWindows, estep, collisions, penning,
                                GpuTally(processes: processes, spectrum: spectrum))
         else:
-          walkWith[G, T, NoTally](ws[k], f, tab[], fm, true, estep, collisions, penning,
+          walkWith[G, T, NoTally, Ranmar](ws[k], f, tab[], fm, gpuWindows, estep, collisions, penning,
                                   NoTally())
 
 template kernels(compiler: untyped): untyped =

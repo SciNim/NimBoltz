@@ -7,7 +7,7 @@
 ## (ITHRM = 1: MIXERT, MONTET, ...).
 
 import std/options
-import units, deck, conditions, tables, mixture, thermal, freeflight, fields, drift,
+import units, xoshiro, deck, conditions, tables, mixture, thermal, freeflight, fields, drift,
        townsend
 
 type
@@ -71,6 +71,11 @@ type
     threads*: int
       ## avalanche runs on this many threads, each with random numbers of
       ## its own (1: Magboltz's single stream, bit for bit)
+    fortran*: bool
+      ## Magboltz's null collisions and formulas in the analyses, for its
+      ## numbers bit for bit; else exact bounds per time window
+    generator*: RngKind
+      ## random numbers of the avalanches with exact bounds
     output*: File          ## Magboltz's printout; nil: none
     warnings*: seq[string]
     # the analyses, if run (`needsAnalyses`)

@@ -31,7 +31,7 @@ echo "== running ${#decks[@]} decks on $jobs cores"
 { reference_cmds "${decks[@]}"
   for d in "${decks[@]}"; do
     n=$(basename "$d" .in)
-    echo "timeout $to $work/magboltz-nim < $d > $work/out/$n.nim.out 2>$work/out/$n.nim.err"
+    echo "NIMBOLTZ_FORTRAN=1 timeout $to $work/magboltz-nim < $d > $work/out/$n.nim.out 2>$work/out/$n.nim.err"
   done
 } | xargs -P "$jobs" -I{} sh -c "{}" || true
 

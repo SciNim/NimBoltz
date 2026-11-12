@@ -6,7 +6,7 @@
 
 import std/[os, strutils, strformat]
 import nimboltz/[units, rm48, vec3, deck, conditions, simulation, magboltz, fields,
-                 freeflight, drift, walkers, ensemble, api]
+                 freeflight, drift, walkers, walkdrift, ensemble, api]
 
 const total = 40_000_000
 let s = Setup(mixture: @[(Gas.argon, 90.0), (Gas.carbonDioxide, 10.0)],
@@ -31,12 +31,14 @@ else:
   seeds.rm.rm48in(s.seed, 0, 0)
   var ws = newSeq[Walker[ColdGas]](n)
   for w in ws.mitems: w = initWalker(start, target, int(drand48(seeds) * 9e8))
-  walkAll[fgElectric, ColdGas](ws, f, r.mix.table, r.estep, warmup, 0, threads)
+  walkAll[fgElectric, ColdGas, Ranmar](ws, f, r.mix.table, r.estep, warmup, 0, threads)
   for w in ws.mitems: w.reset()
-  let half = int32(total div n div 2)
-  walkAll[fgElectric, ColdGas](ws, f, r.mix.table, r.estep, half, 0, threads)
-  for w in ws.mitems: w.mark()
-  walkAll[fgElectric, ColdGas](ws, f, r.mix.table, r.estep, half, 0, threads)
-  let tr = transport[fgElectric, ColdGas](ws, 0.0)
+  let chunks = chunksOf(total div n, warmup)
+  var cp = initCheckpoints(ws)
+  for _ in 1 .. chunks:
+    walkAll[fgElectric, ColdGas, Ranmar](ws, f, r.mix.table, r.estep, int32(total div n div chunks),
+                                 0, threads)
+    cp.add ws
+  let tr = transport[fgElectric, ColdGas, Ranmar](ws, cp, 0.0)
   echo &"{tr.vel.z.to(μm•ns⁻¹).float} {tr.ave.float} {tr.dif.xx.float} {tr.dif.yy.float} " &
        &"{tr.dif.zz.float}"

@@ -41,7 +41,8 @@ proc parity[M](name: string, s: Setup, efinal: eV) =
       for k in 0 ..< 256: cpu.add initWalker(start, target, int(drand48(seeds) * 9e8))
     var gpu = cpu
     let fm = flightMaxima(tabs)
-    walkAll[G, T](cpu, f, tabs, r.estep, 2000, 0, fm = addr fm[])
+    for w in cpu.mitems:  # with the GPU's windows, step by step as the GPU
+      walkWith[G, T, NoTally, Ranmar](w, f, tabs, addr fm[], gpuWindows, r.estep, 2000, 0, NoTally())
     var g = initGpuWalkers[G, T](gpu, f, tabs, fm[], r.estep, exact = true)
     g.walk(2000)
     g.read(gpu)

@@ -13,7 +13,8 @@
 ## a few details; these are kept, marked with the routine they belong to.
 
 import std/[math, options]
-import frt, units, rm48, tables, vec3, fields, freeflight, cascade, townsend
+import frt, units, rm48, xoshiro, tables, vec3, fields, freeflight, cascade, townsend
+from walkers import flightMaxima
 import conditions, simulation, report
 
 type
@@ -159,14 +160,14 @@ func formatsOf(G: FieldGeometry, P: PlaneKind, thermal: bool): Formats =
     of fgCrossed, fgOblique: formatsG
 
 type
-  Walker[G: static FieldGeometry; P: static PlaneKind; T, Tabs] = object
+  Walker[G: static FieldGeometry; P: static PlaneKind; T, Tabs, Rng] = object
     ## an avalanche run on a thread of its own
     c: Cascade[G, P, T]
-    rng: MagRng
+    rng: Rng
     tabs: ptr Tabs
 
-proc walk[G: static FieldGeometry; P: static PlaneKind; T, Tabs](
-    w: ptr Walker[G, P, T, Tabs]) {.thread.} =
+proc walk[G: static FieldGeometry; P: static PlaneKind; T, Tabs, Rng](
+    w: ptr Walker[G, P, T, Tabs, Rng]) {.thread.} =
   w.c.run(w.tabs[], w.rng)
 
 proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
@@ -175,7 +176,9 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
   ## `r.last`. With `r.threads` > 1, that many walkers share NMAX (and the
   ## limit on primaries), each with random numbers of its own seeded from
   ## `rng`, and their counts and sums are added up: the same estimates,
-  ## not the same numbers.
+  ## not the same numbers. Unless `r.fortran`, the avalanches take the
+  ## exact bounds per window, and random numbers of `r.generator`'s kind
+  ## (also on one thread).
   let fm = formatsOf(G, P, thermalMotion(M))
   let f = r.field(G)
   let start = initElectron[G](f, r.estart, r.theta, startPhi)
@@ -183,40 +186,53 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
   when thermalMotion(M):
     type Target = WarmGas
     template tabs: untyped = r.mix.tables
-    template cascade(n, limit: int, g: var MagRng): Cascade[G, P, Target] =
+    template cascade(n, limit: int, g: untyped): Cascade[G, P, Target] =
       initCascade[G, P, WarmGas](f, const2, const3, start, initWarmGas(r.mix.gas, g),
-                                 r.estep, n, d.penning, planes, d.btheta, limit)
+                                 r.estep, n, d.penning, planes, d.btheta, limit, windowBounds)
   else:
     type Target = ColdBound
     template tabs: untyped = r.mix.table
     var tlim = r.mix.bounds[1]
     for i in 2 .. 8:
       if tlim < r.mix.bounds[i]: tlim = r.mix.bounds[i]
-    template cascade(n, limit: int, g: var MagRng): Cascade[G, P, Target] =
+    template cascade(n, limit: int, g: untyped): Cascade[G, P, Target] =
       initCascade[G, P, ColdBound](f, const2, const3, start, ColdBound(tlim: tlim),
-                                   r.estep, n, d.penning, planes, d.btheta, limit)
+                                   r.estep, n, d.penning, planes, d.btheta, limit, windowBounds)
+  # exact bounds per window, unless Magboltz's numbers are wanted
+  let maxima = (if r.fortran: nil else: flightMaxima(tabs))
+  let windowBounds = (if maxima == nil: nil else: addr maxima[])
   var c: Cascade[G, P, Target]
-  when not compileOption("threads"):
+  template split(Rng: typedesc, n: int, seed: untyped) =
+    ## n walkers, each with random numbers `seed`(`rng`) of type Rng
+    var walkers = newSeq[Walker[G, P, Target, typeof(tabs), Rng]](n)
+    for k, w in walkers.mpairs:
+      w.rng = seed
+      w.c = cascade(nmax div n + (if k < nmax mod n: 1 else: 0),
+                    maxPrimaries div n, w.rng)
+      w.tabs = addr tabs
+    if n == 1:
+      walk(addr walkers[0])
+    else:
+      when compileOption("threads"):
+        var threads = newSeq[Thread[ptr Walker[G, P, Target, typeof(tabs), Rng]]](n)
+        for k in 0 ..< n:
+          createThread(threads[k], walk[G, P, Target, typeof(tabs), Rng], addr walkers[k])
+        joinThreads(threads)
+    c = move walkers[0].c
+    for k in 1 ..< n: c.merge(walkers[k].c)
+  let n = (when compileOption("threads"): max(r.threads, 1) else: 1)
+  if r.fortran and n == 1:
+    # Magboltz's one stream of random numbers
     c = cascade(nmax, maxPrimaries, rng)
     c.run(tabs, rng)
+  elif r.fortran:
+    proc seeded(rng: var MagRng): MagRng =
+      result = initMagRng(nil)
+      result.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
+    split(MagRng, n, seeded(rng))
   else:
-    if r.threads <= 1:
-      c = cascade(nmax, maxPrimaries, rng)
-      c.run(tabs, rng)
-    else:
-      let n = r.threads
-      var walkers = newSeq[Walker[G, P, Target, typeof(tabs)]](n)
-      for k, w in walkers.mpairs:
-        w.rng = initMagRng(nil)
-        w.rng.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
-        w.c = cascade(nmax div n + (if k < nmax mod n: 1 else: 0),
-                      maxPrimaries div n, w.rng)
-        w.tabs = addr tabs
-      var threads = newSeq[Thread[ptr Walker[G, P, Target, typeof(tabs)]]](n)
-      for k in 0 ..< n: createThread(threads[k], walk[G, P, Target, typeof(tabs)], addr walkers[k])
-      joinThreads(threads)
-      c = move walkers[0].c
-      for k in 1 ..< n: c.merge(walkers[k].c)
+    withRng(r.generator, R):
+      split(R, n, initRng(R, int(drand48(rng) * 900000000.0)))
   r.last = Collisions[M](tally: c.tally, st: c.st, ttots: c.ttots, spectrum: c.spectrum)
   for w in c.warnings:
     r.output.printNegative(fm, f, w)
@@ -231,7 +247,7 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
     when P == pkSpace: r.stop(msg & $c.iprim & ")")
     else: r.warnings.add msg & $c.iprim & ")"
   of stNone: discard
-  r.theta = c.theta
+  r.theta = c.lastTheta
   result.sums = c.sums
   result.iprim = c.iprim
   result.ratio = attachmentRatio(c.neion, c.nelec, c.iprim)

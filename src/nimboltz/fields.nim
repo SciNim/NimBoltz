@@ -37,6 +37,8 @@ type
     # fgCrossed, fgOblique
     eovb*: m•ps⁻¹          ## E×B drift speed for the E component ⊥ B
     ez100*, ex100*: eV•m⁻¹  ## energy gain per displacement along z, x
+    # all: the electric force changes √e at most at this rate (|E| v / 2√e)
+    slope*: eV¹ᐟ²•ps⁻¹
 
   Electron* = object
     ## state of an electron right after a collision (or at the start)
@@ -67,6 +69,7 @@ func initField*(geometry: FieldGeometry, efield: V•cm⁻¹, const1: cm²•V�
   result.vfac = const3.to(m•ps⁻¹•eV⁻¹ᐟ²)
   result.vfac2 = result.vfac * result.vfac
   result.wb = wb
+  result.slope = efield.to(V•m⁻¹) * perElectron * result.vfac / 2.0
   case geometry
   of fgElectric, fgParallel:
     result.bp = efield * efield * const1 * perElectron

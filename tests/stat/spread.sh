@@ -8,12 +8,14 @@
 #   ./spread.sh [deck-glob]      (run ./run.sh first: it writes the decks)
 #
 # Env: as run.sh, plus SEEDS (default "2 3 4 5 6 7 8 9"). Only meaningful
-# for a build that is statistically equal to Fortran (the unchanged port).
+# for a build that is statistically equal to Fortran: the bit-for-bit mode
+# (NIMBOLTZ_FORTRAN=1), which the spread measured so far is of.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 glob=${1:-*}
 . "$here/../lib/reference.sh"
+export NIMBOLTZ_THREADS=${NIMBOLTZ_THREADS:-1}
 jobs=${JOBS:-$(nproc)}
 seeds=${SEEDS:-2 3 4 5 6 7 8 9}
 out=$work/stat-$mode

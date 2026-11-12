@@ -25,9 +25,15 @@
 ## agree bit for bit, including where the ten routines differ from each
 ## other (marked "as MONTEF..."). Units as in Magboltz: positions in m,
 ## times in ps, energies in eV.
+##
+## With `FlightMaxima` (`initCascade`'s `fm`), the flights take the exact
+## bounds per time window of the walkers (`walkers.windowHit`), and the
+## angles `scatterFast`: the same distributions, far fewer null collisions,
+## not Magboltz's numbers.
 
 import std/math
-import units, rm48, tables, vec3, fields, collisions, thermal, freeflight, drift
+import units, rm48, xoshiro, tables, vec3, fields, collisions, thermal, freeflight, drift
+from walkers import FlightMaxima, windowHit, cpuWindows
 
 const
   nPlanes* = 8               ## planes of either kind
@@ -152,14 +158,18 @@ type
     stop*: Stop
     primaryLimit: int        ## stTooManyPrimaries above (maxPrimaries, or its
                              ## share of a walker)
+    fm: ptr FlightMaxima     ## nil: Magboltz's flights and angles; else
+                             ## exact bounds per window, `scatterFast`
+    cosTheta: float64        ## of the last scattering (with `fm`)
 
 func initCascade*[G: static FieldGeometry; P: static PlaneKind; T](
     f: Field, const2: m•cm•V⁻¹•ps⁻², const3: cm•ps⁻¹•eV⁻¹ᐟ², start: Electron, target: T,
     estep: eV,
     nmax: int, penning: bool, planes: Planes, btheta: float64,
-    primaryLimit = maxPrimaries): Cascade[G, P, T] =
+    primaryLimit = maxPrimaries, fm: ptr FlightMaxima = nil): Cascade[G, P, T] =
   ## `start`: the first primary; `primaryLimit`: of this run (a walker gets
-  ## its share of maxPrimaries)
+  ## its share of maxPrimaries); `fm`: the exact bounds of the walkers (it
+  ## must outlive the run), nil: Magboltz's
   static: doAssert P == pkTime or G == fgElectric
   result.f = f
   result.const2 = const2
@@ -178,9 +188,15 @@ func initCascade*[G: static FieldGeometry; P: static PlaneKind; T](
   result.j1 = 1
   result.jprint = nmax div 10
   result.primaryLimit = primaryLimit
+  result.fm = fm
 
 func stacked*[G: static FieldGeometry; P: static PlaneKind; T](c: Cascade[G, P, T]): int =
   c.stack.len
+
+func lastTheta*[G: static FieldGeometry; P: static PlaneKind; T](c: Cascade[G, P, T]): float64 =
+  ## polar angle of the last scattering (Magboltz's THETA; `scatterFast`
+  ## leaves `theta` out)
+  if c.fm == nil: c.theta else: arccos(clamp(c.cosTheta, -1.0, 1.0))
 
 # --- sampling at the planes -------------------------------------------------
 
@@ -421,14 +437,29 @@ func lateLossClamp[G: static FieldGeometry; P: static PlaneKind; T](ei, e: eV): 
 
 proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
                                                              tabs: MixtureTable | GasTables,
-                                                             rng: var MagRng) =
+                                                             rng: var (MagRng | WalkerRng)) =
   ## follows the current electron until it ends (or the run stops)
+  let fast = c.fm != nil
+  let rstep = 1.0 / c.estep
   var tdash = 0.0.ps
   while true:
-    let r1 = drand48(rng)
-    let t = (when T is ColdBound: -(ln(r1) / c.target.tlim) + tdash
-             else: -(ln(r1) / c.target.gas.tcfmx) + tdash)
-    let told = tdash
+    var t, told: ps
+    var h: Hit
+    if fast:
+      # the next real collision at once; the planes before it as below
+      var nulls = 0'i32
+      when T is ColdBound:
+        h = windowHit[G, cpuWindows](c.f, tabs, c.fm[], rstep, c.el, rng, nulls)
+      else:
+        var beyond = 0'i32
+        h = windowHit[G, cpuWindows](c.f, tabs, c.fm[], rstep, c.el, c.target, rng, nulls, beyond)
+      c.nnull = c.nnull + nulls
+      t = h.fl.t
+    else:
+      let r1 = drand48(rng)
+      t = (when T is ColdBound: -(ln(r1) / c.target.tlim) + tdash
+           else: -(ln(r1) / c.target.gas.tcfmx) + tdash)
+      told = tdash
     tdash = t
     # planes crossed during the flight
     when P == pkTime:
@@ -452,36 +483,39 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
           c.isol = 1
           continue
         break
-    var fl = fly[G](c.f, c.el, t)
-    when G == fgCrossed:
-      fl.e = c.el.e + fl.dz * c.f.efield * perElectron  # as MONTEFTG: (dz·E)·100
-    if fl.e < 0.0.eV:
-      c.warnings.add NegativeEnergy(iter: c.id, el: c.el, fl: fl)
-      fl.e = 0.001.eV
-    # real or null collision
-    var h: Hit
-    when T is ColdBound:
-      let ie = energyBin(fl.e, c.estep)
-      let r5 = drand48(rng)
-      if not (r5 <= tabs.tcf[ie] / c.target.tlim):
-        inc c.nnull
-        continue
-      finishFlight[G](c.f, fl)
-      h = Hit(fl: fl, ie: ie, e: fl.e, din: directionAt[G](c.f, c.el, fl), gas: 1)
+    var fl: Flight
+    if fast:
+      fl = h.fl
     else:
-      finishFlight[G](c.f, fl)
-      let vel = hitVelocity[G, P](c.f, c.el, fl)
-      h.gas = c.target.gas.pickGas(drand48(rng))
-      h.vgas = c.target.maxwell.velocity(c.target.gas.vtmb[h.gas], rng)
-      let vrel = vel - h.vgas
-      h.e = norm2(vrel) / c.f.vfac2
-      h.ie = energyBin(h.e, c.estep)
-      let r4 = drand48(rng)
-      if not (r4 <= tabs[h.gas].tcf[h.ie] / c.target.gas.tcfmax[h.gas]):
-        inc c.nnull
-        continue
-      h.fl = fl
-      h.din = vrel * (1.0 / (c.f.vfac * sqrt(h.e)))
+      fl = fly[G](c.f, c.el, t)
+      when G == fgCrossed:
+        fl.e = c.el.e + fl.dz * c.f.efield * perElectron  # as MONTEFTG: (dz·E)·100
+      if fl.e < 0.0.eV:
+        c.warnings.add NegativeEnergy(iter: c.id, el: c.el, fl: fl)
+        fl.e = 0.001.eV
+      # real or null collision
+      when T is ColdBound:
+        let ie = energyBin(fl.e, c.estep)
+        let r5 = drand48(rng)
+        if not (r5 <= tabs.tcf[ie] / c.target.tlim):
+          inc c.nnull
+          continue
+        finishFlight[G](c.f, fl)
+        h = Hit(fl: fl, ie: ie, e: fl.e, din: directionAt[G](c.f, c.el, fl), gas: 1)
+      else:
+        finishFlight[G](c.f, fl)
+        let vel = hitVelocity[G, P](c.f, c.el, fl)
+        h.gas = c.target.gas.pickGas(drand48(rng))
+        h.vgas = c.target.maxwell.velocity(c.target.gas.vtmb[h.gas], rng)
+        let vrel = vel - h.vgas
+        h.e = norm2(vrel) / c.f.vfac2
+        h.ie = energyBin(h.e, c.estep)
+        let r4 = drand48(rng)
+        if not (r4 <= tabs[h.gas].tcf[h.ie] / c.target.gas.tcfmax[h.gas]):
+          inc c.nnull
+          continue
+        h.fl = fl
+        h.din = vrel * (1.0 / (c.f.vfac * sqrt(h.e)))
     # a real collision
     template tab: untyped = tableOf(tabs, h)
     if t >= c.tmax: c.tmax = t
@@ -592,19 +626,26 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
         if not kept: dec c.nclus
     # scattering
     ei = lateLossClamp[G, P, T](ei, h.e)
-    let s = scatter(tab, i, h.ie, h.e, ei, h.din, rng)
+    let s = (if fast: scatterFast(tab, i, h.ie, h.e, ei, h.din, rng)
+             else: scatter(tab, i, h.ie, h.e, ei, h.din, rng))
     c.theta = s.theta
+    c.cosTheta = s.cosTheta
     if secondary >= 0:
       # the ionisation secondary: transverse momentum balance, opposite azimuth
       var f5s = s.sinTheta * sqrt(float64(s.e / c.stack[secondary].e))
       if f5s > 1.0: f5s = 1.0
-      let thsec = arcsin(f5s)
-      f5s = sin(thsec)
-      var f6s = cos(thsec)
-      if s.cosTheta < 0.0: f6s = -f6s
-      var phis = s.phi + PI
-      if phis > 2.0 * PI: phis = phis - 2.0 * PI  # MB-39
-      c.stack[secondary].dir = rotate(h.din, f6s, f5s, cos(phis), sin(phis))
+      if fast:
+        var f6s = sqrt(1.0 - f5s * f5s)
+        if s.cosTheta < 0.0: f6s = -f6s
+        c.stack[secondary].dir = rotate(h.din, f6s, f5s, -s.cosPhi, -s.sinPhi)
+      else:
+        let thsec = arcsin(f5s)
+        f5s = sin(thsec)
+        var f6s = cos(thsec)
+        if s.cosTheta < 0.0: f6s = -f6s
+        var phis = s.phi + PI
+        if phis > 2.0 * PI: phis = phis - 2.0 * PI  # MB-39
+        c.stack[secondary].dir = rotate(h.din, f6s, f5s, cos(phis), sin(phis))
     when T is ColdBound:
       c.el = afterCollision[G](c.f, s.e, s.dir)
     else:
@@ -643,7 +684,7 @@ proc pop[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T
 
 proc run*[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
                                                            tabs: MixtureTable | GasTables,
-                                                           rng: var MagRng) =
+                                                           rng: var (MagRng | WalkerRng)) =
   ## Primaries until NMAX real collisions. `tabs`: `MixtureTable` for
   ## `ColdBound`, `GasTables` for `WarmGas`.
   while true:
@@ -714,6 +755,7 @@ proc merge*[G: static FieldGeometry; P: static PlaneKind; T](a: var Cascade[G, P
   a.primaryE2 = a.primaryE2 + b.primaryE2
   a.sums.add b.sums
   a.theta = b.theta
+  a.cosTheta = b.cosTheta
   a.st = b.st
   a.warnings.add b.warnings
   if a.stop == stNone and b.stop != stNone:

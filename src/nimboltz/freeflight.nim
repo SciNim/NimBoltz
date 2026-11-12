@@ -16,7 +16,7 @@
 ## The random numbers are drawn in the same order as in Magboltz.
 
 import std/math
-import units, rm48, tables, vec3, fields, collisions, thermal
+import units, rm48, xoshiro, tables, vec3, fields, collisions, thermal
 
 type
   ColdGas* = object
@@ -51,14 +51,14 @@ func energyBin*(e, estep: eV): int {.inline.} =
 func initColdGas*(bounds: NullBounds, efinal: eV): ColdGas =
   ColdGas(bounds: bounds, bandWidth: efinal / float64(bounds.len))
 
-proc initWarmGas*(gas: ThermalGas, rng: var (MagRng | Ranmar)): WarmGas =
+proc initWarmGas*(gas: ThermalGas, rng: var (MagRng | WalkerRng)): WarmGas =
   WarmGas(gas: gas, maxwell: initMaxwellSampler(rng))
 
 template tableOf*(tab: MixtureTable, h: Hit): untyped = tab
 template tableOf*(tabs: GasTables, h: Hit): untyped = tabs[h.gas]
 
 proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: var ColdGas,
-                                       estep: eV, el: Electron, rng: var (MagRng | Ranmar),
+                                       estep: eV, el: Electron, rng: var (MagRng | WalkerRng),
                                        nnull: var (int | int32 | int64)): Hit =
   ## Gas at 0 K: next real collision of an electron leaving `el`.
   ## (A loop without `break`/`continue`, so the GPU compiler takes it.)
@@ -85,7 +85,7 @@ proc nextHit*[G: static FieldGeometry](f: Field, tab: CollisionTable, target: va
   result.gas = 1
 
 proc nextHit*[G: static FieldGeometry](f: Field, tabs: GasTables, target: var WarmGas,
-                                       estep: eV, el: Electron, rng: var (MagRng | Ranmar),
+                                       estep: eV, el: Electron, rng: var (MagRng | WalkerRng),
                                        nnull: var (int | int32 | int64)): Hit =
   ## Thermal motion: next real collision; energy and direction in the rest
   ## frame of the molecule hit.

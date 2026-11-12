@@ -7,7 +7,7 @@
 
 import std/[math, monotimes, times, strformat, os, strutils, cpuinfo]
 import nimboltz/[units, rm48, vec3, deck, conditions, simulation, magboltz, fields,
-                 freeflight, drift, walkers, ensemble, api]
+                 freeflight, drift, walkers, walkdrift, ensemble, api]
 
 const
   total = 40_000_000     # real collisions of either method
@@ -41,10 +41,15 @@ proc compare(name: string, s: Setup, threads: int) =
     var seeds = initMagRng(nil)
     var ws = newSeq[Walker[ColdGas]](nWalkers)
     for w in ws.mitems: w = initWalker(start, target, int(drand48(seeds) * 9e8))
-    walkAll[G, ColdGas](ws, f, r.mix.table, r.estep, warmup, 0, threads)
+    walkAll[G, ColdGas, Ranmar](ws, f, r.mix.table, r.estep, warmup, 0, threads)
     for w in ws.mitems: w.reset()
-    walkAll[G, ColdGas](ws, f, r.mix.table, r.estep, int32(total div nWalkers), 0, threads)
-    tr = transport[G, ColdGas](ws, d.btheta)
+    let chunks = chunksOf(total div nWalkers, warmup)
+    var cp = initCheckpoints(ws)
+    for _ in 1 .. chunks:
+      walkAll[G, ColdGas, Ranmar](ws, f, r.mix.table, r.estep, int32(total div nWalkers div chunks), 0,
+                          threads)
+      cp.add ws
+    tr = transport[G, ColdGas, Ranmar](ws, cp, d.btheta)
   let tW = (getMonoTime() - t1).inMilliseconds
   echo &"== {name}: NimBoltz {tNb} ms, {nWalkers} walkers on {threads} threads {tW} ms"
   proc row(label: string, m: Measurement, v: float64, pct: float64) =

@@ -2,7 +2,7 @@
 ## its velocity for each collision.
 
 import std/math
-import units, rm48, tables, vec3
+import units, rm48, xoshiro, tables, vec3
 
 type
   ThermalGas* = object
@@ -31,7 +31,7 @@ proc refill(m: var MaxwellSampler, rng: var MagRng) =
     m.rn[j + 1] = sqrt(-ln(ran1)) * sin(ran2 * (2.0 * PI))
   m.used = 0
 
-proc refill(m: var MaxwellSampler, rng: var Ranmar) =
+proc refill(m: var MaxwellSampler, rng: var WalkerRng) =
   ## for walkers (`walkers.nim`): in single precision, which is fast on GPUs
   ## and more than precise enough for the speed of a gas molecule
   for k in 0 .. 2:
@@ -43,11 +43,11 @@ proc refill(m: var MaxwellSampler, rng: var Ranmar) =
     m.rn[j + 1] = float64(r * sin(ran2 * float32(2.0 * PI)))
   m.used = 0
 
-proc initMaxwellSampler*(rng: var (MagRng | Ranmar)): MaxwellSampler =
+proc initMaxwellSampler*(rng: var (MagRng | WalkerRng)): MaxwellSampler =
   result.refill(rng)
 
 proc velocity*(m: var MaxwellSampler, vth: m•ps⁻¹,
-               rng: var (MagRng | Ranmar)): Vector[m•ps⁻¹] {.inline.} =
+               rng: var (MagRng | WalkerRng)): Vector[m•ps⁻¹] {.inline.} =
   ## velocity of a gas molecule with thermal speed vth
   if m.used == 6'i32: m.refill(rng)
   result = vec3(vth * m.rn[m.used + 1], vth * m.rn[m.used + 2], vth * m.rn[m.used + 3])

@@ -16,6 +16,7 @@ type
     theta*: float64  ## polar scattering angle (rad, against the incoming direction)
     cosTheta*, sinTheta*: float64  ## of the polar angle, as used (backward: cosTheta < 0)
     phi*: float64    ## azimuth (rad)
+    cosPhi*, sinPhi*: float64
 
 func findProcess*[N](tab: CollisionTable[N], ie: int, r: float64): int {.inline.} =
   ## First process i with cf[ie, i] >= r (SORT/SORTT, then a linear scan):
@@ -111,4 +112,48 @@ proc scatter*[N; R](tab: CollisionTable[N], i, ie: int, e, ei: eV, din: Vec3,
   if f3 < 0.0 and f3 * f3 > u: f6 = -f6
   result.cosTheta = f6
   result.sinTheta = sin(result.theta)
-  result.dir = rotate(din, f6, result.sinTheta, cos(phi0), sin(phi0))
+  result.cosPhi = cos(phi0)
+  result.sinPhi = sin(phi0)
+  result.dir = rotate(din, f6, result.sinTheta, result.cosPhi, result.sinPhi)
+
+proc scatterFast*[N; R](tab: CollisionTable[N], i, ie: int, e, ei: eV, din: Vec3,
+                        rng: var R): Scattered =
+  ## `scatter` with square roots for Magboltz's arccos, arcsin, sin and cos
+  ## (sin θ₀ = √(1 − cos² θ₀), sin θ = q sin θ₀), and the azimuth from a
+  ## point (x, y) uniform in the unit disk (cos φ, sin φ = (x² − y², 2xy) /
+  ## (x² + y²), its doubled angle): the same distributions, other numbers
+  ## (walkers, the analyses' avalanches), and no functions whose rounding
+  ## differs between CPUs and GPUs. `theta` and `phi` are left 0.
+  let s1 = tab.rgas[i]
+  let s2 = s1 * s1 / (s1 - 1.0)
+  var f3: float64
+  let index = tab.index[i]
+  let r3 = drand48(rng)
+  if index == 1:
+    let r31 = drand48(rng)
+    f3 = 1.0 - r3 * tab.angct[ie, i]
+    if r31 > tab.psct[ie, i]: f3 = -f3
+  elif index == 2:
+    let epsi = tab.psct[ie, i]
+    f3 = 1.0 - 2.0 * r3 * (1.0 - epsi) / (1.0 + epsi * (1.0 - 2.0 * r3))
+  else:
+    f3 = 1.0 - 2.0 * r3
+  var px, py: float64
+  var pp = 2.0
+  while pp >= 1.0:
+    px = 2.0 * drand48(rng) - 1.0
+    py = 2.0 * drand48(rng) - 1.0
+    pp = px * px + py * py
+  result.cosPhi = (px * px - py * py) / pp
+  result.sinPhi = 2.0 * px * py / pp
+  let arg1 = max(1.0 - s1 * ei / e, small)
+  let d = 1.0 - f3 * sqrt(arg1)
+  result.e = max(e * (1.0 - ei / (s1 * e) - 2.0 * d / s2), small.eV)
+  let q = min(sqrt(e / result.e * arg1) / s1, 1.0)
+  let sinTheta = q * sqrt(max(1.0 - f3 * f3, 0.0))
+  var f6 = sqrt(max(1.0 - sinTheta * sinTheta, 0.0))
+  let u = (s1 - 1.0) * (s1 - 1.0) / arg1
+  if f3 < 0.0 and f3 * f3 > u: f6 = -f6
+  result.cosTheta = f6
+  result.sinTheta = sinTheta
+  result.dir = rotate(din, f6, sinTheta, result.cosPhi, result.sinPhi)

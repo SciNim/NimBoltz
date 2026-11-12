@@ -86,7 +86,8 @@ Rules:
   default that is the one stream of the `Session`, passed to every run in
   Magboltz's order, so that results stay comparable with Fortran bit for
   bit.
-- Threads (2026-11-08, opt-in with `NIMBOLTZ_THREADS=n`): the avalanche
+- Threads (2026-11-08; since 2026-11-12 all cores by default, one in the
+  bit-for-bit mode): the avalanche
   runs of the Townsend analyses (`cascade.nim`) are split over n walkers,
   each with its share of NMAX and of the limit on primaries, its own
   target state and random numbers seeded from the session's stream
@@ -124,6 +125,25 @@ naming the routine, so bitwise comparison holds. Thermal runs compute the
 ionisation secondary in the rest frame of the molecule and push it
 without transforming it back to the lab frame, as Magboltz does (an
 error of order v_gas/v_e). Speed equal to the legacy routines (±4%).
+
+In the default mode (2026-11-12; `Cascade.fm`, from `analyses.avalanche`)
+the avalanches take the walkers' flights (`walkers.windowHit`: the next
+real collision at once, then the planes crossed before it, as Magboltz
+samples them from its trials) and `collisions.scatterFast`, and split
+over the threads with generators of their own (xoshiro256+ by default),
+also on one thread. Magboltz's one bound for all energies (TLIM, the
+largest of MONTE's 8) gave 5–10 null collisions per real one. The
+ionisation secondary and the rest stay Magboltz's.
+
+`collisions.scatterFast` (walkers, avalanches): Magboltz's angles with
+square roots for arccos, arcsin, sin and cos (sin θ₀ = √(1 − cos² θ₀),
+sin θ = q sin θ₀, cos θ = √(1 − sin² θ)), and the azimuth from a point
+(x, y) uniform in the unit disk: (cos φ, sin φ) = (x² − y², 2xy) / (x² +
+y²), the doubled angle, no transcendental function at all. The same
+distributions; about a quarter of the walkers' time saved. THETA, which
+Magboltz carries from run to run, becomes arccos(cos θ) of the last
+collision (Magboltz's lies in [0, π/2] even for backward scattering: no
+matter, the walkers forget it).
 
 Speed (2026-10-31): `drift.nim` is 2–4% slower than the legacy routines.
 Nim emits a generic instance into the C file of the module that first
@@ -299,12 +319,31 @@ What this asks of the code the GPU runs:
 - collision counts per process and energy bin: atomic adds into one tally
   (`GpuTally`)
 
+### Two modes (2026-11-12)
+
+By default NimBoltz runs MONTE (and ELIMIT) on walkers, on all cores, and
+the avalanches of the Townsend analyses with the walkers' exact bounds
+per time window and cheaper angles, also on all cores: Magboltz's results
+within errors, faster. `NIMBOLTZ_FORTRAN=1` (`Setup.fortran`,
+`initSession(fortran = true)`, `"walkers": "none"` in a page) is Magboltz
+11.21 bit for bit: one trajectory, Magboltz's null collisions, formulas
+and random numbers, one thread; the printout is Magboltz's, number for
+number (`tests/regress` runs it). Speed of the default mode against
+Magboltz++ (one thread each): see "Speed against Magboltz++" below.
+
+Random numbers of the default mode (`WalkerSettings.rng`,
+`NIMBOLTZ_RNG`): xoshiro256+ (`xoshiro.nim`; 0.9 ns a number, 32 bytes of
+state) or Ranmar (RM48 one number at a time, 5 ns, 800 bytes). Over five
+decks xoshiro made whole runs 5–14 % faster, with the same agreement.
+GPUs keep Ranmar (WGSL has no 64-bit integers). `Walker[T; R = Ranmar]`;
+procs take R explicitly: Nim 2.4 substitutes a default of a proc's
+generic parameter into its signature even when the argument is given.
+
 ### The drift run on walkers
 
-`NIMBOLTZ_WALKERS=cpu[:n]`, `gpu[:n]` or `gpu32[:n]` (`Setup.walkers`,
+`NIMBOLTZ_WALKERS=cpu[:n]` (the default), `gpu[:n]` or `gpu32[:n]` (`Setup.walkers`,
 `Session.walkers`) runs MONTE on walkers (`walkdrift.nim`, estimators in
-`ensemble.nim`), and ELIMIT too when the deck leaves EFINAL to it; the
-Townsend analyses keep Magboltz's one trajectory. The CPU backend runs the
+`ensemble.nim`), and ELIMIT too when the deck leaves EFINAL to it. The CPU backend runs the
 walkers on threads, the GPU one needs a build with `-d:nimboltzGpu` and
 `--path:` to tattletale; `gpu32` runs it in single precision (below).
 The results fill the same `Transport`, printout and `Results`; one line
@@ -331,7 +370,13 @@ deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
   95 decks). The
   walkers of the last try go on to MONTE warm. Where MONTE then has more
   than 1000 collisions per NMAX/10 in the last bin (Magboltz stops there),
-  walkers raise EFINAL and run MONTE again. Over the regression decks the
+  walkers raise EFINAL and run MONTE again. They stop as soon as it shows
+  (`walkdrift.driftRun`'s `abortAbove`, `anyBefore`): at a checkpoint after
+  a chunk over that share, or after any collision in the last bin within
+  ELIMIT's number of collisions (ELIMIT's test continued: the tail can fill
+  after the warm-up; Ar/Xe 90/10, gas06: the run stopped after 5 of 12
+  chunks, now after 1). Only where ELIMIT chose EFINAL: a given one is
+  never raised. Over the regression decks the
   choice is Magboltz's in 75 of 94, the others one √2 step off, 11 up and
   8 down, as Magboltz's own varies between seeds; a tail that builds up slowly (Ar/CBrF₃ 90/10:
   electrons escaping into argon heat up over 10⁵ collisions) is seen by
@@ -340,11 +385,20 @@ deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
   (gas01) 23.1 → 5.5 s.
 - Drift velocity Σx/Σt, mean energy Σ∫e dt/Σt (B ⊥ E and oblique: Σ e/ν,
   as MONTEB/C). Diffusion from the spread of the walkers around the mean
-  drift: with positions marked halfway, D = [Σ(x − wt)² − Σ(x₁ − wt₁)²] /
-  2Σ(t − t₁), so the constant from the correlation of the first
-  collisions cancels exactly. Errors from the scatter of 10 blocks of
+  drift over windows between checkpoints (`ensemble.Checkpoints`): the
+  main run stops every chunk of collisions (at least the warm-up, at most
+  64 chunks), and for windows of one chunk (sums S₁, T₁, n₁ windows) and
+  of two (S₂, T₂, n₂), D = (S₂/n₂ − S₁/n₁) / 2(T₂/n₂ − T₁/n₁): 〈(x − wt)²〉
+  = 2Dt + c for every window longer than the correlation of the velocities,
+  so c cancels exactly. Until 2026-11-12 each walker gave one window
+  (positions marked halfway), so the error of D went with the number of
+  walkers: 100 walkers, Ar/CO₂ 90/10 at 1000 V/cm, DT ± 26 % (2000: ± 6 %,
+  Magboltz prints ± 7.6 %); with the checkpoints ± 2.7 %. Errors from the scatter of 10 blocks of
   walkers. Townsend coefficients from the walkers' ionisations and
   attachments.
+- How many walkers on CPUs: 100 per thread (`walkersPerThread`; was 2000
+  in all). Each walks its warm-up, so fewer walkers waste less: with 2000
+  on one thread a 4·10⁷ run spent 36 % more collisions on warm-ups.
 - How many walkers: the main run of each walker must last at least as long
   as its warm-up (a few energy relaxation times), else walkers of
   different energies spread ballistically and D comes out too large
@@ -361,9 +415,12 @@ deck (MIXER and ELIMIT, MONTE, analyses) to stderr.
 
 Equivalence: the same walkers on CPU and GPU take the same collisions
 for a while (`tests/gpu/tgeometry.nim`, `exact = true`: no fused
-multiply-adds), until a last-bit difference between CUDA's `logf`, `acos`,
-`sin` and glibc's sends a walker on another path: of 256 walkers, 115–256
-still have the same null collisions after 2000 collisions. Many walkers
+multiply-adds), until a last-bit difference between CUDA's `logf` (and,
+with B, `sin`, `cos` of the gyration) and glibc's sends a walker on another
+path: of 256 walkers, 249–255 at B = 0 and B ∥ E, 24–44 at other angles
+still have the same null collisions after 2000 collisions. (An azimuth
+from `cos`/`sin` in single precision diverged at once, worst z 0.56: the
+angles of `scatterFast` use no such functions.) Many walkers
 estimate what one trajectory does, not the same numbers: Ar/CO₂ 90/10 at
 1000 V/cm, B = 1 T, all geometries, 0 K and thermal, 4·10⁷ collisions:
 |z| < 2 for drift, energy and diffusion against `simulate`; the
@@ -386,18 +443,27 @@ motion at B = 0. `freeflight.nextHit` stays Magboltz's, bit for bit.
 Null collisions: Magboltz's bounds in 8 bands of starting energy
 (`nullBounds`) cover every energy an electron reaches from the band within
 TMAX, nearly the largest frequency of all; with thermal motion it has one
-bound per gas over all energies. Walkers at B = 0 and B ∥ E use exact
+bound per gas over all energies. Walkers use exact
 bounds per time window instead (`walkers.windowHit`): the energy over the
-next 2 mean free times is known in closed form, the largest collision
-frequency over it (a sparse range-maximum table, `FlightMaxima`, two
-lookups) bounds it strictly; no trial in the window, the flight goes on
-in the next one. Where the bound is well above the frequency at the
-window's start (a Ramsauer minimum), the window shrinks to 2 / bound and
-gets its own bound. With thermal motion per gas, in the molecule's frame,
+next few mean free times (3 on CPUs, 2 on GPUs) is known in closed form at B = 0 and B ∥ E; at
+other angles √e changes at most at the rate |E| v / 2√e = `Field.slope`
+(the magnetic force does no work), a few percent over a window. The largest collision
+frequency over that range (a sparse range-maximum table, `FlightMaxima`,
+two lookups, the level from a table: `levelOf`, `widthOf`) bounds it
+strictly. The time to the next trial is one exponential depth −ln r, used
+up window by window at each window's bound (a piecewise constant bound
+of the frequency), so an empty window costs no logarithm and no random
+number (it cost a third of the walkers' time). Where the bound is well above the frequency at the
+window's start (a Ramsauer minimum; on CPUs: more than twice), the window
+shrinks to that many mean free times at the bound and gets its own bound. With thermal motion per gas, in the molecule's frame,
 with a margin of 6 thermal speeds. Null collisions per real one: Ar/CO₂
 90/10 at 1000 V/cm 5.6 → 0.08 (0 K), 9.6 → 0.10 (thermal); Ar/CF₄ 90/10
-thermal (gas01) 4.3 → 0.12. (Window lengths of 1, 2, 4 mean free times
-cost about the same on CPUs; on the GPU 2 is best.) (Tried first:
+thermal (gas01) 4.3 → 0.12; B ⊥ E (arco2_bperp_t0, 2026-11-12) 10.9 → 0.26. (Window lengths, `walkers.Bounds`: on CPUs a bound
+costs more than a trial; over six decks (2026-11-12) windows of 3 mean
+free times shrunk only above twice their trials took the fewest cycles,
+15 % fewer than 2 and shrunk at once, 25 % fewer than 1, with 1.5–3 times
+the null collisions. On the GPU 2 and at once stays the fastest: 3 and 2
+cost Ar/CF₄ 17 % in double precision, 1–5 % in single.) (Tried first:
 each band's own maximum, raised when exceeded: biased, mean energies 2–6 %
 low over the regression decks, mean z −0.83 — flights crossing energies
 above the bound without a trial there lose collisions.)

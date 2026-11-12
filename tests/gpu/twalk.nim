@@ -38,11 +38,13 @@ proc main() =
     const collisions = 2000'i32
     var cpu = walkersOf(n)
     var gpu = cpu
-    walkAll[fgElectric, ColdGas](cpu, f, r.mix.table, r.estep, collisions, 0, fm = addr fm[])
+    for w in cpu.mitems:  # with the GPU's windows, step by step as the GPU
+      walkWith[fgElectric, ColdGas, NoTally, Ranmar](w, f, r.mix.table, addr fm[], gpuWindows,
+                                                     r.estep, collisions, 0, NoTally())
     var g = initGpuWalkers[fgElectric, ColdGas](gpu, f, r.mix.table, fm[], r.estep, exact = true)
     g.walk(collisions)
     g.read(gpu)
-    var same, sameCollisions = 0
+    var same, sameCollisions, close = 0
     var worst = 0.0
     for k in 0 ..< n:
       # `float`: Unchained's `==` is approximate
@@ -50,10 +52,12 @@ proc main() =
          cpu[k].e2.float == gpu[k].e2.float:
         inc same
       if cpu[k].nulls == gpu[k].nulls: inc sameCollisions
-      worst = max(worst, abs(float(gpu[k].pos.z / cpu[k].pos.z) - 1.0))
+      let d = abs(float(gpu[k].pos.z / cpu[k].pos.z) - 1.0)
+      worst = max(worst, d)
+      if d < 1e-9: inc close
     echo &"{n} walkers x {collisions} collisions: {same} identical on CPU and GPU, " &
-         &"{sameCollisions} with the same null collisions; largest relative " &
-         &"difference of z: {worst:.2e}"
+         &"{sameCollisions} with the same null collisions, {close} with z within 1e-9; " &
+         &"largest relative difference of z: {worst:.2e}"
 
   # 2. drift velocity and mean energy, against NimBoltz
   const total = 40_000_000

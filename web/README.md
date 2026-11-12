@@ -83,9 +83,9 @@ the headers block nothing. GitHub Pages can't set headers.
 - All runs: a table (CSV download) and a plot of any result against E,
   one line per setup.
 
-- Drift run: Magboltz's one electron, or independent electrons (walkers,
-  the same results within errors, smaller errors), on the CPU or on the
-  GPU. The GPU needs a browser with WebGPU and WGSL pointer parameters
+- Drift run: independent electrons (walkers, the default: Magboltz's
+  results within errors, faster), on the CPU or on the GPU, or Magboltz's
+  one electron, bit for bit as Magboltz 11.21. The GPU needs a browser with WebGPU and WGSL pointer parameters
   (Chrome or Edge 123 and later) and the build with it; it runs in single
   precision, 16384 walkers, and its runs count more collisions than asked
   (each walker warms up first). When the browser can't use the graphics

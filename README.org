@@ -1,185 +1,193 @@
 * NimBoltz
 
-A simple interfacer to [[https://magboltz.web.cern.ch/magboltz/][MagBoltz]], a program that solves the Boltzmann
-transport equations for electrons in gas mixtures given external
-electric and magnetic fields. It is one of the most fundamental
-programs in gaseous detector physics to simulate properties of gases
-used in gaseous detectors.
+Electron transport in gas mixtures: [[https://magboltz.web.cern.ch/magboltz/][Magboltz]] 11.21 (S. Biagi), the
+reference Monte Carlo program for drift velocities, diffusion, mean
+energies and Townsend coefficients of electrons in gases, ported to Nim.
 
-It requires ~magboltz~ as a binary somewhere in your PATH. See
-[[Installing Magboltz]] below if you're unsure about how.
+- The same input decks and the same printout as Magboltz, all 61 gases
+  (and the 19 empty slots of Magboltz), all field geometries, the gas at
+  0 K or with thermal motion, Penning transfers, the Townsend analyses.
+- Faster than Magboltz and than [[https://gitlab.cern.ch/garfield/magboltzpp][Magboltz++]], on one thread and more so on
+  many, on NVIDIA GPUs and in a web page (WebAssembly, WebGPU).
+- A library: a gas mixture and the fields in, the results out as values
+  with errors and units.
+- 61 defects of Magboltz 11.21 fixed, each reported with a reproduction
+  (see [[Defects of Magboltz]]).
 
-What this library allows you to do is to avoid having to manually
-write the extremely pedantic Magboltz input files. An example for a
-Magboltz input looks as follows:
+** Two modes
 
-#+begin_src
-2         1         1         1         0.00000   
-2    11   80   80   80   80   
-97.7000   2.3000    0.0000    0.0000    0.0000    0.0000    26.8500   787.5648  
-60000.000 0.000     0.000     
-0         0         0         0         0.00000   
+| Mode                    | How                     | What                                                                                                 |
+|-------------------------+-------------------------+------------------------------------------------------------------------------------------------------|
+| Default                 |                         | many independent electrons, exact bounds of the collision frequency, all cores: Magboltz's results within errors |
+| Magboltz, bit for bit   | ~NIMBOLTZ_FORTRAN=1~    | one electron, Magboltz's methods and random numbers, one thread: Magboltz's printout, number for number |
+
+The default mode gives the same physics with other estimators: the drift
+run follows many electrons ("walkers") instead of one long trajectory,
+and every free flight uses an exact upper bound of the collision
+frequency over short time windows instead of Magboltz's coarse one, so
+far fewer null collisions are drawn. Its results agree with Magboltz's
+within the errors, and its errors are honest: Magboltz underestimates
+some of its own (diffusion by 2–5 times, attachment in CCl₄ and SF₆ by up
+to 16 times).
+
+The bit-for-bit mode is there to cross-check: with the same deck it prints
+what Magboltz 11.21 prints (with the defects below fixed in both), digit
+for digit, which the regression tests check on 96 decks.
+
+** Building and running
+
+Nim 2.2 or later, and the packages of ~NimBoltz.nimble~.
+
+#+begin_src sh
+nim c -d:release -o:nimboltz-mb src/nimboltz/magboltz_main.nim
+./nimboltz-mb < deck.in > deck.out          # a Magboltz deck, Magboltz's printout
+NIMBOLTZ_FORTRAN=1 ./nimboltz-mb < deck.in   # Magboltz 11.21, bit for bit
 #+end_src
 
-Nice right?
+| Variable                 | Effect                                                                             |
+|--------------------------+------------------------------------------------------------------------------------|
+| ~NIMBOLTZ_FORTRAN=1~     | Magboltz bit for bit (see above)                                                   |
+| ~NIMBOLTZ_THREADS=n~     | n threads instead of all cores                                                     |
+| ~NIMBOLTZ_SEED=n~        | another seed (Magboltz's is 54217137)                                              |
+| ~NIMBOLTZ_WALKERS=…~     | ~cpu[:n]~ (default: 100 per thread), ~gpu[:n]~ or ~gpu32[:n]~ (a GPU build, below)  |
+| ~NIMBOLTZ_RNG=…~         | ~xoshiro~ (xoshiro256+, default) or ~ranmar~ (Magboltz's RM48) for the walkers     |
+| ~NIMBOLTZ_TIMING=1~      | the time of each step of a deck on stderr                                          |
 
-Further, if you define multiple gas mixtures / settings this library
-will run multiple Magboltz processes for you in parallel, so you don't
-have to manually start N processes each with their own input and
-output file names. The file names are created based on the used
-parameters.
+** As a library
 
-** Using this library
-
-Of interest is mainly the ~initMagboltz~ procedure:
 #+begin_src nim
-proc initMagboltz*[F: SomeUnit, P: Pressure](
-  gases: seq[Gas], pressure: P, temp: Kelvin, E: F,
-  nMax: int,
-  usePenning = true, gasMotionThermal = true,
-  B: Tesla = 0.T,
-  Bθ: Degree = 0.°,
-  eFinal = 0.0,
-  outpath = "resources"
-                                          ): Magboltz
+import nimboltz/api
+
+let r = simulate(Setup(mixture: @[(argon, 90.0), (carbonDioxide, 10.0)],
+                       efield: 500.0.V•cm⁻¹, collisions: 4_000_000))
+echo r.velocity.z               # 41.1 ± 0.122 MicroMeter•NanoSecond⁻¹
+echo r.spread(r.transverse)     # √(2D/v), per √cm
 #+end_src
-with which you construct a ~Magboltz~ object, which stores the gases
-and settings for a calculation. The gases come from either ~initGas~
-or ~initGases~:
 
-#+begin_src nim
-proc initGas*(id: int, fraction: float): Gas =
-  let gM = getGas(id)
-  result = Gas(name: gM.name, id: gM.id, frac: fraction)
+A ~Setup~ is one Magboltz deck (gases and shares, temperature, pressure,
+E, B and its angle, collisions, Penning transfers, thermal motion);
+~Setup.fortran~ selects the bit-for-bit mode. ~Results~ has the drift
+velocity, the diffusion tensor, the mean energy, the Townsend and
+attachment coefficients and the results of the Townsend analyses, each
+with its error, plus the collision frequencies by process and the energy
+distribution. See ~src/nimboltz/api.nim~.
 
-proc initGas*(name: string, fraction: float): Gas =
-  let gM = getGas(name)
-  result = Gas(name: gM.name, id: gM.id, frac: fraction)
+** Speed
 
-proc initGases*[T: int | string](gases: varargs[(T, float)]): seq[Gas] =
-  for arg in gases:
-    result.add initGas(arg[0], arg[1])
-#+end_src
-where as you can see we either allow to take the Magboltz IDs for the
-gases as listed in [[#sec:available_gases]] below or their names. The
-names as strings are case insensitive.
+Whole decks of the regression set (~tests/regress/decks~, 4·10⁷
+collisions, Townsend analyses where Magboltz runs them), one thread each,
+15 decks side by side on a Ryzen 9 5950X; CPU seconds:
 
-Once a ~Magboltz~ object is defined all you need to do is run
-~runMagboltz~ and it will call Magboltz for you. All files will be
-stored in the ~outpath~ directory as given to ~initMagboltz~.
+| deck                                  | default | Magboltz++ | bit for bit | Magboltz 11.21 |
+|---------------------------------------+---------+------------+-------------+----------------|
+| Ar/CO₂ 90/10, 0 K (arco2_nob_t0)      |     8.9 |       13.9 |        22.5 |           28.0 |
+| Ar/CO₂ 90/10, B ⊥ E (arco2_bperp_t0)  |    11.0 |       13.5 |        32.2 |           38.7 |
+| CO₂, thermal (pure_co2_t1)            |    10.3 |       16.4 |        17.4 |           20.5 |
+| CF₄ (gas01)                           |    15.8 |       98.3 |       147.1 |          191.2 |
+| H₂ (gas21)                            |    11.7 |       71.5 |        40.5 |           51.0 |
+| air, Townsend (hi_air_t0)             |   203.2 |      414.8 |       890.0 |          992.5 |
+| Ne/CO₂, Townsend (penning_neco2_t0)   |    30.9 |       42.7 |        46.0 |           52.0 |
 
-If you wish to run multiple processes in parallel, simply call
-~runMagboltz~ with an array / seq input.
+Over 90 decks (six left out where the programs do not run the same
+thing: Magboltz++ stops early, or MB-58 changes the physics) the default
+mode is 2.3 times as fast as Magboltz++ (geometric mean; median 1.8,
+slowest deck 1.08: pure argon), 2.7 times as fast as the bit-for-bit mode
+and 3.2 times as fast as Magboltz 11.21 (gfortran -O2); in total 28 CPU
+minutes against 89, 92 and 113. Magboltz++ skips the Townsend analyses
+below |α − η| = 25 /cm; its times above are of a build with Magboltz's
+limit (5). On all cores (the default) the walkers and the avalanches run
+in parallel: arco2_nob_t0 takes 8.5 s on one thread, 1.6 s on 32.
 
-So for example:
+Where the time goes: Magboltz's free flight takes 5–10 null collisions
+per real one; the walkers bound the collision frequency exactly over
+short windows of time (~0.1 null collisions per real one), draw angles
+without trigonometric functions, and take their random numbers from
+xoshiro256+ (Ranmar's in the bit-for-bit mode). See ~docs/DESIGN.md~.
+
+** GPUs and the web
+
+- NVIDIA GPUs: build with ~-d:nimboltzGpu --path:<tattletale>~ (Crucible,
+  the Nim-to-GPU compiler of [[https://github.com/mratsim/tattletale][tattletale]]) and run with
+  ~NIMBOLTZ_WALKERS=gpu~ (or ~gpu32~ in single precision).
+- A web page (~web/~): NimBoltz compiled to WebAssembly, on all cores of
+  the browser's machine and on its GPU through WebGPU. See ~web/README.md~.
+
+** Agreement with Magboltz
+
+- ~tests/regress~: the bit-for-bit mode against the Fortran program, 96
+  decks (all geometries, thermal motion, Penning transfers, analyses),
+  byte for byte.
+- ~tests/stat~: the default mode against the Fortran program, every
+  printed result within its errors, the errors measured over several
+  seeds where Magboltz's are too small.
+- ~tests/gasengine~, ~tests/gasdump~: the collision tables of all gases
+  against Magboltz's.
+- ~tests/unit~, ~tests/ensemble~, ~tests/gpu~, ~tests/wasm~: the library,
+  the walkers, CPU against GPU walkers.
+
+How it is built and why: ~docs/DESIGN.md~.
+
+** Defects of Magboltz
+
+Porting Magboltz line by line, comparing every table bit for bit and then
+comparing with Magboltz++ found 61 defects in Magboltz 11.21 (MB-01 to
+MB-61): wrong array indices, typos in constants, levels skipped or
+counted twice, a mass off by 81 amu, energy lost twice, uninitialised
+values, 32-bit overflows. Each is fixed by its evident intent in NimBoltz
+and on the branch ~fixes~ of the Magboltz fork, one commit each, with a
+report (~bugs/README.md~ there: what, where, its effect on results, a
+reproduction), and 15 open questions where the intent is not clear
+(~bugs/QUESTIONS.md~). Where Magboltz has a defect, NimBoltz's results
+are those of the fixed Magboltz.
+
+** The Magboltz interfacer
+
+The first NimBoltz wrote Magboltz decks and ran the Fortran program on
+them, several in parallel; it is still here (~nimboltz.nim~):
 
 #+begin_src nim
 import nimboltz
 let gases = initGases([("argon", 97.7), ("isobutane", 2.3)])
 let mb = initMagboltz(gases, 1050.mbar, 300.K, 60.kV•cm⁻¹, nMax = 10,
                       usePenning = true, gasMotionThermal = true)
-# to run a single calculation:
-# runMagboltz(mb)
-# to run multiple in parallel:
-var mb1 = mb # to keep modifying it simple, we just copy...
-var mb2 = mb
-var mb3 = mb
-var mb4 = mb
-mb1.temp = 300.K # ... and reassign what we want changed
-mb2.temp = 330.K
-mb3.temp = 360.K
-mb4.temp = 390.K
-let mbs = [mb1, mb2, mb3, mb4]
-runMagboltz(mbs)
+runMagboltz(mb)        # or runMagboltz([mb1, mb2, ...]) in parallel
 #+end_src
 
-In the future this will likely also provide some basic parsing of the
-Magboltz output files, but not today. 
-
-** Installing Magboltz
-
-Download the Magboltz source code from here:
-
-https://magboltz.web.cern.ch/magboltz/
-
-Assuming you are on a Unix system, you might want to do:
+It needs ~magboltz~ on the PATH:
 
 #+begin_src sh
-cd ~
-mkdir -p src/Magboltz # for example for source code you compile
-cd src/Magboltz
-wget https://magboltz.web.cern.ch/magboltz/magboltz-11.17.f # for latest version as of writing
-gfortran -O3 -o magboltz magboltz-11.17.f
+wget https://magboltz.web.cern.ch/magboltz/magboltz-11.21.f
+gfortran -O3 -o magboltz magboltz-11.21.f
 #+end_src
-which downloads and compiles Magboltz with optimizations enabled.
 
-Then you should make sure to add =~/src/Magboltz= to your PATH, by adding
-#+begin_src sh
-export PATH=$PATH:$HOME/src/Magboltz
-#+end_src
-to your =~/.bashrc=, =~/.zshrc= or wherever you store your terminal
-configurations.
+The tests compare with the Fortran program too (~MAGBOLTZ_SRC~, default
+~~/src/Magboltz/magboltz-11.21.f~).
 
-After starting a new terminal Magboltz should be available as
-~magboltz~ from any directory.
+** Gases
 
-** Available Magboltz gases
-:PROPERTIES:
-:CUSTOM_ID: sec:available_gases
-:END:
+Magboltz's gas numbers, as in the decks, and their names in the library
+(~nimboltz/gases.Gas~):
 
-|----------+-----------------------+-------------+----------------------------------------+-------------|
-| Routine  | Gas                   | Last update | Notes                                  | Star rating |
-|----------+-----------------------+-------------+----------------------------------------+-------------|
-| GAS1     | CF4                   |        2001 | anisotropic scattering                 | 5*          |
-| GAS2     | Argon                 |        1997 |                                        | 5*          |
-| GAS3     | Helium 4              |        1997 |                                        | 5*          |
-| GAS4     | Helium 3              |        1992 |                                        | 5*          |
-| GAS5     | Neon                  |        1992 |                                        | 5*          |
-| GAS6     | Krypton               |        2001 |                                        | 4*          |
-| GAS7     | Xenon                 |        2001 |                                        | 4*          |
-| GAS8     | methane               |        1994 |                                        | 5*          |
-| GAS9     | ethane                |        1999 |                                        | 5*          |
-| GAS10    | propane               |        1999 |                                        | 4*          |
-| GAS11    | isobutane             |        1999 |                                        | 3*          |
-| GAS12    | CO2                   |        2001 |                                        | 5*          |
-| GAS13    | C(CH3)4 neo-pentane   |        1995 |                                        | 3*          |
-| GAS14    | H20                   |        1998 |                                        | 3*          |
-| GAS15    | Oxygen                |        1990 | 3-body attachment included             | 4*          |
-| GAS16    | Nitrogen              |        1985 | Pitchford and Phelps                   | 4*          |
-| GAS17    | nitric oxide          |        1995 | attaching gas                          | 4*          |
-| GAS18    | nitrous oxide         |        1995 | attaching gas                          | 4*          |
-| GAS19    | C2H4 ethene           |        1999 |                                        | 4*          |
-| GAS20    | C2H2 acetylene        |        1992 |                                        | 3*          |
-| GAS21    | Hydrogen              |        2001 |                                        | 5*          |
-| GAS22    | Deuterium             |        1998 |                                        | 5*          |
-| GAS23    | Carbon monoxide       |        1998 |                                        | 5*          |
-| GAS24    | methylal              |        1988 |                                        | 2*          |
-| GAS25    | DME                   |        1998 |                                        | 4*          |
-| GAS26    | Reid step model       |           ? | anisotropic version                    | -           |
-| GAS27    | Maxwell model         |           ? |                                        | -           |
-| GAS28    | Reid ramp model       |           ? |                                        | -           |
-| GAS29    | C2F6                  |        1999 | anisotropic                            | 4*          |
-| GAS30    | SF6                   |           ? | do not use high percentage             | 3*          |
-| GAS31    | NH3 ammonia           |        1999 |                                        | 3*          |
-| GAS32    | C3H6 propene          |        1999 |                                        | 4*          |
-| GAS33    | C3H6 cyclopropane     |        1999 |                                        | 4*          |
-| GAS34    | CH3OH methanol        |        1999 |                                        | 2*          |
-| GAS35    | C2H5OH ethanol        |        1999 |                                        | 3*          |
-| GAS36    | C3H7OH isopropanol    |        1999 |                                        | 2*          |
-| GAS37    | Cæsium                |        2001 | no dimers                              | 2*          |
-| GAS38    | Fluorine              |           ? | Morgan                                 | 2*          |
-| GAS39    | CS2                   |        2001 | ion drift, dark matter                 | 2*          |
-| GAS40    | COS                   |        2001 |                                        | 2*          |
-| GAS41    | CD4                   |        2001 | TPCs in neutron background environment | 3*          |
-| GAS42    | BF3 Boron trifluoride |        2001 | anisotropic                            | 3*          |
-| GAS43    | C2HF5 or C2H2F4       |           ? | estimated no data, anisotropic         | 1*          |
-| GAS44    | Helium 3              |        2002 | anisotropic                            | 5*          |
-| GAS45    | Helium 4              |        2002 | anisotropic                            | 5*          |
-| GAS46    | Neon                  |        2002 | anisotropic                            | 5*          |
-| GAS47    | Argon                 |        2002 | anisotropic                            | 5*          |
-| GAS48    | Krypton               |        2002 | anisotropic                            | 4*          |
-| GAS49    | Xenon                 |        2002 | anisotropic                            | 4*          |
-| GAS50    | methane               |        2002 | anisotropic                            | 5*          |
-| GAS52-80 | Dummy routines        |           ? |                                        | -           |
+|  1 | ~cf4~                 | 21 | ~hydrogen~           | 41 | ~deuteratedMethane~     |
+|  2 | ~argon~               | 22 | ~deuterium~          | 42 | ~boronTrifluoride~      |
+|  3 | ~helium4~             | 23 | ~carbonMonoxide~     | 43 | ~c2h2f4~                |
+|  4 | ~helium3~             | 24 | ~methylal~           | 44 | ~trimethylamine~        |
+|  5 | ~neon~                | 25 | ~dimethylEther~      | 45 | ~c3f4h2~                |
+|  6 | ~krypton~             | 26 | ~reidStep~           | 46 | ~nPropanol~             |
+|  7 | ~xenon~               | 27 | ~maxwell~            | 47 | ~paraHydrogen~          |
+|  8 | ~methane~             | 28 | ~reidRamp~           | 48 | ~orthoDeuterium~        |
+|  9 | ~ethane~              | 29 | ~hexafluoroethane~   | 49 | ~c4f7n~                 |
+| 10 | ~propane~             | 30 | ~sulphurHexafluoride~ | 50 | ~fluoroform~           |
+| 11 | ~isobutane~           | 31 | ~ammonia~            | 51 | ~bromotrifluoromethane~ |
+| 12 | ~carbonDioxide~       | 32 | ~propene~            | 52 | ~perfluoropropane~      |
+| 13 | ~neopentane~          | 33 | ~cyclopropane~       | 53 | ~ozone~                 |
+| 14 | ~water~               | 34 | ~methanol~           | 54 | ~mercuryDimer~          |
+| 15 | ~oxygen~              | 35 | ~ethanol~            | 55 | ~hydrogenSulphide~      |
+| 16 | ~nitrogen~            | 36 | ~isopropanol~        | 56 | ~nButane~               |
+| 17 | ~nitricOxide~         | 37 | ~cesium~             | 57 | ~nPentane~              |
+| 18 | ~nitrousOxide~        | 38 | ~fluorine~           | 58 | ~nitrogenPhelps~        |
+| 19 | ~ethylene~            | 39 | ~carbonDisulphide~   | 59 | ~germane~               |
+| 20 | ~acetylene~           | 40 | ~carbonylSulphide~   | 60 | ~silane~                |
+|    |                       |    |                      | 61 | ~carbonTetrachloride~   |
 
+26 to 28 are model gases; 62 to 80 are empty, as in Magboltz.

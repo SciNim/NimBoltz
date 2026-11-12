@@ -14,13 +14,15 @@
 ##
 ## A `Setup` is one input deck of Magboltz. `simulate` runs it as Magboltz
 ## would (energy range, drift run, then the Townsend analyses if ionisation
-## or attachment matters) and prints nothing unless `output` is set; with
+## or attachment matters) and prints nothing unless `output` is set. By
+## default the drift run follows many independent electrons on all cores:
+## Magboltz's results within errors, faster. With `fortran = true`,
 ## `output = stdout` and the same seed, the printout is Magboltz's, bit for
 ## bit. A run that Magboltz would stop raises a `MagboltzError`.
 
 import units, rm48, deck, conditions, gases, results, magboltz
 
-export units, results, MagboltzError, nscale, WalkerBackend, WalkerSettings
+export units, results, MagboltzError, nscale, WalkerBackend, WalkerSettings, RngKind
 export gases.Gas
 
 type
@@ -39,13 +41,19 @@ type
     penning*: bool = false        ## Penning transfers
     thermal*: bool = true         ## thermal motion of the gas (else 0 K)
     seed*: int = DefaultSeed      ## of the random numbers (Magboltz's by default)
-    threads*: int = 1             ## for the avalanches of the analyses: their
-                                  ## own random numbers, so not Magboltz's
-                                  ## numbers, but the same within errors
-    walkers*: WalkerSettings      ## backend wbCpu or wbGpu (`single`: in single
-                                  ## precision): the drift run (and ELIMIT) with
-                                  ## independent electrons on CPU threads or a
-                                  ## GPU, again the same within errors
+    fortran*: bool = false        ## Magboltz 11.21 bit for bit: one electron,
+                                  ## its methods and numbers, one thread
+                                  ## (slower; for cross-checks); `walkers`
+                                  ## unused
+    threads*: int = 0             ## CPU threads (0: all cores) for the walkers
+                                  ## and the avalanches of the analyses; with
+                                  ## `fortran`, 0 is one thread, and more split
+                                  ## the avalanches, with random numbers of
+                                  ## their own
+    walkers*: WalkerSettings      ## the drift run (and ELIMIT) with independent
+                                  ## electrons on CPU threads (wbCpu) or a GPU
+                                  ## (wbGpu; `single`: in single precision):
+                                  ## the same results within errors
     output*: File                 ## Magboltz's printout goes here (nil: nowhere)
 
 func deck*(s: Setup): Deck =
@@ -69,9 +77,8 @@ proc simulate*(s: Setup): Results =
   ## runs a setup as Magboltz would run its deck
   if s.collisions <= 0:
     raise newException(MagboltzError, "no collisions to run")
-  var session = initSession(s.output)
+  var session = initSession(s.output, s.fortran)
   if s.seed != DefaultSeed: session.rng.rm.rm48in(s.seed, 0, 0)
-  session.threads = max(s.threads, 1)
-  session.walkers = s.walkers
-  if session.walkers.threads <= 0: session.walkers.threads = session.threads
+  if s.threads > 0: session.threads = s.threads
+  if not s.fortran: session.walkers = s.walkers
   session.run(s.deck, s.collisions)

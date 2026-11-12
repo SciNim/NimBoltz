@@ -5,9 +5,10 @@
 ## the results agree with Magboltz's within errors, not number for number.
 ##
 ## A run: the walkers start where Magboltz's electron starts and run until
-## they have forgotten it (`warmUp`), then the sums restart; halfway through
-## the main run the walkers mark their positions (for the diffusion), and
-## every collision of the main run is counted per process and energy bin.
+## they have forgotten it (`warmUp`), then the sums restart; the main run
+## stops at checkpoints, where the walkers' positions are kept (for the
+## diffusion, `ensemble.nim`), and every collision of the main run is
+## counted per process and energy bin.
 ##
 ## How many walkers: the time to forget the start is a few energy
 ## relaxation times, and the main run of each walker must last at least as
@@ -36,7 +37,7 @@ type
     e, ee: float64       ## mean energy and its error (eV)
     v, ve: float64       ## drift velocity along E and its error (m/ps)
 
-func chunk[T](ws: openArray[Walker[T]], blocks = 10): Chunk =
+func chunk[T, R](ws: openArray[Walker[T, R]], blocks = 10): Chunk =
   ## mean energy and drift velocity of the walkers' sums, with errors from
   ## the scatter of blocks
   var es, vs: seq[float64]
@@ -60,7 +61,7 @@ func chunk[T](ws: openArray[Walker[T]], blocks = 10): Chunk =
 
 const minWalkers* = 100  ## 10 blocks of 10 for the errors
 
-proc drop*[B, T](b: var B, ws: var seq[Walker[T]], n: int) =
+proc drop*[B, T, R](b: var B, ws: var seq[Walker[T, R]], n: int) =
   ## keeps the first n walkers
   mixin shrink
   ws.setLen(n)
@@ -74,7 +75,7 @@ proc lastBinShare*[B](b: B): float64 =
   b.readTally(t)
   t.spectrum[nEnergyBins] / max(sum(t.spectrum), 1.0)
 
-proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i32,
+proc warmUp*[B, T, R](b: var B, ws: var seq[Walker[T, R]], budget: int, first = 1000'i32,
                    exceeding = 0.0): WarmUp =
   ## Runs the walkers in chunks of doubling length until the mean energy and
   ## the drift velocity of a chunk agree with those of the chunk before
@@ -87,7 +88,7 @@ proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i
   ## (after a `clearTally`), and the warm-up stops (`exceeded`) when more
   ## than this share of them is in the last energy bin.
   mixin walk, read, write, dropsWalkers
-  proc run(b: var B, ws: var seq[Walker[T]], c: int32): Chunk =
+  proc run(b: var B, ws: var seq[Walker[T, R]], c: int32): Chunk =
     b.walk(c, counting = exceeding > 0.0)
     b.read(ws)
     result = chunk(ws)
@@ -118,7 +119,7 @@ proc warmUp*[B, T](b: var B, ws: var seq[Walker[T]], budget: int, first = 1000'i
       return
     prev = cur
 
-proc energyLimitExceeded*[B, T](b: var B, ws: var seq[Walker[T]], budget, sample: int): WarmUp =
+proc energyLimitExceeded*[B, T, R](b: var B, ws: var seq[Walker[T, R]], budget, sample: int): WarmUp =
   ## ELIMIT on walkers: whether an electron reaches the last energy bin
   ## (`result.exceeded`) in `sample` collisions of all walkers together,
   ## once they have warmed up (`warmUp`). Magboltz's ELIMIT counts its one
@@ -154,22 +155,53 @@ type
     st*: ps        ## time of all walkers
     nulls*: int64
     tmax*: ps
+    aborted*: bool ## stopped early: the last energy bin got more than
+                   ## `abortAbove` of the collisions (no transport then)
 
-proc driftRun*[G: static FieldGeometry; B, T](b: var B, ws: var seq[Walker[T]],
-                                              perWalker: int32, btheta: float64): WalkerRun =
-  ## `perWalker` collisions of every walker (after `warmUp`), marked
-  ## halfway, counted
+const maxChunks* = 64
+  ## checkpoints of the main run (`ensemble.Checkpoints`) at most
+
+func chunksOf*(perWalker, warmUp: int): int =
+  ## chunks of the main run between checkpoints: each at least as long as
+  ## the warm-up (longer than the correlation of the velocities), at least
+  ## two, at most `maxChunks`
+  clamp(perWalker div max(warmUp, 1), 2, maxChunks)
+
+proc driftRun*[G: static FieldGeometry; B, T, R](b: var B, ws: var seq[Walker[T, R]],
+                                              perWalker: int32, chunks: int,
+                                              btheta: float64,
+                                              abortAbove = 0.0, anyBefore = 0): WalkerRun =
+  ## `perWalker` collisions of every walker (after `warmUp`), in `chunks`
+  ## chunks with checkpoints in between, counted. With `abortAbove` > 0,
+  ## stops after a chunk with more than this share of its collisions in the
+  ## last energy bin, or, while the walkers have made fewer than `anyBefore`
+  ## collisions together before it (and in the first chunk), with any
+  ## (`aborted`: the energy range is too small, no need to run on). The
+  ## second is ELIMIT's test continued: a tail that fills slowly can pass
+  ## it in the warm-up.
   mixin walk, read, write, clearTally, readTally
   b.clearTally()
-  let half = perWalker div 2
-  b.walk(half)
-  b.read(ws)
-  for w in ws.mitems: w.mark()
-  b.write(ws)
-  b.walk(perWalker - half)
-  b.read(ws)
+  var cp = initCheckpoints(ws)
+  var done = 0'i32
+  var last, all = 0.0  # collisions in the last energy bin and in all, so far
+  for j in 1 .. chunks:
+    let upTo = int32(int64(perWalker) * j div chunks)
+    b.walk(upTo - done)
+    done = upTo
+    if abortAbove > 0.0 and j < chunks:
+      var t {.noinit.}: Tallies
+      b.readTally(t)
+      let (l, a) = (t.spectrum[nEnergyBins], sum(t.spectrum))
+      if (l - last) / max(a - all, 1.0) > abortAbove or
+         (l > 0.0 and (j == 1 or all < float64(anyBefore))):
+        result.aborted = true
+        b.read(ws)
+        return
+      (last, all) = (l, a)
+    b.read(ws)
+    cp.add ws
   b.readTally(result.tallies)
-  result.transport = transport[G, T](ws, btheta)
+  result.transport = transport[G, T, R](ws, cp, btheta)
   for w in ws:
     result.st = result.st + w.st
     result.nulls = result.nulls + int64(w.nulls)

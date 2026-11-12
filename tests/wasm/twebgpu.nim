@@ -42,7 +42,9 @@ proc parity[M](name: string, s: Setup) =
     var g = initGpuWalkers[G, T](gpu, f, tabs, fm[], r.estep)
     var done = 0
     for n in [1, 10, 100]:
-      walkAll[G, T](cpu, f, tabs, r.estep, int32(n - done), 0, fm = addr fm[])
+      for w in cpu.mitems:  # with the GPU's windows, step by step as the GPU
+        walkWith[G, T, NoTally, Ranmar](w, f, tabs, addr fm[], gpuWindows, r.estep,
+                                        int32(n - done), 0, NoTally())
       g.walk(int32(n - done), counting = false)
       done = n
       g.read(gpu)

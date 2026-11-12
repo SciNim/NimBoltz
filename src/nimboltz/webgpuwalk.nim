@@ -17,7 +17,7 @@
 ## walker's first collision agrees with the CPU's to rounding.
 
 import workspace/crucible
-import units, tables, fields, freeflight, walkers, single
+import units, rm48, tables, fields, freeflight, walkers, single
 from simulation import MagboltzError
 
 type
@@ -45,10 +45,10 @@ template kernel(G: static FieldGeometry, T: typedesc): string =
       let k = int32(thread_position_in_grid.x)
       if k < a.n:
         if a.counting != 0:
-          walkWith[G, T, ptr UncheckedArray[uint32]](ws[k], a.f, tab[0], addr fm[0], true,
+          walkWith[G, T, ptr UncheckedArray[uint32], Ranmar](ws[k], a.f, tab[0], addr fm[0], gpuWindows,
                                                     a.estep, a.collisions, a.penning, tally)
         else:
-          walkWith[G, T, NoTally](ws[k], a.f, tab[0], addr fm[0], true,
+          walkWith[G, T, NoTally, Ranmar](ws[k], a.f, tab[0], addr fm[0], gpuWindows,
                                   a.estep, a.collisions, a.penning, NoTally())
 
 const kernels = [
