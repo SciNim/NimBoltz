@@ -392,11 +392,12 @@ const ammoniaModel* = GasModel(
                    xEps: widen(xel), eps: widen(yeps), epsConstantBelow: true,
                    low: constant, lowBelow: f64(xel, 0), lowQ: f64(yel, 0) * 1e-16,
                    lowQMomentum: f64(ymt, 0) * 1e-16),
-  # channels from their tables in order, stopping at the first one whose
-  # table has not started; shares of the counting ionisation above them
-  # (linear up to 1 keV, log-log, Born-Bethe above 40 keV); the K shell
+  # channels from their tables, each from its own table's start (MB-61:
+  # upstream stops at the first one not started, so N+ at 28 eV also closes
+  # H+ and H2+ from 23 and 26 eV); shares of the counting ionisation above
+  # them (linear up to 1 keV, log-log, Born-Bethe above 40 keV); the K shell
   ionisation: Ionisation(
-    scheme: channels, am2: 3.411, c: 35.5, fromTables: true, stopAtClosed: true,
+    scheme: channels, am2: 3.411, c: 35.5, fromTables: true,
     counting: table(xionc, yionc, interp = linLog, switchAt = 1000.0, beyond = bethe,
                     fraction = 1.0),
     channels: @[
