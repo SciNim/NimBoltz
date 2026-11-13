@@ -335,7 +335,7 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
     r.output.fwrite(fmt11)
     r.output.fwrite(fmt12, planes.zstep.to(μm))
     let sr = avalanche[G, pkSpace, M](r, planes, nmax, rng)
-    let sst = steadyState(sr.sums, sr.iprim, planes.zstep, planes.izfinal, sr.ratio)
+    let sst = steadyState(sr.sums, sr.iprim, planes.zstep, int(planes.izfinal), sr.ratio)
     r.steadyState = some(sst)
     r.output.printSst(sst)
     r.transport.alpha = sst.alpha
@@ -355,7 +355,7 @@ proc analyse[G: static FieldGeometry; M](r: var Run[M], rng: var MagRng) =
   r.output.fwrite(fmt26, planes.tstep)
   let tr = avalanche[G, pkTime, M](r, planes, nmax, rng)
   r.printFriedland()
-  let pt = pulsedTownsend[G](tr.sums, tr.iprim, planes.tstep, planes.itfinal)
+  let pt = pulsedTownsend[G](tr.sums, tr.iprim, planes.tstep, int(planes.itfinal))
   r.pulsedTownsend = some(pt)
   printPt[G](r.output, pt, tr.sums)
   var ratio = tr.ratio

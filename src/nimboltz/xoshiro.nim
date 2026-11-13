@@ -90,15 +90,28 @@ proc initXoshiro128[X: Xoshiro128](seed: int): X =
   X(s0: uint32(a and 0xffffffff'u64), s1: uint32(a shr 32),
     s2: uint32(b and 0xffffffff'u64), s3: uint32(b shr 32))
 
-proc seedOf*(g: var (Ranmar | Xoshiro256Plus)): int {.inline.} =
-  ## a seed for another generator, from g's numbers
-  int(drand48(g) * 9007199254740992.0)
+type
+  Seed* = object
+    ## 64 bits for a generator, as two words (GPUs: 32-bit integers)
+    lo*, hi*: uint32
 
-proc seedOf*(g: var Xoshiro128): int {.inline.} =
-  ## from two numbers (one has 32 or 23 bits only)
-  let a = int(drand48(g) * 4294967296.0)
-  let b = int(drand48(g) * 4294967296.0)
-  (a shl 21) xor b
+proc seedOf*(g: var (Ranmar | Xoshiro256Plus | MagRng)): Seed {.inline.} =
+  ## a seed for another generator, from g's numbers
+  let x = uint64(drand48(g) * 9007199254740992.0)
+  Seed(lo: uint32(x and 0xffffffff'u64), hi: uint32(x shr 32))
+
+proc seedOf*(g: var Xoshiro128): Seed {.inline.} =
+  ## from two numbers (each with 32 or 23 bits only)
+  Seed(lo: uint32(drand48(g) * 4294967296.0), hi: uint32(drand48(g) * 4294967296.0))
+
+func mix32(x: uint32): uint32 {.inline.} =
+  ## MurmurHash3's finaliser
+  var h = x
+  h = h xor (h shr 16)
+  h = h * 0x85ebca6b'u32
+  h = h xor (h shr 13)
+  h = h * 0xc2b2ae35'u32
+  h xor (h shr 16)
 
 proc initRng*(R: typedesc[Ranmar], seed: int): Ranmar = initRanmar(seed)
 proc initRng*(R: typedesc[Xoshiro256Plus], seed: int): Xoshiro256Plus = initXoshiro(seed)
@@ -106,6 +119,15 @@ proc initRng*(R: typedesc[Xoshiro128StarStar], seed: int): Xoshiro128StarStar =
   initXoshiro128[Xoshiro128StarStar](seed)
 proc initRng*(R: typedesc[Xoshiro128Plus], seed: int): Xoshiro128Plus =
   initXoshiro128[Xoshiro128Plus](seed)
+
+proc initRng*[R: WalkerRng](rng: typedesc[R], seed: Seed): R {.inline.} =
+  ## from a `Seed` (`seedOf`); xoshiro128 in 32-bit arithmetic (GPU code)
+  when R is Xoshiro128:
+    var g = R(s0: mix32(seed.lo), s1: mix32(seed.hi), s2: mix32(seed.lo xor 0x9e3779b9'u32),
+              s3: mix32(seed.hi xor 0x7f4a7c15'u32) or 1'u32)
+    g
+  else:
+    initRng(R, int(uint64(seed.hi) shl 32 or uint64(seed.lo)) and 0x3fffffffffffffff)
 
 template withRng*(kind: RngKind, R, body: untyped) =
   ## body with `R` the generator type of `kind`

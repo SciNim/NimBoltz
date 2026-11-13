@@ -125,7 +125,8 @@ func samplingPlanes*(alpha, att: cm⁻¹, wz: cm•s⁻¹, tempc: float64, torr:
 func steadyState*(s: SpaceSums, iprim: int, zstep: m, izfinal: int,
                   ar: AttachmentRatio): SteadyState =
   ## SST from the sums of an `pkSpace` run
-  var nesst: array[1..nPlanes + 1, int] = s.born
+  var nesst: array[1..nPlanes + 1, int]
+  for k in 1 .. nPlanes + 1: nesst[k] = int(s.born[k])
   var esst: array[1..nPlanes, eV]
   var vdi, wtemp, wsi: array[1..nPlanes, m•ps⁻¹]
   var dxi, dyi, dli: array[1..nPlanes, m²•ps⁻¹]
