@@ -79,18 +79,21 @@ distribution. See ~src/nimboltz/api.nim~.
 ** Speed
 
 Whole decks of the regression set (~tests/regress/decks~, 4·10⁷
-collisions, Townsend analyses where Magboltz runs them), one thread each,
-15 decks side by side on a Ryzen 9 5950X; CPU seconds:
+collisions, Townsend analyses where Magboltz runs them) on a Ryzen 9
+5950X. One thread each, 15 decks side by side, in CPU seconds; and, under
+"32 threads", the default mode on all 32 threads of the machine, one deck
+at a time, in seconds of wall time (Magboltz and Magboltz++ have one
+thread only):
 
-| deck                                  | default | Magboltz++ | bit for bit | Magboltz 11.21 |
-|---------------------------------------+---------+------------+-------------+----------------|
-| Ar/CO₂ 90/10, 0 K (arco2_nob_t0)      |     8.9 |       13.9 |        22.5 |           28.0 |
-| Ar/CO₂ 90/10, B ⊥ E (arco2_bperp_t0)  |    11.0 |       13.5 |        32.2 |           38.7 |
-| CO₂, thermal (pure_co2_t1)            |    10.3 |       16.4 |        17.4 |           20.5 |
-| CF₄ (gas01)                           |    15.8 |       98.3 |       147.1 |          191.2 |
-| H₂ (gas21)                            |    11.7 |       71.5 |        40.5 |           51.0 |
-| air, Townsend (hi_air_t0)             |   203.2 |      414.8 |       890.0 |          992.5 |
-| Ne/CO₂, Townsend (penning_neco2_t0)   |    30.9 |       42.7 |        46.0 |           52.0 |
+| deck                                  | default | 32 threads | Magboltz++ | bit for bit | Magboltz 11.21 |
+|---------------------------------------+---------+------------+------------+-------------+----------------|
+| Ar/CO₂ 90/10, 0 K (arco2_nob_t0)      |     8.9 |        1.6 |       13.9 |        22.5 |           28.0 |
+| Ar/CO₂ 90/10, B ⊥ E (arco2_bperp_t0)  |    11.0 |        1.5 |       13.5 |        32.2 |           38.7 |
+| CO₂, thermal (pure_co2_t1)            |    10.3 |        1.4 |       16.4 |        17.4 |           20.5 |
+| CF₄ (gas01)                           |    15.8 |        1.9 |       98.3 |       147.1 |          191.2 |
+| H₂ (gas21)                            |    11.7 |        1.7 |       71.5 |        40.5 |           51.0 |
+| air, Townsend (hi_air_t0)             |   203.2 |       11.7 |      414.8 |       890.0 |          992.5 |
+| Ne/CO₂, Townsend (penning_neco2_t0)   |    30.9 |        3.2 |       42.7 |        46.0 |           52.0 |
 
 Over 90 decks (six left out where the programs do not run the same
 thing: Magboltz++ stops early, or MB-58 changes the physics) the default
@@ -100,12 +103,32 @@ and 3.2 times as fast as Magboltz 11.21 (gfortran -O2); in total 28 CPU
 minutes against 89, 92 and 113. Magboltz++ skips the Townsend analyses
 below |α − η| = 25 /cm; its times above are of a build with Magboltz's
 limit (5). On all cores (the default) the walkers and the avalanches run
-in parallel: arco2_nob_t0 takes 8.5 s on one thread, 1.6 s on 32. The
+in parallel; about 1 s of each deck on 32 threads is the setup (the
+tables of cross sections and ELIMIT), which runs on one thread. The
 avalanches of the Townsend analyses go electron by electron in waves over
 all threads (each electron with its own random numbers, so the results
 don't depend on the number of threads): the analyses of hi_air_t0 take
 11 s on 32 threads, against 203 s for the whole deck on one; all 96
 decks of the regression set take 4.5 minutes on 32 threads.
+
+The drift alone (MONTE) with ten times the collisions, 4·10⁸, in seconds
+of wall time: on one thread (5 decks side by side), on 32 threads and on
+an NVIDIA RTX 3090 (~NIMBOLTZ_WALKERS=gpu~, and ~gpu32~ in single
+precision):
+
+| deck           | 1 thread | 32 threads | GPU, double | GPU, single |
+|----------------+----------+------------+-------------+-------------|
+| arco2_nob_t0   |     63.0 |        3.1 |        1.11 |        0.29 |
+| arco2_bperp_t0 |     85.5 |        4.2 |        1.95 |        0.28 |
+| pure_co2_t1    |     76.2 |        3.9 |        1.65 |        0.41 |
+| gas01          |    113.0 |        5.9 |        3.27 |        0.54 |
+| gas21          |     84.0 |        4.5 |        2.87 |        0.42 |
+
+On the decks above (4·10⁷ collisions) the GPU gains little: starting
+CUDA and compiling the kernels (NVRTC) takes 0.5–3 s, the tables take
+their second on the CPU, and the GPU runs at least 16384 walkers, i.e.
+3–6 times the collisions asked for (with smaller errors). The Townsend
+analyses run on the CPU threads (see below for the GPU).
 
 Where the time goes: Magboltz's free flight takes 5–10 null collisions
 per real one; the walkers bound the collision frequency exactly over
