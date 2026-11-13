@@ -34,7 +34,7 @@ python3 -m http.server -d web 8000    # then open http://localhost:8000
 ```
 
 Any static file host works (GitHub Pages, ...): the page is `index.html`,
-`style.css`, `app.js`, `worker.js`, `nimboltz.js` and `nimboltz.wasm`,
+`style.css`, `app.js`, `worker.js`, `coi-serviceworker.js`, `nimboltz.js` and `nimboltz.wasm`,
 and for threads `nimboltz-mt.js` and `nimboltz-mt.wasm`.
 
 Threads: `nimboltz-mt` runs on one thread per core (Emscripten's pthreads,
@@ -66,7 +66,13 @@ location /nimboltz/ {
 
 (A `location` with `add_header` of its own inherits none from the
 `server` block: repeat those there.) The page loads only its own files, so
-the headers block nothing. GitHub Pages can't set headers.
+the headers block nothing. Hosts that can't send headers (GitHub Pages)
+get them from `coi-serviceworker.js` ([coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker),
+MIT): a service worker that adds them to the page's responses (the page
+loads once more on the first visit).
+
+The CI (`.github/workflows/ci.yml`) builds the page with WebGPU and puts it
+on <https://scinim.github.io/NimBoltz/> from every push to master.
 
 ## The page
 

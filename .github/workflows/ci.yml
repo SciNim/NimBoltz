@@ -1,0 +1,98 @@
+# Tests, the web build (WebAssembly + WebGPU) and its deployment to GitHub
+# Pages (https://scinim.github.io/NimBoltz/, from master only).
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NIM_VERSION: "2.4.0"
+  EMSCRIPTEN_VERSION: "7.0.0"
+  # Crucible (tattletale's Nim-to-GPU compiler) with the changes NimBoltz needs
+  TATTLETALE_REPO: Vindaar/tattletale
+  TATTLETALE_REF: nimboltz
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: ${{ env.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Dependencies
+        run: nimble install -y --depsOnly
+      - name: Unit tests
+        run: |
+          for t in tfrt tkinematics tmixture tapi; do
+            echo "::group::$t"
+            nim c -r --hints:off -d:release --nimcache:"$RUNNER_TEMP/nc-$t" \
+              -o:"$RUNNER_TEMP/$t" tests/unit/$t.nim
+            echo "::endgroup::"
+          done
+      - name: The program, on a deck
+        run: |
+          nim c --hints:off -d:release -o:nimboltz-mb src/nimboltz/magboltz_main.nim
+          deck=tests/regress/decks/arco2_nob_t0.in
+          ./nimboltz-mb < $deck > default.out
+          grep "DRIFT VELOCITY" default.out
+          # Magboltz 11.21 (its defects fixed) printed tests/regress/ref/*.out
+          NIMBOLTZ_FORTRAN=1 ./nimboltz-mb < $deck > fortran.out
+          cmp fortran.out tests/regress/ref/arco2_nob_t0.out && echo "bit for bit"
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TATTLETALE_REPO }}
+          ref: ${{ env.TATTLETALE_REF }}
+          path: tattletale
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: ${{ env.NIM_VERSION }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Dependencies
+        run: nimble install -y --depsOnly
+      - name: Build (WebAssembly, with WebGPU)
+        run: TATTLETALE="$GITHUB_WORKSPACE/tattletale" web/build.sh
+      - name: Run the module under Node
+        run: node tests/wasm/trun.js '{"mixture": [[2, 90], [12, 10]], "efield": 500, "collisions": 2000000}'
+      - name: The site
+        run: |
+          mkdir -p site
+          cp web/{index.html,style.css,app.js,worker.js,coi-serviceworker.js} \
+             web/nimboltz{,-mt}.{js,wasm} site/
+          touch site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [test, web]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

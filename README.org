@@ -8,7 +8,8 @@ energies and Townsend coefficients of electrons in gases, ported to Nim.
   (and the 19 empty slots of Magboltz), all field geometries, the gas at
   0 K or with thermal motion, Penning transfers, the Townsend analyses.
 - Faster than Magboltz and than [[https://gitlab.cern.ch/garfield/magboltzpp][Magboltz++]], on one thread and more so on
-  many, on NVIDIA GPUs and in a web page (WebAssembly, WebGPU).
+  many, on NVIDIA GPUs and in a web page (WebAssembly, WebGPU):
+  [[https://scinim.github.io/NimBoltz/]].
 - A library: a gas mixture and the fields in, the results out as values
   with errors and units.
 - 61 defects of Magboltz 11.21 fixed, each reported with a reproduction
@@ -36,9 +37,11 @@ for digit, which the regression tests check on 96 decks.
 
 ** Building and running
 
-Nim 2.2 or later, and the packages of ~NimBoltz.nimble~.
+Nim 2.4 or later, and the packages of ~NimBoltz.nimble~ (among them
+[[https://github.com/SciNim/Unchained][Unchained]] from its branch ~rational-powers~, not released yet):
 
 #+begin_src sh
+nimble install -d          # the dependencies
 nim c -d:release -o:nimboltz-mb src/nimboltz/magboltz_main.nim
 ./nimboltz-mb < deck.in > deck.out          # a Magboltz deck, Magboltz's printout
 NIMBOLTZ_FORTRAN=1 ./nimboltz-mb < deck.in   # Magboltz 11.21, bit for bit
@@ -97,7 +100,12 @@ and 3.2 times as fast as Magboltz 11.21 (gfortran -O2); in total 28 CPU
 minutes against 89, 92 and 113. Magboltz++ skips the Townsend analyses
 below |α − η| = 25 /cm; its times above are of a build with Magboltz's
 limit (5). On all cores (the default) the walkers and the avalanches run
-in parallel: arco2_nob_t0 takes 8.5 s on one thread, 1.6 s on 32.
+in parallel: arco2_nob_t0 takes 8.5 s on one thread, 1.6 s on 32. The
+avalanches of the Townsend analyses go electron by electron in waves over
+all threads (each electron with its own random numbers, so the results
+don't depend on the number of threads): the analyses of hi_air_t0 take
+11 s on 32 threads, against 203 s for the whole deck on one; all 96
+decks of the regression set take 4.5 minutes on 32 threads.
 
 Where the time goes: Magboltz's free flight takes 5–10 null collisions
 per real one; the walkers bound the collision frequency exactly over
@@ -110,9 +118,15 @@ xoshiro256+ (Ranmar's in the bit-for-bit mode). See ~docs/DESIGN.md~.
 - NVIDIA GPUs: build with ~-d:nimboltzGpu --path:<tattletale>~ (Crucible,
   the Nim-to-GPU compiler of [[https://github.com/mratsim/tattletale][tattletale]]) and run with
   ~NIMBOLTZ_WALKERS=gpu~ (or ~gpu32~ in single precision: on an RTX 3090
-  1.0–1.8 G collisions/s, double precision 0.12–0.48).
-- A web page (~web/~): NimBoltz compiled to WebAssembly, on all cores of
-  the browser's machine and on its GPU through WebGPU. See ~web/README.md~.
+  1.0–1.8 G collisions/s, double precision 0.12–0.48). Each walker has a
+  small generator of its own (xoshiro128** in double precision,
+  xoshiro128+ in single) and its fields in arrays of their own. With
+  ~NIMBOLTZ_GPU_AVALANCHES=1~ the Townsend avalanches run on the GPU too:
+  correct, but still 10–50 times slower than 32 CPU threads
+  (experimental).
+- A web page (~web/~), [[https://scinim.github.io/NimBoltz/]]: NimBoltz
+  compiled to WebAssembly, on all cores of the browser's machine and on
+  its GPU through WebGPU. See ~web/README.md~.
 
 ** Agreement with Magboltz
 
@@ -126,6 +140,10 @@ xoshiro256+ (Ranmar's in the bit-for-bit mode). See ~docs/DESIGN.md~.
   against Magboltz's.
 - ~tests/unit~, ~tests/ensemble~, ~tests/gpu~, ~tests/wasm~: the library,
   the walkers, CPU against GPU walkers.
+
+The CI (~.github/workflows/ci.yml~) runs the unit tests and a deck in
+both modes (the bit-for-bit one against Magboltz's printout), builds the
+web page with WebGPU and puts it on GitHub Pages.
 
 How it is built and why: ~docs/DESIGN.md~.
 
