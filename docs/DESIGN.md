@@ -135,6 +135,45 @@ also on one thread. Magboltz's one bound for all energies (TLIM, the
 largest of MONTE's 8) gave 5–10 null collisions per real one. The
 ionisation secondary and the rest stay Magboltz's.
 
+Avalanches in waves (2026-11-13; `cascade.runWaves`, default mode): one
+avalanche per thread could not use the threads where it matters, as each
+thread had to finish at least one avalanche (hi_air: one primary of 6·10⁸
+collisions). Now all electrons waiting form a wave; each is followed to
+its end with random numbers of its own (seeded from its parent's: the
+same numbers whichever thread follows it, so runs are reproducible), and
+the electrons it creates form the next wave. Plane sums and counts are
+sums over electrons: the order does not matter. The primaries come in
+chains, each as Magboltz's: the next primary when the last avalanche has
+ended, from the electron of the chain's last 200th collision. Many
+chains run side by side when the avalanches are small (gas49: 4.4·10⁶
+primaries of ~11 collisions). Getting the starts right took four tries,
+all biased on gas49 and gas51 (strong attachment, where the primaries'
+starts decide the attachment rates) except the last:
+
+- starts from a few states for many primaries: z 9 on ATT;
+- every 200th collision's electron used once: z 34 (Magboltz uses one
+  for the primaries of 200 collisions, so a start that leads to short
+  avalanches serves many primaries: its starts are weighted by
+  collisions, not by electrons);
+- new chains from another chain's start: z 10–20, both ways (a chain cut
+  off by the end of the run before its start had its 200 collisions
+  weighs it by primaries; a copy at count 0 gets a full 200 where the
+  chain had less, the rest of the avalanche it was recorded in counting
+  towards it, and that rest is long exactly for long-lived starts);
+- now: a chain goes on until its last start has had its 200 collisions,
+  and a new chain runs 2000 collisions that do not count (its sums go to
+  a cascade that is dropped) before it counts: gas49 4.48·10⁶ primaries
+  (Fortran 4.45·10⁶), χ²/n 0.22. Burn-in only where the avalanches
+  average under 2000 collisions; new chains only after 16 avalanches
+  ended (the first to end are the small ones: hi_air_t1 started 11
+  primaries instead of 1–3), and NMAX/20000 chains at most.
+
+24 decks with the analyses, 32 threads, against Fortran: |z| ≤ 3.5 but
+gas53's SST DL at 4.1 (that DL spreads ±2–4 % over seeds in both codes);
+analyses 0.8–4.6 s per deck (a whole deck took 22–64 s on one thread),
+hi_air_t0/t1 38/97 s (203/425 s). One thread as before (gas15 20.2 s
+against 20.4), gas49 12 % slower (its burn-in).
+
 `collisions.scatterFast` (walkers, avalanches): Magboltz's angles with
 square roots for arccos, arcsin, sin and cos (sin θ₀ = √(1 − cos² θ₀),
 sin θ = q sin θ₀, cos θ = √(1 − sin² θ)), and the azimuth from a point

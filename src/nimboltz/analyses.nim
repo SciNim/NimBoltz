@@ -177,8 +177,9 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
   ## limit on primaries), each with random numbers of its own seeded from
   ## `rng`, and their counts and sums are added up: the same estimates,
   ## not the same numbers. Unless `r.fortran`, the avalanches take the
-  ## exact bounds per window, and random numbers of `r.generator`'s kind
-  ## (also on one thread).
+  ## exact bounds per window, random numbers of `r.generator`'s kind, and
+  ## run electron by electron in waves on `r.threads` threads
+  ## (`cascade.runWaves`: also within one avalanche).
   let fm = formatsOf(G, P, thermalMotion(M))
   let f = r.field(G)
   let start = initElectron[G](f, r.estart, r.theta, startPhi)
@@ -231,8 +232,12 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
       result.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
     split(MagRng, n, seeded(rng))
   else:
+    # electron by electron, in waves (`cascade.runWaves`), on n threads
     withRng(r.generator, R):
-      split(R, n, initRng(R, int(drand48(rng) * 900000000.0)))
+      var g0 = initRng(R, int(drand48(rng) * 900000000.0))
+      var cs = newSeq[Cascade[G, P, Target]](n)
+      for k in 0 ..< n: cs[k] = cascade(nmax, maxPrimaries, g0)
+      c = runWaves[G, P, Target, R](cs, tabs, start, rng)
   r.last = Collisions[M](tally: c.tally, st: c.st, ttots: c.ttots, spectrum: c.spectrum)
   for w in c.warnings:
     r.output.printNegative(fm, f, w)
