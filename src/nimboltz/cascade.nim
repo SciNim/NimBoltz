@@ -33,7 +33,7 @@
 
 import std/math
 import units, rm48, xoshiro, tables, vec3, fields, collisions, thermal, freeflight, drift
-from walkers import FlightMaxima, windowHit, cpuWindows
+from walkers import FlightMaxima, windowHit, Bounds, cpuWindows, gpuWindows
 
 const
   nPlanes* = 8               ## planes of either kind
@@ -130,13 +130,7 @@ type
     tzstop, tzstop1: ps      ## pkSpace: flight times to the next plane (TCALC)
     isol: int                ## pkSpace: 2 if it crosses the plane below first
     stack: seq[Pending]
-    tag: int32               ## waves: the primary of the electron followed
     next: Electron           ## start of the next primary
-    nexts: seq[(int, int32, Electron)]
-      ## waves (`keepNexts`): every 200th collision's electron, with the
-      ## wave's electron and its chain
-    keepNexts: bool
-    current: int             ## waves: the wave's electron followed
     i100: int
     # counts and results
     iprim*: int              ## primaries
@@ -211,7 +205,7 @@ func lastTheta*[G: static FieldGeometry; P: static PlaneKind; T](c: Cascade[G, P
 
 # --- sampling at the planes -------------------------------------------------
 
-proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T], k: int) =
+proc sampleTime[G: static FieldGeometry; P: static PlaneKind; C](c: var C, k: int) =
   ## TPLANE: the electron crosses time plane k
   let el = c.el
   let tau = float64(k) * c.planes.tstep - c.st
@@ -292,8 +286,7 @@ proc sampleTime[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[
     s.vx[k] = s.vx[k] + v.x
   inc s.n[k]
 
-proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
-                                                                  tau: ps, k: int) =
+proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; C](c: var C, tau: ps, k: int) =
   ## SPLANE: the electron crosses space plane k at the flight time tau
   if k > nPlanes: return
   let el = c.el
@@ -329,8 +322,7 @@ proc sampleSpace[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade
   s.w[k] = s.w[k] + w
   s.w2[k] = s.w2[k] + w * w
 
-proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](
-    c: var Cascade[G, P, T]): bool =
+proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; C](c: var C): bool =
   ## TCALC: the next space plane and the flight time to it (assuming no
   ## collision); false if the electron cannot reach a plane. With isol = 2
   ## the electron first falls back through the plane below (tzstop) and
@@ -379,13 +371,13 @@ proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; T](
     c.tzstop1 = tstop1
   true
 
-proc stranded[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T]): bool =
+proc stranded[G: static FieldGeometry; P: static PlaneKind; C](c: var C): bool =
   ## pkSpace: the electron cannot get back to the last plane, or cannot reach
   ## the next one; otherwise prepares the next plane crossing
   if c.pos.z > c.planes.zfinal:
     let epot = c.f.efield * (c.pos.z - c.planes.zfinal) * perElectron  # (E·Δz)·100
     if c.el.e < epot: return true
-  not c.reachNextPlane()
+  not reachNextPlane[G, P, typeof(c)](c)
 
 func slice(planes: Planes, z: m): int =
   ## ZSTEP slice of z (1..9)
@@ -393,8 +385,7 @@ func slice(planes: Planes, z: m): int =
 
 # --- electrons ---------------------------------------------------------------
 
-proc finishElectron[G: static FieldGeometry; P: static PlaneKind; T](
-    c: var Cascade[G, P, T]) {.inline.} =
+proc finishElectron[C](c: var C) {.inline.} =
   c.ztot = c.ztot + c.pos.z
   c.ttot = c.ttot + c.st
   c.ztots = c.ztots + c.pos.z - c.zstrt
@@ -407,7 +398,7 @@ proc push[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, 
   if c.stack.len >= stackSize:
     c.stop = stStackFull
     return false
-  c.stack.add Pending(pos: pos, st: st, e: e, dir: dir, plane: plane, tag: c.tag)
+  c.stack.add Pending(pos: pos, st: st, e: e, dir: dir, plane: plane)
   true
 
 proc count[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
@@ -477,7 +468,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
       while t + c.st >= c.tstop:
         inc c.plane
         c.tstop = c.tstop + c.planes.tstep
-        c.sampleTime(c.plane)
+        sampleTime[G, P, typeof(c)](c, c.plane)
         if t + c.st >= c.tstop and c.tstop <= c.planes.tfinal: continue
         if t + c.st >= c.planes.tfinal:
           c.finishElectron()
@@ -485,7 +476,7 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
         break
     else:
       while t >= c.tzstop and told < c.tzstop:
-        c.sampleSpace(c.tzstop, c.plane)
+        sampleSpace[G, P, typeof(c)](c, c.tzstop, c.plane)
         if c.plane >= c.planes.izfinal + 1:
           c.finishElectron()
           return
@@ -665,9 +656,8 @@ proc follow[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
     if c.i100 == 200:
       c.next = c.el
       c.i100 = 0
-      if c.keepNexts: c.nexts.add (c.current, c.tag, c.el)
     when P == pkSpace:
-      if c.stranded():
+      if stranded[G, P, typeof(c)](c):
         c.finishElectron()
         return
     if c.iprint > c.jprint:
@@ -686,7 +676,7 @@ proc pop[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T
     c.zstrt = c.pos.z
     c.tsstrt = c.st
     when P == pkSpace:
-      if c.stranded():
+      if stranded[G, P, typeof(c)](c):
         inc c.nelec
         c.isol = 1
         c.finishElectron()
@@ -774,24 +764,100 @@ proc merge*[G: static FieldGeometry; P: static PlaneKind; T](a: var Cascade[G, P
     a.stop = b.stop
     a.stack = b.stack
 
-# --- waves --------------------------------------------------------------------
+# --- one electron, as GPU code -------------------------------------------------
 #
-# Avalanches electron by electron: all electrons waiting (of one primary or
-# of several) form a wave; each is followed to its end, independently of
-# the others, and the electrons it creates form the next wave. The planes'
-# sums and the counts are sums over electrons, so the order does not
-# matter: the same estimates as one electron after the other. A wave's
-# electrons can be followed side by side, on CPU threads (`runWaves`)
-# even within one avalanche, which one primary after the other cannot
-# (hi_air: one primary of 6·10⁸ collisions). Each electron has random
-# numbers of its own, seeded from its parent's: the numbers do not depend
-# on who follows which electron.
+# `follow` with the walkers' flights and angles (the default mode), written
+# so that a GPU compiler takes it (no `break`, `continue`, `return`,
+# sequences or references): its sums and counts go into a `Chase`, plain
+# data; the electrons it creates, the collision counts and the spectrum go
+# to a sink (`CascadeSink`: the thread's cascade, on a CPU).
 
-proc followPending*[G: static FieldGeometry; P: static PlaneKind; T, R](
-    c: var Cascade[G, P, T], p: Pending, tabs: MixtureTable | GasTables) =
-  ## follows the electron p (of a wave) to its end; the electrons it
-  ## creates are left on the stack, with seeds for their random numbers
-  var rng = initRng(R, p.seed)
+type
+  Chase*[G: static FieldGeometry; P: static PlaneKind; T] = object
+    ## the electron followed, and the sums of all electrons followed
+    f: Field
+    const2: m•cm•V⁻¹•ps⁻²
+    const3: cm•ps⁻¹•eV⁻¹ᐟ²
+    target: T
+    estep: eV
+    penning: int32
+    planes: Planes
+    rcs, rsn: float64
+    el: Electron
+    pos: Vector[m]
+    st: ps
+    zstrt: m
+    tsstrt: ps
+    plane: int
+    tstop: ps
+    tzstop, tzstop1: ps
+    isol: int
+    tag: int32               ## its chain
+    i100: int32              ## the chain's collisions since its last 200th
+    records: int32           ## 200th collisions of this electron
+    record: Electron         ## the electron after the last of them
+    full: int32              ## 1: no room for the electrons it creates
+    nelec, neion, nclus, id, iprim: int
+    nnull: int64
+    tmax: ps
+    ztot: m
+    ttot: ps
+    ztots: m
+    ttots: ps
+    primaryE: eV
+    primaryE2: eV²
+    cosTheta: float64
+    sums: (when P == pkTime: TimeSums else: SpaceSums)
+
+  CascadeSink[G: static FieldGeometry; P: static PlaneKind; T] = object
+    c: ptr Cascade[G, P, T]
+
+func initChase[G: static FieldGeometry; P: static PlaneKind; T](
+    c: Cascade[G, P, T]): Chase[G, P, T] =
+  ## for the electrons of c's run
+  Chase[G, P, T](f: c.f, const2: c.const2, const3: c.const3, target: c.target,
+                 estep: c.estep, penning: int32(ord(c.penning)), planes: c.planes,
+                 rcs: c.rcs, rsn: c.rsn)
+
+proc push(s: CascadeSink, p: Pending): int {.inline.} =
+  ## index of the new electron, -1 if there is no room
+  if s.c.stack.len >= stackSize: return -1
+  s.c.stack.add p
+  s.c.stack.high
+
+func full(s: CascadeSink): bool {.inline.} = s.c.stack.len >= stackSize
+proc setDir(s: CascadeSink, i: int, dir: Vec3) {.inline.} = s.c.stack[i].dir = dir
+proc countFlight(s: CascadeSink, it: int) {.inline.} =
+  s.c.times[it] = s.c.times[it] + 1.0
+proc countBin(s: CascadeSink, ie: int) {.inline.} =
+  s.c.spectrum[ie] = s.c.spectrum[ie] + 1.0
+proc countProcess(s: CascadeSink, gas, kind, i: int) {.inline.} = s.c[].count(gas, kind, i)
+
+proc absorb[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
+                                                             ch: Chase[G, P, T]) =
+  ## the sums of a chase into c
+  c.iprim = c.iprim + ch.iprim
+  c.nelec = c.nelec + ch.nelec
+  c.neion = c.neion + ch.neion
+  c.nclus = c.nclus + ch.nclus
+  c.id = c.id + ch.id
+  c.nnull = c.nnull + ch.nnull
+  c.tmax = max(c.tmax, ch.tmax)
+  c.ztot = c.ztot + ch.ztot
+  c.ttot = c.ttot + ch.ttot
+  c.ztots = c.ztots + ch.ztots
+  c.ttots = c.ttots + ch.ttots
+  c.primaryE = c.primaryE + ch.primaryE
+  c.primaryE2 = c.primaryE2 + ch.primaryE2
+  c.sums.add ch.sums
+  c.cosTheta = ch.cosTheta
+  c.st = ch.st
+
+proc startChase[G: static FieldGeometry; P: static PlaneKind; T](c: var Chase[G, P, T],
+                                                                 p: Pending): bool =
+  ## the electron p, to be followed; false if it ends at once (it cannot
+  ## reach a space plane)
+  result = true
   c.pos = p.pos
   c.st = p.st
   c.el = afterCollision[G](c.f, p.e, p.dir)
@@ -799,9 +865,11 @@ proc followPending*[G: static FieldGeometry; P: static PlaneKind; T, R](
   c.zstrt = c.pos.z
   c.tsstrt = c.st
   c.tag = p.tag
-  c.i100 = int(p.count)
+  c.i100 = p.count
+  c.records = 0
+  c.full = 0
   if p.primary != 0:
-    inc c.iprim
+    c.iprim = c.iprim + 1
     c.primaryE2 = c.primaryE2 + c.el.e * c.el.e
     c.primaryE = c.primaryE + c.el.e
     when P == pkSpace:
@@ -810,30 +878,250 @@ proc followPending*[G: static FieldGeometry; P: static PlaneKind; T, R](
       c.tzstop = 1000.0.ps
   else:
     when P == pkSpace:
-      if c.stranded():
-        inc c.nelec
+      if stranded[G, P, typeof(c)](c):
+        c.nelec = c.nelec + 1
         c.isol = 1
-        c.finishElectron()
-        return
-  inc c.nelec
-  when P == pkTime:
-    c.tstop = c.planes.tstep + float64(c.plane) * c.planes.tstep
-  c.follow(tabs, rng)
-  for q in c.stack.mitems: q.seed = int(drand48(rng) * 9007199254740992.0)
+        finishElectron(c)
+        result = false
+  if result:
+    c.nelec = c.nelec + 1
+    when P == pkTime:
+      c.tstop = c.planes.tstep + float64(c.plane) * c.planes.tstep
+
+proc collide[G: static FieldGeometry; P: static PlaneKind; T, R, S](
+    c: var Chase[G, P, T], tabs: MixtureTable | GasTables, h: Hit, rng: var R, sink: S): bool =
+  ## the real collision h; false if the electron ends
+  template tab: untyped = tableOf(tabs, h)
+  var going = true
+  let fl = h.fl
+  let t = fl.t
+  if t >= c.tmax: c.tmax = t
+  discard advance[G](c.f, c.el, fl, c.pos)
+  c.st = c.st + t
+  let it = int(min(trunc(t.float + 1.0), float64(nTimeBins)))  # 1 ps bins
+  sink.countFlight(it)
+  sink.countBin(h.ie)
+  let r2 = drand48(rng)
+  let i = findProcess(tab, h.ie, r2)
+  var ei = tab.ein[i]
+  if h.e < ei: ei = h.e - 0.0001.eV
+  if tab.moderation[i] == 1'i32: ei = h.e - vibrationMark  # MB-58
+  var secondary = -1
+  var esec = 0.0.eV
+  if tab.ipn[i] == -1:
+    # attachment: the electron ends
+    c.neion = c.neion + 1
+    sink.countProcess(h.gas, tab.iarry[i], i)
+    c.id = c.id + 1
+    sink.countFlight(it)
+    finishElectron(c)
+    when P == pkSpace:
+      c.sums.born[c.planes.slice(c.pos.z)] = c.sums.born[c.planes.slice(c.pos.z)] - 1
+    going = false
+  else:
+    let plane = (when P == pkTime: c.plane else: c.planes.slice(c.pos.z))
+    if tab.ipn[i] != 0:
+      # ionisation: the secondary takes part of the energy above threshold
+      let eistr = ei
+      let r9 = drand48(rng)
+      esec = tab.wpl[i] * tan(r9 * arctan((h.e - ei) / (2.0 * tab.wpl[i])))
+      esec = tab.wpl[i] * pow(esec / tab.wpl[i], 0.9524000287055969)
+      ei = esec + ei
+      c.nclus = c.nclus + 1
+      secondary = sink.push(Pending(pos: c.pos, st: c.st, e: esec, plane: plane, tag: c.tag,
+                                    seed: seedOf(rng)))  # direction below
+      if secondary < 0:
+        c.full = 1
+        going = false
+      else:
+        when P == pkSpace: c.sums.born[plane] = c.sums.born[plane] + 1
+        if eistr > 30.0.eV:
+          # Auger electrons, isotropic
+          let naug = tab.augerCount[i]
+          let eavaug = tab.augerEnergy[i] / float64(naug)
+          for _ in 1 .. naug:
+            if going:
+              c.nclus = c.nclus + 1
+              let r3 = drand48(rng)
+              let f3 = 1.0 - 2.0 * r3
+              let theta0 = arccos(f3)
+              let f6 = cos(theta0)
+              let f5 = sin(theta0)
+              let r4 = drand48(rng)
+              let phi0 = 2.0 * PI * r4
+              let k = sink.push(Pending(pos: c.pos, st: c.st, e: eavaug,
+                                        dir: vec3(cos(phi0) * f5, sin(phi0) * f5, f6),
+                                        plane: plane, tag: c.tag, seed: seedOf(rng)))
+              if k < 0:
+                c.full = 1
+                going = false
+              else:
+                when P == pkSpace: c.sums.born[plane] = c.sums.born[plane] + 1
+    if going:
+      sink.countProcess(h.gas, tab.iarry[i], i)
+      c.id = c.id + 1
+      # Penning transfer: an electron of 1 eV, displaced in space and time
+      if c.penning != 0 and tab.penningFraction[i] != 0.0:
+        let ran = drand48(rng)
+        if not (ran > tab.penningFraction[i]):
+          c.nclus = c.nclus + 1
+          if sink.full:
+            c.full = 1
+            going = false
+          else:
+            var p = c.pos
+            var kept = true
+            if tab.penningRange[i].float == 0.0:
+              when P == pkSpace:
+                if p.z > c.planes.zfinal or p.z < 0.0.m: kept = false
+            else:
+              var asign = 1.0
+              var ran = drand48(rng)
+              var ran1 = drand48(rng)
+              if ran1 < 0.5: asign = -asign
+              p.x = c.pos.x - ln(ran) * tab.penningRange[i] * asign
+              ran = drand48(rng)
+              ran1 = drand48(rng)
+              if ran1 < 0.5: asign = -asign
+              p.y = c.pos.y - ln(ran) * tab.penningRange[i] * asign
+              ran = drand48(rng)
+              ran1 = drand48(rng)
+              if ran1 < 0.5: asign = -asign
+              p.z = c.pos.z - ln(ran) * tab.penningRange[i] * asign
+              when P == pkSpace:
+                if p.z < 0.0.m or p.z > c.planes.zfinal: kept = false
+            if kept:
+              var tpen = c.st
+              if tab.penningTime[i].float != 0.0:
+                let ran = drand48(rng)
+                tpen = c.st - ln(ran) * tab.penningTime[i]
+              var plane = 0
+              when P == pkTime:
+                # planes before tpen; dropped after the last
+                var tstop1 = 0.0.ps
+                var looking = true
+                kept = false
+                for _ in 1 .. c.planes.itfinal:
+                  if looking:
+                    tstop1 = c.planes.tstep + tstop1
+                    if tpen < tstop1:
+                      kept = true
+                      looking = false
+                    else:
+                      plane = plane + 1
+              else:
+                plane = c.planes.slice(p.z)
+              if kept:
+                discard sink.push(Pending(pos: p, st: tpen, e: 1.0.eV, dir: c.el.dir,
+                                          plane: plane, tag: c.tag, seed: seedOf(rng)))
+                when P == pkSpace: c.sums.born[plane] = c.sums.born[plane] + 1
+            if not kept: c.nclus = c.nclus - 1
+    if going:
+      # scattering
+      ei = lateLossClamp[G, P, T](ei, h.e)
+      let s = scatterFast(tab, i, h.ie, h.e, ei, h.din, rng)
+      c.cosTheta = s.cosTheta
+      if secondary >= 0:
+        # the ionisation secondary: transverse momentum balance, opposite azimuth
+        var f5s = s.sinTheta * sqrt(float64(s.e / esec))
+        if f5s > 1.0: f5s = 1.0
+        var f6s = sqrt(1.0 - f5s * f5s)
+        if s.cosTheta < 0.0: f6s = -f6s
+        sink.setDir(secondary, rotate(h.din, f6s, f5s, -s.cosPhi, -s.sinPhi))
+      when T is ColdBound:
+        c.el = afterCollision[G](c.f, s.e, s.dir)
+      else:
+        c.el = leave[G](c.target, c.f, s, h)
+      c.i100 = c.i100 + 1
+      if c.i100 == 200'i32:
+        c.i100 = 0
+        c.records = c.records + 1
+        c.record = c.el
+      when P == pkSpace:
+        if stranded[G, P, typeof(c)](c):
+          finishElectron(c)
+          going = false
+  going
+
+proc chase*[G: static FieldGeometry; P: static PlaneKind; T, R, S](
+    c: var Chase[G, P, T], tabs: MixtureTable | GasTables, fm: ptr FlightMaxima,
+    bounds: static Bounds, rng: var R, sink: S) =
+  ## follows the electron (`startChase`) to its end, with the walkers'
+  ## flights (window lengths of `bounds`)
+  let rstep = 1.0 / c.estep
+  var going = true
+  while going:
+    var nulls = 0'i32
+    var h: Hit
+    when T is ColdBound:
+      h = windowHit[G, bounds](c.f, tabs, fm[], rstep, c.el, rng, nulls)
+    else:
+      var beyond = 0'i32
+      h = windowHit[G, bounds](c.f, tabs, fm[], rstep, c.el, c.target, rng, nulls, beyond)
+    c.nnull = c.nnull + nulls
+    let t = h.fl.t
+    # planes crossed during the flight
+    when P == pkTime:
+      var crossing = t + c.st >= c.tstop
+      while crossing:
+        c.plane = c.plane + 1
+        c.tstop = c.tstop + c.planes.tstep
+        sampleTime[G, P, typeof(c)](c, c.plane)
+        if not (t + c.st >= c.tstop and c.tstop <= c.planes.tfinal):
+          crossing = false
+          if t + c.st >= c.planes.tfinal:
+            finishElectron(c)
+            going = false
+    else:
+      var crossing = t >= c.tzstop and 0.0.ps < c.tzstop
+      while crossing:
+        sampleSpace[G, P, typeof(c)](c, c.tzstop, c.plane)
+        if c.plane >= c.planes.izfinal + 1:
+          finishElectron(c)
+          going = false
+          crossing = false
+        elif c.isol == 2:
+          c.tzstop = c.tzstop1
+          c.isol = 1
+          crossing = t >= c.tzstop and 0.0.ps < c.tzstop
+        else:
+          crossing = false
+    if going:
+      going = collide[G, P, T, R, S](c, tabs, h, rng, sink)
+
+# --- waves --------------------------------------------------------------------
+#
+# Avalanches electron by electron: all electrons waiting (of one primary or
+# of several) form a wave; each is followed to its end (`chase`),
+# independently of the others, and the electrons it creates form the next
+# wave. The planes' sums and the counts are sums over electrons, so the
+# order does not matter: the same estimates as one electron after the
+# other. A wave's electrons can be followed side by side, on CPU threads
+# (`runWaves`) even within one avalanche, which one primary after the
+# other cannot (hi_air: one primary of 6·10⁸ collisions). Each electron has
+# random numbers of its own, seeded from its parent's: the numbers do not
+# depend on who follows which electron.
 
 func primaryOf(start: Electron, tag, burn: int32, seed: int): Pending =
   Pending(e: start.e, dir: start.dir, tag: tag, primary: 1, burn: burn, seed: seed)
 
 type
+  Outcome = object
+    ## of an electron followed, for its chain
+    tag: int32
+    collisions, counted: int  ## all, and those towards the 200th (no attachments)
+    records: int32
+    record: Electron
+
   WaveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R] = object
     c, b: ptr Cascade[G, P, T]  ## counted; burn-in (its sums are dropped)
+    cc, cb: ptr Chase[G, P, T]
     tabs: ptr Tabs
+    fm: ptr FlightMaxima
     wave: ptr seq[Pending]
     first, step: int
     created: seq[Pending]
-    collisions: seq[(int32, int, int)]
-      ## per electron followed: its chain, its collisions, and those that count
-      ## towards the 200th (all but attachments)
+    outcomes: seq[(int, Outcome)]  ## per electron followed (with its index)
 
 proc waveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
     j: ptr WaveJob[G, P, T, Tabs, R]) {.thread.} =
@@ -842,12 +1130,18 @@ proc waveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
   while k < j.wave[].len:
     let p = j.wave[][k]
     let c = (if p.burn != 0: j.b else: j.c)
-    let id0 = c.id
-    let nexts0 = c.nexts.len
-    c.current = k
-    followPending[G, P, T, R](c[], p, j.tabs[])
-    j.collisions.add (p.tag, c.id - id0, 200 * (c.nexts.len - nexts0) + c.i100 - int(p.count))
-    if c.stop != stNone: return
+    let ch = (if p.burn != 0: j.cb else: j.cc)
+    var rng = initRng(R, p.seed)
+    let id0 = ch.id
+    if startChase(ch[], p):
+      chase[G, P, T, R, CascadeSink[G, P, T]](ch[], j.tabs[], j.fm, cpuWindows, rng,
+                                              CascadeSink[G, P, T](c: c))
+    j.outcomes.add (k, Outcome(tag: p.tag, collisions: ch.id - id0,
+                               counted: 200 * int(ch.records) + int(ch.i100) - int(p.count),
+                               records: ch.records, record: ch.record))
+    if ch.full != 0:
+      c.stop = stStackFull
+      return
     for q in c.stack.mitems: q.burn = p.burn
     j.created.add c.stack
     c.stack.setLen 0
@@ -901,20 +1195,31 @@ proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
   let nmax = cs[0].nmax
   template newSeed(): int = int(drand48(seed) * 9007199254740992.0)
   var bs = cs  # burn-in: the same, with sums that are dropped
-  for c in cs.mitems: c.keepNexts = true
-  for b in bs.mitems: b.keepNexts = true
+  var ccs, cbs: seq[Chase[G, P, T]]
+  for c in cs:
+    ccs.add initChase(c)
+    cbs.add initChase(c)
+  let fm = cs[0].fm
   var chains = @[Chain(live: 1, next: start)]
   var wave = @[primaryOf(start, 0, 0, newSeed())]
   var finished = 0        # counted avalanches that ended
   var done = 0            # their collisions
   var started = 1
+  var waves = 0
   while wave.len > 0:
+    when defined(debugWaves):
+      inc waves
+      if waves mod 1000 == 1 or wave.len > 100000:
+        var idd = 0
+        for c in ccs: idd = idd + c.id
+        stderr.writeLine "wave ", waves, " size ", wave.len, " chains ", chains.len, " id ", idd, " nmax ", nmax
     for p in wave.mitems: p.count = int32(chains[p.tag].count)
     var jobs = newSeq[WaveJob[G, P, T, typeof(tabs), R]](n)
     for k in 0 ..< n:
       jobs[k] = WaveJob[G, P, T, typeof(tabs), R](c: addr cs[k], b: addr bs[k],
-                                                  tabs: unsafeAddr tabs, wave: addr wave,
-                                                  first: k, step: n)
+                                                  cc: addr ccs[k], cb: addr cbs[k],
+                                                  tabs: unsafeAddr tabs, fm: fm,
+                                                  wave: addr wave, first: k, step: n)
     if n == 1 or wave.len == 1:
       jobs[0].step = 1
       waveJob(addr jobs[0])
@@ -935,27 +1240,26 @@ proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
     if stopped: break
     # the chains' next starts: the electron of the last 200th collision (by
     # the wave's order)
+    # the chains' next starts: the electron of the last 200th collision (by
+    # the wave's order)
     var last = newSeq[int](chains.len)
-    template records(c: untyped) =
-      for (k, tag, el) in c.nexts:
-        chains[tag].recorded = true
-        if k >= last[tag]:
-          last[tag] = k
-          chains[tag].next = el
-      c.nexts.setLen 0
-    for c in cs.mitems: records(c)
-    for b in bs.mitems: records(b)
     var next: seq[Pending]
     for j in jobs.mitems:
       next.add move(j.created)
-      for (tag, n, counted) in j.collisions:
-        if chains[tag].burning: chains[tag].burnLeft = chains[tag].burnLeft - n
-        else: chains[tag].collisions = chains[tag].collisions + n
-        chains[tag].count = (chains[tag].count + counted) mod 200
+      for (k, o) in j.outcomes:
+        template ch: untyped = chains[o.tag]
+        if o.records > 0:
+          ch.recorded = true
+          if k >= last[o.tag]:
+            last[o.tag] = k
+            ch.next = o.record
+        if ch.burning: ch.burnLeft = ch.burnLeft - o.collisions
+        else: ch.collisions = ch.collisions + o.collisions
+        ch.count = (ch.count + o.counted) mod 200
     for p in wave: dec chains[p.tag].live
     for q in next: inc chains[q.tag].live
     var id = 0
-    for c in cs: id = id + c.id
+    for c in ccs: id = id + c.id
     var idle: seq[int32]
     var running = 0
     for t, ch in chains.mpairs:
@@ -1003,9 +1307,8 @@ proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
         startPrimary(int32(chains.high))
         dec k
     wave = move next
+  for k in 0 ..< n: cs[k].absorb(ccs[k])
   result = move cs[0]
   for k in 1 ..< n: result.merge(cs[k])
-  for b in bs:
-    result.warnings.add b.warnings
   result.nclus = result.nclus + result.iprim - 1  # primaries after the first, as `run`
   result.j1 = 1 + result.id div max(nmax div 10, 1)

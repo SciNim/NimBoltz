@@ -174,6 +174,14 @@ analyses 0.8–4.6 s per deck (a whole deck took 22–64 s on one thread),
 hi_air_t0/t1 38/97 s (203/425 s). One thread as before (gas15 20.2 s
 against 20.4), gas49 12 % slower (its burn-in).
 
+The electron is followed by `cascade.chase` (2026-11-13): `follow`'s
+default-mode path written as GPU code (no `break`, `continue`, `return`
+or sequences), its sums in a `Chase` (plain data), the electrons it
+creates and the counts through a sink (`CascadeSink` on a CPU); children's
+seeds drawn when they are created. `follow` stays for the bit-for-bit
+mode. Same agreement on the 24 decks; hi_air_t0/t1 analyses 11/51 s on 32
+threads.
+
 `collisions.scatterFast` (walkers, avalanches): Magboltz's angles with
 square roots for arccos, arcsin, sin and cos (sin θ₀ = √(1 − cos² θ₀),
 sin θ = q sin θ₀, cos θ = √(1 − sin² θ)), and the azimuth from a point

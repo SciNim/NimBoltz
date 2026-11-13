@@ -90,6 +90,16 @@ proc initXoshiro128[X: Xoshiro128](seed: int): X =
   X(s0: uint32(a and 0xffffffff'u64), s1: uint32(a shr 32),
     s2: uint32(b and 0xffffffff'u64), s3: uint32(b shr 32))
 
+proc seedOf*(g: var (Ranmar | Xoshiro256Plus)): int {.inline.} =
+  ## a seed for another generator, from g's numbers
+  int(drand48(g) * 9007199254740992.0)
+
+proc seedOf*(g: var Xoshiro128): int {.inline.} =
+  ## from two numbers (one has 32 or 23 bits only)
+  let a = int(drand48(g) * 4294967296.0)
+  let b = int(drand48(g) * 4294967296.0)
+  (a shl 21) xor b
+
 proc initRng*(R: typedesc[Ranmar], seed: int): Ranmar = initRanmar(seed)
 proc initRng*(R: typedesc[Xoshiro256Plus], seed: int): Xoshiro256Plus = initXoshiro(seed)
 proc initRng*(R: typedesc[Xoshiro128StarStar], seed: int): Xoshiro128StarStar =
