@@ -13,7 +13,7 @@ energies and Townsend coefficients of electrons in gases, ported to Nim.
 - A library: a gas mixture and the fields in, the results out as values
   with errors and units.
 - 61 defects of Magboltz 11.21 fixed, each reported with a reproduction
-  (see [[Defects of Magboltz]]).
+  (see [[Defects of Magboltz]] and the [[https://github.com/SciNim/Magboltz][Magboltz fork]]).
 
 ** Two modes
 
@@ -154,10 +154,11 @@ comparing with Magboltz++ found 61 defects in Magboltz 11.21 (MB-01 to
 MB-61): wrong array indices, typos in constants, levels skipped or
 counted twice, a mass off by 81 amu, energy lost twice, uninitialised
 values, 32-bit overflows. Each is fixed by its evident intent in NimBoltz
-and on the branch ~fixes~ of the Magboltz fork, one commit each, with a
-report (~bugs/README.md~ there: what, where, its effect on results, a
+and on the branch ~fixes~ of the Magboltz fork
+[[https://github.com/SciNim/Magboltz]], one commit each, with a report
+([[https://github.com/SciNim/Magboltz/blob/fixes/bugs/README.md][bugs/README.md]]: what, where, its effect on results, a
 reproduction), and 15 open questions where the intent is not clear
-(~bugs/QUESTIONS.md~). Where Magboltz has a defect, NimBoltz's results
+([[https://github.com/SciNim/Magboltz/blob/fixes/bugs/QUESTIONS.md][bugs/QUESTIONS.md]]). Where Magboltz has a defect, NimBoltz's results
 are those of the fixed Magboltz.
 
 ** The Magboltz interfacer
@@ -181,7 +182,10 @@ gfortran -O3 -o magboltz magboltz-11.21.f
 #+end_src
 
 The tests compare with the Fortran program too (~MAGBOLTZ_SRC~, default
-~~/src/Magboltz/magboltz-11.21.f~).
+~~/src/Magboltz/magboltz-11.21.f~): the branch ~fixes~ of the fork,
+#+begin_src sh
+git clone -b fixes https://github.com/SciNim/Magboltz ~/src/Magboltz
+#+end_src
 
 ** Gases
 

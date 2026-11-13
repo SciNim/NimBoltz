@@ -225,7 +225,7 @@ BBCONST, so their Born dipoles pass their own constant (`dipole(..., bb)`).
 ## Upstream defects and open questions
 
 The irregularities found while writing these modules are reported in the
-Magboltz fork (`~/src/Magboltz`, branch `fixes`): `bugs/README.md` MB-44 …
+[Magboltz fork](https://github.com/SciNim/Magboltz) (`~/src/Magboltz`, branch `fixes`): `bugs/README.md` MB-44 …
 MB-56 are fixed in the fork and here in the same way, so the bitwise
 comparison holds against `fixes`. The cases whose intent is unclear are
 kept as in Magboltz 11.21 and listed in `bugs/QUESTIONS.md` (Q-01 … Q-13:

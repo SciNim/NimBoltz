@@ -5,7 +5,7 @@ How the Magboltz 11.21 port becomes idiomatic Nim. Agreed 2026-10-31.
 ## Starting point
 
 `tools/f2nim` translated `magboltz-11.21.f` (with the fixes MB-01..MB-29
-of the `fixes` branch of the Magboltz fork) into `src/nimboltz/legacy/`,
+of the `fixes` branch of the [Magboltz fork](https://github.com/SciNim/Magboltz)) into `src/nimboltz/legacy/`,
 bit for bit equal to the gfortran build. The translator is retired: a
 better translator cannot produce idiomatic code. `legacy/` was then
 rewritten by hand, routine family by routine family, and removed
