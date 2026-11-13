@@ -16,6 +16,8 @@ import std/[math, options]
 import frt, units, rm48, xoshiro, tables, vec3, fields, freeflight, cascade, townsend
 from walkers import flightMaxima
 import conditions, simulation, report
+when defined(nimboltzGpu):
+  import gpuwaves
 
 type
   Formats = object
@@ -231,6 +233,11 @@ proc avalanche[G: static FieldGeometry; P: static PlaneKind; M](
       result = initMagRng(nil)
       result.rm.rm48in(int(drand48(rng) * 900000000.0), 0, 0)
     split(MagRng, n, seeded(rng))
+  elif defined(nimboltzGpu) and r.gpuAvalanches:
+    # the waves on the GPU (xoshiro128**)
+    when defined(nimboltzGpu):
+      var g0 = initRng(Xoshiro128StarStar, int(drand48(rng) * 900000000.0))
+      c = runGpuWaves[G, P, Target](cascade(nmax, maxPrimaries, g0), tabs, maxima[], start, rng)
   else:
     # electron by electron, in waves (`cascade.runWaves`), on n threads
     withRng(r.generator, R):

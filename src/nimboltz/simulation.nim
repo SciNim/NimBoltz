@@ -75,6 +75,7 @@ type
       ## Magboltz's null collisions and formulas in the analyses, for its
       ## numbers bit for bit; else exact bounds per time window
     generator*: RngKind
+    gpuAvalanches*: bool  ## the avalanches' waves on the GPU (`gpuwaves.nim`)
       ## random numbers of the avalanches with exact bounds
     output*: File          ## Magboltz's printout; nil: none
     warnings*: seq[string]

@@ -85,16 +85,16 @@ type
 
   Pending* = object
     ## an electron waiting on the stack (or in a wave, `runWaves`)
-    pos: Vector[m]
-    st: ps
-    e: eV
-    dir: Vec3
-    plane: int32   ## pkTime: time planes passed; pkSpace: slice of the creation point
-    tag: int32     ## waves: the chain of primaries it descends from
-    primary: int32 ## waves: 1 for a primary
-    count: int32   ## waves: the chain's collisions since its last 200th
-    burn: int32    ## waves: 1 in a chain's burn-in (not counted)
-    seed: Seed     ## waves: of its random numbers
+    pos*: Vector[m]
+    st*: ps
+    e*: eV
+    dir*: Vec3
+    plane*: int32   ## pkTime: time planes passed; pkSpace: slice of the creation point
+    tag*: int32     ## waves: the chain of primaries it descends from
+    primary*: int32 ## waves: 1 for a primary
+    count*: int32   ## waves: the chain's collisions since its last 200th
+    burn*: int32    ## waves: 1 in a chain's burn-in (not counted)
+    seed*: Seed     ## waves: of its random numbers
 
   NegativeEnergy* = object
     ## a flight that ended with a negative energy (round-off); Magboltz
@@ -115,7 +115,7 @@ type
     const3: cm•ps⁻¹•eV⁻¹ᐟ²
     target*: T
     estep: eV
-    nmax: int
+    nmax*: int
     penning: bool
     planes: Planes
     rcs, rsn: float64        ## fgOblique: rotation to the frame of E
@@ -332,7 +332,7 @@ proc reachNextPlane[G: static FieldGeometry; P: static PlaneKind; C](c: var C): 
   let b = sqrt(c.el.e) * c.const3 * unity(m•cm⁻¹) * c.el.dir.z
   let b2 = b * b
   let z = c.pos.z
-  let zp = c.planes.zplane
+  template zp: untyped = c.planes.zplane  # (no array copy: GPU code)
   var k = 1
   while k <= nPlanes and not (z < zp[k]): inc k
   c.plane = typeof(c.plane)(k)
@@ -796,9 +796,10 @@ type
     i100: int32              ## the chain's collisions since its last 200th
     records: int32           ## 200th collisions of this electron
     record: Electron         ## the electron after the last of them
-    full: int32              ## 1: no room for the electrons it creates
+    full*: int32             ## 1: no room for the electrons it creates
     # (32-bit counts: added up and zeroed after each wave)
-    nelec, neion, nclus, id, iprim: int32
+    nelec, neion, nclus, iprim: int32
+    id*: int32
     nnull: int32
     tmax: ps
     ztot: m
@@ -813,7 +814,7 @@ type
   CascadeSink[G: static FieldGeometry; P: static PlaneKind; T] = object
     c: ptr Cascade[G, P, T]
 
-func initChase[G: static FieldGeometry; P: static PlaneKind; T](
+func initChase*[G: static FieldGeometry; P: static PlaneKind; T](
     c: Cascade[G, P, T]): Chase[G, P, T] =
   ## for the electrons of c's run
   Chase[G, P, T](f: c.f, const2: c.const2, const3: c.const3, target: c.target,
@@ -826,7 +827,7 @@ proc push(s: CascadeSink, p: Pending): int {.inline.} =
   s.c.stack.add p
   s.c.stack.high
 
-func full(s: CascadeSink): bool {.inline.} = s.c.stack.len >= stackSize
+func isFull(s: CascadeSink): bool {.inline.} = s.c.stack.len >= stackSize
 proc setDir(s: CascadeSink, i: int, dir: Vec3) {.inline.} = s.c.stack[i].dir = dir
 proc countFlight(s: CascadeSink, it: int) {.inline.} =
   s.c.times[it] = s.c.times[it] + 1.0
@@ -834,7 +835,7 @@ proc countBin(s: CascadeSink, ie: int) {.inline.} =
   s.c.spectrum[ie] = s.c.spectrum[ie] + 1.0
 proc countProcess(s: CascadeSink, gas, kind, i: int) {.inline.} = s.c[].count(gas, kind, i)
 
-proc absorb[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
+proc absorb*[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P, T],
                                                              ch: Chase[G, P, T]) =
   ## the sums of a chase into c
   c.iprim = c.iprim + int(ch.iprim)
@@ -854,7 +855,7 @@ proc absorb[G: static FieldGeometry; P: static PlaneKind; T](c: var Cascade[G, P
   c.cosTheta = ch.cosTheta
   c.st = ch.st
 
-proc zeroSums[G: static FieldGeometry; P: static PlaneKind; T](ch: var Chase[G, P, T]) =
+proc zeroSums*[G: static FieldGeometry; P: static PlaneKind; T](ch: var Chase[G, P, T]) =
   ## after `absorb`
   ch.iprim = 0
   ch.nelec = 0
@@ -871,7 +872,7 @@ proc zeroSums[G: static FieldGeometry; P: static PlaneKind; T](ch: var Chase[G, 
   ch.primaryE2 = 0.0.eV²
   ch.sums = default(typeof(ch.sums))
 
-proc startChase[G: static FieldGeometry; P: static PlaneKind; T](c: var Chase[G, P, T],
+proc startChase*[G: static FieldGeometry; P: static PlaneKind; T](c: var Chase[G, P, T],
                                                                  p: Pending): bool =
   ## the electron p, to be followed; false if it ends at once (it cannot
   ## reach a space plane)
@@ -909,6 +910,7 @@ proc startChase[G: static FieldGeometry; P: static PlaneKind; T](c: var Chase[G,
 proc collide[G: static FieldGeometry; P: static PlaneKind; T, R, S](
     c: var Chase[G, P, T], tabs: MixtureTable | GasTables, h: Hit, rng: var R, sink: S): bool =
   ## the real collision h; false if the electron ends
+  mixin push, isFull, setDir, countFlight, countBin, countProcess
   template tab: untyped = tableOf(tabs, h)
   var going = true
   let fl = h.fl
@@ -983,7 +985,7 @@ proc collide[G: static FieldGeometry; P: static PlaneKind; T, R, S](
         let ran = drand48(rng)
         if not (ran > tab.penningFraction[i]):
           c.nclus = c.nclus + 1
-          if sink.full:
+          if sink.isFull:
             c.full = 1
             going = false
           else:
@@ -1124,22 +1126,29 @@ func primaryOf(start: Electron, tag, burn: int32, seed: Seed): Pending =
   Pending(e: start.e, dir: start.dir, tag: tag, primary: 1, burn: burn, seed: seed)
 
 type
-  Outcome = object
+  Outcome* = object
     ## of an electron followed, for its chain
-    tag: int32
-    collisions, counted: int  ## all, and those towards the 200th (no attachments)
-    records: int32
-    record: Electron
+    tag*: int32
+    collisions*, counted*: int32  ## all, and those towards the 200th (no attachments)
+    records*: int32
+    record*: Electron
 
+proc outcomeOf*[G: static FieldGeometry; P: static PlaneKind; T](ch: Chase[G, P, T],
+                                                                 p: Pending, id0: int32): Outcome =
+  Outcome(tag: p.tag, collisions: ch.id - id0,
+          counted: 200'i32 * ch.records + ch.i100 - p.count,
+          records: ch.records, record: ch.record)
+
+type
   WaveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R] = object
     c, b: ptr Cascade[G, P, T]  ## counted; burn-in (its sums are dropped)
     cc, cb: ptr Chase[G, P, T]
     tabs: ptr Tabs
     fm: ptr FlightMaxima
     wave: ptr seq[Pending]
+    outcomes: ptr seq[Outcome]
     first, step: int
     created: seq[Pending]
-    outcomes: seq[(int, Outcome)]  ## per electron followed (with its index)
 
 proc waveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
     j: ptr WaveJob[G, P, T, Tabs, R]) {.thread.} =
@@ -1154,9 +1163,7 @@ proc waveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
     if startChase(ch[], p):
       chase[G, P, T, R, CascadeSink[G, P, T]](ch[], j.tabs[], j.fm, cpuWindows, rng,
                                               CascadeSink[G, P, T](c: c))
-    j.outcomes.add (k, Outcome(tag: p.tag, collisions: ch.id - id0,
-                               counted: 200 * int(ch.records) + int(ch.i100) - int(p.count),
-                               records: ch.records, record: ch.record))
+    j.outcomes[][k] = outcomeOf(ch[], p, id0)
     if ch.full != 0:
       c.stop = stStackFull
       return
@@ -1165,9 +1172,79 @@ proc waveJob[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
     c.stack.setLen 0
     k = k + j.step
 
+type
+  CpuWaves*[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R] = object
+    ## waves on CPU threads: one cascade (the sink) and one chase per thread,
+    ## and the same for the burn-in (dropped)
+    cs, bs: seq[Cascade[G, P, T]]
+    ccs, cbs: seq[Chase[G, P, T]]
+    tabs: ptr Tabs
+
+proc initCpuWaves*[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
+    cs: var seq[Cascade[G, P, T]], tabs: Tabs, rng: typedesc[R]): CpuWaves[G, P, T, Tabs, R] =
+  ## on `cs.len` threads
+  result.cs = move cs
+  result.bs = result.cs
+  for c in result.cs:
+    result.ccs.add initChase(c)
+    result.cbs.add initChase(c)
+  result.tabs = unsafeAddr tabs
+
+func width*(b: CpuWaves): int = b.cs.len
+  ## electrons followed side by side
+
+proc cpuCollisions[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
+    b: CpuWaves[G, P, T, Tabs, R]): int =
+  ## counted real collisions so far
+  for c in b.cs: result = result + c.id
+
+proc cpuStopped[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
+    b: CpuWaves[G, P, T, Tabs, R]): bool =
+  for c in b.cs:
+    if c.stop != stNone: return true
+  for c in b.bs:
+    if c.stop != stNone: return true
+
+proc cpuProcess[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
+    b: var CpuWaves[G, P, T, Tabs, R], wave, next: var seq[Pending], outcomes: var seq[Outcome]) =
+  ## follows the wave's electrons: the electrons they create in `next`,
+  ## an outcome per electron
+  let n = b.cs.len
+  outcomes.setLen wave.len
+  var jobs = newSeq[WaveJob[G, P, T, Tabs, R]](n)
+  for k in 0 ..< n:
+    jobs[k] = WaveJob[G, P, T, Tabs, R](c: addr b.cs[k], b: addr b.bs[k], cc: addr b.ccs[k],
+                                        cb: addr b.cbs[k], tabs: b.tabs, fm: b.cs[0].fm,
+                                        wave: addr wave, outcomes: addr outcomes,
+                                        first: k, step: n)
+  if n == 1 or wave.len == 1:
+    jobs[0].step = 1
+    waveJob(addr jobs[0])
+  else:
+    when compileOption("threads"):
+      var threads = newSeq[Thread[ptr WaveJob[G, P, T, Tabs, R]]](n)
+      for k in 0 ..< n:
+        createThread(threads[k], waveJob[G, P, T, Tabs, R], addr jobs[k])
+      joinThreads(threads)
+    else:
+      jobs[0].step = 1
+      waveJob(addr jobs[0])
+  next.setLen 0
+  for j in jobs.mitems: next.add move(j.created)
+  for k in 0 ..< n:
+    b.cs[k].absorb(b.ccs[k])
+    b.ccs[k].zeroSums()
+    b.cbs[k].zeroSums()
+
+proc finish*[G: static FieldGeometry; P: static PlaneKind; T, Tabs, R](
+    b: var CpuWaves[G, P, T, Tabs, R]): Cascade[G, P, T] =
+  ## the run: the threads' cascades added up
+  result = move b.cs[0]
+  for k in 1 ..< b.cs.len: result.merge(b.cs[k])
+
 const
   waveTarget* {.intdefine.} = 4096
-    ## chains of primaries per thread, at most
+    ## chains of primaries per electron followed side by side, at most
   minFinished = 16
     ## avalanches ended before new chains (the first to end are the small
     ## ones: with few, their mean says little)
@@ -1189,99 +1266,65 @@ type
     burnLeft: int    ## collisions until it counts
     burning: bool    ## the avalanche going does not count
 
-proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
-    cs: var seq[Cascade[G, P, T]], tabs: MixtureTable | GasTables, start: Electron,
-    seed: var MagRng): Cascade[G, P, T] =
-  ## Primaries until NMAX real collisions, as `run`, in waves on
-  ## `cs.len` threads (one cascade each, all initialised alike), random
-  ## numbers R seeded from `seed`.
+proc driveWaves*[B](b: var B, nmax: int, start: Electron, seed: var MagRng,
+                    process: proc (b: var B, wave, next: var seq[Pending],
+                                   outcomes: var seq[Outcome]) {.nimcall.},
+                    collisions: proc (b: B): int {.nimcall.},
+                    stopped: proc (b: B): bool {.nimcall.}, width: int): (int, Stop) =
+  ## Primaries until NMAX real collisions, as `run`, in waves on the
+  ## backend b (`process`: CPU threads, `CpuWaves`, or a GPU), random
+  ## numbers seeded from `seed`; returns the primaries and how it stopped.
   ##
   ## The primaries come in chains, each as `run`'s: the next primary when
   ## the avalanche of the last has ended, from the electron of the chain's
   ## last 200th collision (an electron used for the primaries of 200
   ## collisions: the primaries' starts are weighted by collisions). Many
   ## chains go side by side. A new chain starts from the first's last start
-  ## and runs `burnIn` collisions that do not count, so that its starts are
-  ## the gas's; new chains come when `minFinished` or more finished avalanches leave room in
-  ## NMAX (those still going counted at their mean or more), at most as
-  ## many as have finished, and NMAX / (10 `burnIn`) in all. A chain goes on
-  ## while there is room, or alone as long as there are fewer than NMAX
-  ## collisions (as `run`), and in any case until its last start has had
-  ## its 200 collisions (else long avalanches' starts would weigh more):
-  ## about NMAX collisions in all, as `run` has.
-  let n = cs.len
-  let nmax = cs[0].nmax
+  ## and runs `burnIn` collisions that do not count (only where avalanches
+  ## are small), so that its starts are the gas's; new chains come when
+  ## `minFinished` or more finished avalanches leave room in NMAX (those
+  ## still going counted at their mean or more), at most as many as have
+  ## finished, and NMAX / (10 `burnIn`) in all. A chain goes on while there
+  ## is room, or alone as long as there are fewer than NMAX collisions (as
+  ## `run`), and in any case until its last start has had its 200
+  ## collisions (else long avalanches' starts would weigh more): about NMAX
+  ## collisions in all, as `run` has.
   template newSeed(): Seed = seedOf(seed)
-  var bs = cs  # burn-in: the same, with sums that are dropped
-  var ccs, cbs: seq[Chase[G, P, T]]
-  for c in cs:
-    ccs.add initChase(c)
-    cbs.add initChase(c)
-  let fm = cs[0].fm
   var chains = @[Chain(live: 1, next: start)]
   var wave = @[primaryOf(start, 0, 0, newSeed())]
+  var next: seq[Pending]
+  var outcomes: seq[Outcome]
   var finished = 0        # counted avalanches that ended
   var done = 0            # their collisions
   var started = 1
+  var stop = stNone
   var waves = 0
-  while wave.len > 0:
+  while wave.len > 0 and stop == stNone:
     when defined(debugWaves):
       inc waves
       if waves mod 1000 == 1 or wave.len > 100000:
-        var idd = 0
-        for c in cs: idd = idd + c.id
-        stderr.writeLine "wave ", waves, " size ", wave.len, " chains ", chains.len, " id ", idd, " nmax ", nmax
+        stderr.writeLine "wave ", waves, " size ", wave.len, " chains ", chains.len,
+                         " id ", collisions(b), " nmax ", nmax
     for p in wave.mitems: p.count = int32(chains[p.tag].count)
-    var jobs = newSeq[WaveJob[G, P, T, typeof(tabs), R]](n)
-    for k in 0 ..< n:
-      jobs[k] = WaveJob[G, P, T, typeof(tabs), R](c: addr cs[k], b: addr bs[k],
-                                                  cc: addr ccs[k], cb: addr cbs[k],
-                                                  tabs: unsafeAddr tabs, fm: fm,
-                                                  wave: addr wave, first: k, step: n)
-    if n == 1 or wave.len == 1:
-      jobs[0].step = 1
-      waveJob(addr jobs[0])
-    else:
-      when compileOption("threads"):
-        var threads = newSeq[Thread[ptr WaveJob[G, P, T, typeof(tabs), R]]](n)
-        for k in 0 ..< n:
-          createThread(threads[k], waveJob[G, P, T, typeof(tabs), R], addr jobs[k])
-        joinThreads(threads)
+    process(b, wave, next, outcomes)
+    if stopped(b):
+      stop = stStackFull
+      break
+    # the chains' next starts: the electron of the last 200th collision (by
+    # the wave's order)
+    for k in 0 ..< wave.len:
+      let o = outcomes[k]
+      if o.records > 0:
+        chains[o.tag].recorded = true
+        chains[o.tag].next = o.record
+      if chains[o.tag].burning:
+        chains[o.tag].burnLeft = chains[o.tag].burnLeft - int(o.collisions)
       else:
-        jobs[0].step = 1
-        waveJob(addr jobs[0])
-    var stopped = false
-    for c in cs:
-      if c.stop != stNone: stopped = true
-    for b in bs:
-      if b.stop != stNone: stopped = true
-    if stopped: break
-    # the chains' next starts: the electron of the last 200th collision (by
-    # the wave's order)
-    # the chains' next starts: the electron of the last 200th collision (by
-    # the wave's order)
-    var last = newSeq[int](chains.len)
-    var next: seq[Pending]
-    for j in jobs.mitems:
-      next.add move(j.created)
-      for (k, o) in j.outcomes:
-        template ch: untyped = chains[o.tag]
-        if o.records > 0:
-          ch.recorded = true
-          if k >= last[o.tag]:
-            last[o.tag] = k
-            ch.next = o.record
-        if ch.burning: ch.burnLeft = ch.burnLeft - o.collisions
-        else: ch.collisions = ch.collisions + o.collisions
-        ch.count = (ch.count + o.counted) mod 200
+        chains[o.tag].collisions = chains[o.tag].collisions + int(o.collisions)
+      chains[o.tag].count = (chains[o.tag].count + int(o.counted)) mod 200
     for p in wave: dec chains[p.tag].live
     for q in next: inc chains[q.tag].live
-    var id = 0
-    for k in 0 ..< n:
-      cs[k].absorb(ccs[k])
-      ccs[k].zeroSums()
-      cbs[k].zeroSums()
-    for c in cs: id = id + c.id
+    let id = collisions(b)
     var idle: seq[int32]
     var running = 0
     for t, ch in chains.mpairs:
@@ -1303,7 +1346,7 @@ proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
       room = int((float64(nmax) - expected) / mean)
     template startPrimary(t: int32) =
       if started >= maxPrimaries:
-        cs[0].stop = stTooManyPrimaries
+        stop = stTooManyPrimaries
         break
       chains[t].burning = chains[t].burnLeft > 0
       next.add primaryOf(chains[t].next, t, int32(ord(chains[t].burning)), newSeed())
@@ -1317,20 +1360,30 @@ proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
       if chains[t].burnLeft > 0 and id <= nmax or not chains[t].recorded or
          id <= nmax and (room > 0 or running == 0):
         startPrimary(t)
-    if id <= nmax:
-      # new chains
-      let most = min(waveTarget * n, nmax div (10 * burnIn))
+    if id <= nmax and stop == stNone:
+      # new chains (burn-in only for small avalanches: a long one has 200th
+      # collisions of its own, its start counts once anyway)
+      let most = min(waveTarget * width, nmax div (10 * burnIn))
       var k = min(min(room, finished), most - chains.len)
       if finished < minFinished: k = 0
       while k > 0:
-        # (burn-in only for small avalanches: a long one has 200th
-        # collisions of its own, its start counts once anyway)
         chains.add Chain(next: chains[0].next, burnLeft: (if mean < burnIn: burnIn else: 0))
         startPrimary(int32(chains.high))
         dec k
-    wave = move next
-  for k in 0 ..< n: cs[k].absorb(ccs[k])  # (a stop left some)
-  result = move cs[0]
-  for k in 1 ..< n: result.merge(cs[k])
+    swap(wave, next)
+  (started, stop)
+
+proc runWaves*[G: static FieldGeometry; P: static PlaneKind; T, R](
+    cs: var seq[Cascade[G, P, T]], tabs: MixtureTable | GasTables, start: Electron,
+    seed: var MagRng): Cascade[G, P, T] =
+  ## `driveWaves` on `cs.len` CPU threads (one cascade each, all
+  ## initialised alike), random numbers R
+  let nmax = cs[0].nmax
+  var b = initCpuWaves[G, P, T, typeof(tabs), R](cs, tabs, R)
+  let (_, stop) = driveWaves(b, nmax, start, seed, cpuProcess[G, P, T, typeof(tabs), R],
+                             cpuCollisions[G, P, T, typeof(tabs), R],
+                             cpuStopped[G, P, T, typeof(tabs), R], b.width)
+  result = b.finish()
+  if stop == stTooManyPrimaries: result.stop = stop
   result.nclus = result.nclus + result.iprim - 1  # primaries after the first, as `run`
   result.j1 = 1 + result.id div max(nmax div 10, 1)

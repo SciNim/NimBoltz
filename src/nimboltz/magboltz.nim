@@ -5,7 +5,7 @@
 ## analyses (analyses.nim). Thermal motion of the gas (ITHRM = 1) selects
 ## the per-gas versions of all steps at compile time (`WarmMixture`).
 
-import std/[math, times, strutils, cpuinfo]
+import std/[math, times, strutils, cpuinfo, os]
 import frt, units, rm48, deck, conditions, tables, mixture, gases, fields, collisions,
        freeflight, elimit, drift, simulation, report, analyses, results, walkers, walkdrift
 when defined(nimboltzGpu):
@@ -433,6 +433,8 @@ proc run[M: Mixture](s: var Session, mix: ref M, d: Deck, collisions: int): Resu
   var wk = s.walkers
   if s.fortran: wk.backend = wbNone
   r.generator = wk.rng
+  r.gpuAvalanches = defined(nimboltzGpu) and wk.backend == wbGpu and not wk.single and
+                    existsEnv("NIMBOLTZ_GPU_AVALANCHES")  # (slower than CPU threads yet)
   if wk.threads <= 0: wk.threads = s.threads
   when not compileOption("threads"): wk.threads = 1
   var clock = epochTime()

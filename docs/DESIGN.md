@@ -182,6 +182,25 @@ seeds drawn when they are created. `follow` stays for the bit-for-bit
 mode. Same agreement on the 24 decks; hi_air_t0/t1 analyses 11/51 s on 32
 threads.
 
+On a GPU (2026-11-13, `gpuwaves.nim`, opt-in: `NIMBOLTZ_GPU_AVALANCHES=1`
+with `NIMBOLTZ_WALKERS=gpu`, double precision): the same driver
+(`cascade.driveWaves`, the backend's steps passed as procedures: generic
+mixins did not reach them through two instantiations, a template cannot
+reach `Chain`'s private fields), a kernel per wave in which a fixed number
+of threads each follow electrons one after the other with a chase of
+their own, kept on the GPU from wave to wave; created electrons through an
+atomic counter, counts and spectrum in 32-bit atomic counters, fetched
+before they could overflow; burn-in electrons in a launch of their own.
+Correct (8 decks against Fortran, |z| ≤ 4.2, as on CPUs) but 10–50×
+slower than 32 CPU threads: the waves are small (hi_arco2_nob_t0: 34000
+electrons in 19 launches, ~1800 a wave, each with thousands of collisions
+one after the other), and the kernel takes 255 registers with 5 KB of
+spills; 14.5 M collisions/s at best (1.5 M/s B ⊥ E) against 300+ for the
+drift's kernel. NVRTC 0.5–0.8 s. With 1.4 GB of the GPU free (another
+tenant) thermal decks run out of memory (per-gas tables plus local
+memory for every resident thread). Worth it only for many primaries side
+by side (large NMAX), and with a leaner kernel.
+
 `collisions.scatterFast` (walkers, avalanches): Magboltz's angles with
 square roots for arccos, arcsin, sin and cos (sin θ₀ = √(1 − cos² θ₀),
 sin θ = q sin θ₀, cos θ = √(1 − sin² θ)), and the azimuth from a point

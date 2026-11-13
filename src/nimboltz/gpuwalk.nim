@@ -102,6 +102,10 @@ var
     ## kept for the next run (NVRTC takes a while); only one, as each
     ## engine has a CUDA context of its own, of some 100 MB
 
+proc releaseEngine*() =
+  ## frees the last compiled kernel's context (and its GPU memory)
+  lastEngine = nil
+
 proc engineFor(G: static FieldGeometry, T, R: typedesc, exact, single: bool): CudaEngine =
   let kernel = (G, T is WarmGas, $R, exact, single)
   if lastEngine == nil or lastKernel != kernel:

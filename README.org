@@ -52,6 +52,7 @@ NIMBOLTZ_FORTRAN=1 ./nimboltz-mb < deck.in   # Magboltz 11.21, bit for bit
 | ~NIMBOLTZ_WALKERS=…~     | ~cpu[:n]~ (default: 100 per thread), ~gpu[:n]~ or ~gpu32[:n]~ (a GPU build, below)  |
 | ~NIMBOLTZ_RNG=…~         | ~xoshiro~ (default: xoshiro256+, on GPUs xoshiro128) or ~ranmar~ (RM48), walkers    |
 | ~NIMBOLTZ_TIMING=1~      | the time of each step of a deck on stderr                                          |
+| ~NIMBOLTZ_GPU_AVALANCHES=1~ | with ~gpu~: the Townsend avalanches on the GPU too (experimental, slower yet)    |
 
 ** As a library
 
