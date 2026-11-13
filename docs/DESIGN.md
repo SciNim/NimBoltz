@@ -201,6 +201,22 @@ tenant) thermal decks run out of memory (per-gas tables plus local
 memory for every resident thread). Worth it only for many primaries side
 by side (large NMAX), and with a leaner kernel.
 
+Where the time goes (`-d:debugGpuWaves` prints "busy": collisions over
+threads × the longest thread of each launch): 17–21 % on
+hi_arco2_nob_t0, 12–18 % on hi_air_t0 (2.4·10⁹ collisions, waves of
+~4800 electrons), so a wave waits mostly for its longest electron. More
+electrons per thread (4, 16) raise it to 36 / 57 % but run 1.7 / 3.3×
+slower: with a few thousand threads on 82 SMs the kernel is
+latency-bound and its speed goes with the number of threads, so the
+waves' tails are not the limit, the electrons alive at once are. What
+would help: a queue inside one launch (children followed as soon as
+they are made; needs a memory fence or compare-and-swap, Crucible has
+only `atomicFetchAdd`), and many more chains side by side, which their
+burn-in limits to NMAX / (10 `burnIn`) (2500 at NMAX 5·10⁷). Even then
+a double-precision 3090 at its best (~300–450 M collisions/s, the
+drift's kernel at ≥16k walkers) is about 32 CPU threads (hi_air_t0:
+2.4·10⁹ in 11 s).
+
 `collisions.scatterFast` (walkers, avalanches): Magboltz's angles with
 square roots for arccos, arcsin, sin and cos (sin θ₀ = √(1 − cos² θ₀),
 sin θ = q sin θ₀, cos θ = √(1 − sin² θ)), and the azimuth from a point

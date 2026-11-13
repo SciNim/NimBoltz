@@ -5,7 +5,7 @@
 ## wave through an atomic counter, the collision counts and the spectrum
 ## into 32-bit counters, fetched after each launch. Double precision only.
 
-import std/[monotimes, times]
+import std/[monotimes, times, strutils]
 import workspace/crucible
 from workspace/crucible/src/abis/nvidia_abi import CUdeviceptr
 import units, rm48, xoshiro, tables, vec3, fields, freeflight, walkers, drift, cascade
@@ -120,6 +120,7 @@ type
     t0: MonoTime
     kernelTime: Duration
     launches, electrons: int
+    work, slots: int       ## debugGpuWaves: collisions, and threads × the longest
     unfetched: int         ## collisions since the counters were fetched
 
 const
@@ -254,6 +255,14 @@ proc launch[G: static FieldGeometry; P: static PlaneKind; T](
     for o in outcomes:
       g.id = g.id + int(o.collisions)
       g.unfetched = g.unfetched + int(o.collisions)
+  when defined(debugGpuWaves):
+    var mx = 0
+    var thr = newSeq[int](nthreads)
+    for k, o in outcomes:
+      thr[k mod nthreads] += int(o.collisions)
+      g.work = g.work + int(o.collisions)
+    for x in thr: mx = max(mx, x)
+    g.slots = g.slots + mx * nthreads
 
 proc gpuProcess[G: static FieldGeometry; P: static PlaneKind; T](
     g: var GpuWaves[G, P, T], wave, next: var seq[Pending], outcomes: var seq[Outcome]) =
@@ -281,7 +290,8 @@ proc finish*[G: static FieldGeometry; P: static PlaneKind; T](
   when defined(debugGpuWaves):
     stderr.writeLine "gpuwaves: ", g.launches, " launches, ", g.electrons, " electrons, kernels ",
                      g.kernelTime.inMilliseconds, " ms of ", (getMonoTime() - g.t0).inMilliseconds,
-                     " ms, collisions ", g.id
+                     " ms, collisions ", g.id, ", busy ",
+                     formatFloat(100 * g.work / max(g.slots, 1), ffDecimal, 1), " %"
   g.fetchCounters()
   var chases = newSeq[Chase[G, P, T]](maxThreads)
   g.engine.copyToHostFromDevice(cast[ptr byte](addr chases[0]), g.chaseBuf,
