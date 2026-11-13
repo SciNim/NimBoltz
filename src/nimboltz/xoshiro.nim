@@ -41,7 +41,7 @@ proc splitmix64(x: var uint64): uint64 =
   z = (z xor (z shr 27)) * 0x94d049bb133111eb'u64
   z xor (z shr 31)
 
-proc initXoshiro*(seed: int): Xoshiro256Plus =
+proc initXoshiro*(seed: int64): Xoshiro256Plus =
   var x = uint64(seed)
   for i in 0 .. 3: result.s[i] = splitmix64(x)
 
@@ -127,7 +127,10 @@ proc initRng*[R: WalkerRng](rng: typedesc[R], seed: Seed): R {.inline.} =
               s3: mix32(seed.hi xor 0x7f4a7c15'u32) or 1'u32)
     g
   else:
-    initRng(R, int(uint64(seed.hi) shl 32 or uint64(seed.lo)) and 0x3fffffffffffffff)
+    let s = int64(uint64(seed.hi) shl 32 or uint64(seed.lo)) and 0x3fffffffffffffff'i64
+    when R is Xoshiro256Plus: initXoshiro(s)
+    elif sizeof(int) == 8: initRng(R, int(s))
+    else: initRng(R, int(s mod 900_000_000))   # 32-bit ints (wasm32)
 
 template withRng*(kind: RngKind, R, body: untyped) =
   ## body with `R` the generator type of `kind`

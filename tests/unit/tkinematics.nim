@@ -40,7 +40,7 @@ suite "collisions":
     var tab: CollisionTable[64]
     var r = initRand(2)
     for last in 2 .. 64:   # a mixture has at least two processes
-      tab.last = last
+      tab.last = int32(last)
       tab.isize = 1
       while tab.isize * 2 <= last: tab.isize *= 2   # as MIXER
       for ie in 1 .. 3:
