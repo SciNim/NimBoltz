@@ -72,7 +72,8 @@ jobs:
       - name: Build (WebAssembly, with WebGPU)
         run: TATTLETALE="$GITHUB_WORKSPACE/tattletale" web/build.sh
       - name: Run the module under Node
-        run: node tests/wasm/trun.js '{"mixture": [[2, 90], [12, 10]], "efield": 500, "collisions": 2000000}'
+        run: |
+          node tests/wasm/trun.js '{"mixture": [[2, 90], [12, 10]], "efield": 500, "collisions": 2000000}'
       - name: The site
         run: |
           mkdir -p site
